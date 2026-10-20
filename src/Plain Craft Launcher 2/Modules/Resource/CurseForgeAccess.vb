@@ -56,7 +56,7 @@ Public NotInheritable Class CurseForgeAccess
             If SawMirrorDown Then Return MissingKeyMessage & "备用镜像当前也不可用，所以 CurseForge 暂时连不上。"
             Return MissingKeyMessage
         End If
-        If SawForbidden Then Return "CurseForge 拒绝了访问（401/403）。请检查 API Key 是否有效，以及是否获准访问 Minecraft 资源。"
+        If SawForbidden Then Return "CurseForge 不接受当前 API Key（401/403）。请到 console.curseforge.com 重新申请一把已开通 Minecraft 的 Key，或改用 Modrinth。"
         If SawMirrorDown Then Return "CurseForge 备用镜像暂时不可用，官方接口也没有成功。请确认 API Key 后重试，或改用 Modrinth。"
         Return "无法连接到 CurseForge，请检查网络或代理设置后重试。"
     End Function

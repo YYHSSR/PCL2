@@ -50,9 +50,12 @@ Public Class Application
             End If
             '初始化文件结构
             Try
+                DirectoryUtils.Create(Paths.Base & "PCL\")
                 CheckPermissionWithException(Paths.Base & "PCL\")
             Catch ex As Exception
-                MsgBox($"PCL 没有对当前文件夹的权限（{Paths.Base}PCL\），请尝试：" & vbCrLf &
+                MsgBox($"PCL 无法使用当前文件夹（{Paths.Base}PCL\）。" & vbCrLf &
+                  "错误原因：" & ex.GetDisplay(True) & vbCrLf & vbCrLf &
+                  "请尝试：" & vbCrLf &
                   "1. 将 PCL 移动到其他文件夹" & If(PathUtils.GetDiskName(Paths.Base) = "C"c, "，例如 C 盘和桌面以外的其他位置。", "。") & vbCrLf &
                   "2. 删除当前目录中的 PCL 文件夹，然后再试。" & vbCrLf &
                   "3. 右键 PCL 选择属性，打开 兼容性 中的 以管理员身份运行此程序。",

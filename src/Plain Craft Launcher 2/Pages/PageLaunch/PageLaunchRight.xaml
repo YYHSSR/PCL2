@@ -7,9 +7,6 @@
     xmlns:local="clr-namespace:PCL" PanScroll="PanBack">
     <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="PanBack">
         <StackPanel Name="PanMain" Margin="25,25,25,10" Grid.IsSharedSizeScope="True">
-            <local:MyCard Title="欢迎" Margin="0,0,0,15">
-                <TextBlock Margin="25,40,25,20" Text="选择游戏版本，配置账号后开始游戏。" TextWrapping="Wrap" />
-            </local:MyCard>
             <local:MyCard Margin="0,0,0,15" Title="启动日志" x:Name="PanLog">
                 <local:MyTextBox x:Name="LabLog" Margin="15,34,15,13" Padding="0,4" IsReadOnly="True" IsUndoEnabled="False"
                          AcceptsReturn="True" TextWrapping="Wrap" BorderThickness="0" HasBackground="False"

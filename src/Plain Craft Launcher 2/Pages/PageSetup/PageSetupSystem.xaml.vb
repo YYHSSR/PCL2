@@ -24,8 +24,16 @@ Public Class PageSetupSystem
     End Sub
     Private Sub RefreshCurseForgeStatus()
         Dim HasEnvironmentKey = Not String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PCL_CURSEFORGE_API_KEY"))
-        LabCurseForgeStatus.Text = If(HasEnvironmentKey, "正在使用环境变量中的 Key。", If(String.IsNullOrWhiteSpace(CurseForgeAccess.GetApiKey()), "尚未配置。官方接口没有 Key 会返回 403；备用镜像不可用时就连不上 CurseForge。", "已配置本地 Key（加密保存）。"))
-        PasswordCurseForge.Clear()
+        Dim SavedKey = CurseForgeAccess.GetApiKey()
+        If HasEnvironmentKey Then
+            LabCurseForgeStatus.Text = "正在使用环境变量中的 Key。下面的输入框不会改掉它。"
+        ElseIf String.IsNullOrWhiteSpace(SavedKey) Then
+            LabCurseForgeStatus.Text = "尚未配置。官方接口没有 Key 会返回 403；备用镜像不可用时就连不上 CurseForge。"
+            PasswordCurseForge.Clear()
+        Else
+            LabCurseForgeStatus.Text = "已保存。输入框里的圆点就是这把 Key，不会显示明文。"
+            PasswordCurseForge.Password = SavedKey
+        End If
     End Sub
     Private Sub SaveCurseForgeKey() Handles BtnCurseForgeSave.Click
         Dim Key = PasswordCurseForge.Password.Trim()
