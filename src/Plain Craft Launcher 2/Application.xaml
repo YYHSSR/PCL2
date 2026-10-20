@@ -10,7 +10,7 @@
     ShutdownMode="OnExplicitShutdown">
     <Application.Resources>
         <ResourceDictionary>
-            
+
             <!-- Converter -->
             <corewpf:AdditionConverter x:Key="AdditionConverter"/>
             <corewpf:MultiplicationConverter x:Key="MultiplicationConverter"/>
@@ -115,7 +115,7 @@
                     </Setter.Value>
                 </Setter>
             </Style>
-            
+
             <!-- TextBlock -->
             <Style TargetType="TextBlock">
                 <Setter Property="OverridesDefaultStyle" Value="True" />
@@ -508,7 +508,7 @@
                                     </Grid.ColumnDefinitions>
                                     <Path Name="Icon" VerticalAlignment="Center" Stretch="Uniform" Margin="8,0" Fill="{TemplateBinding Foreground}" Height="12" Width="15" />
                                     <TextBlock Name="HeaderHost" Grid.Column="1" Text="{TemplateBinding Header}" Foreground="{TemplateBinding Foreground}" Margin="0,0,40,0" VerticalAlignment="Center" Height="16" />
-                                    <!--  <TextBlock x:Name="InputGestureText" Grid.Column="2" Text="{TemplateBinding InputGestureText}" Margin="5,2,0,2" DockPanel.Dock="Right" /> -->
+
                                 </Grid>
                             </Border>
                             <ControlTemplate.Triggers>
@@ -520,7 +520,7 @@
                     </Setter.Value>
                 </Setter>
             </Style>
-            
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>

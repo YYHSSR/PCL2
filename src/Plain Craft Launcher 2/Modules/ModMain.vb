@@ -456,7 +456,6 @@ EndHint:
             Dim BreathScale = Math.Sin(Timer150Count / 37.5 * Math.PI)
             Dim Difficulty As Double = 1 / (1 + (AprilDifficultiedDistance / 6000) ^ 2) + 0.25 '难度，初始为 1.25x，6000 距离为 0.75x，12000 为 0.5x，24000 为 0.256x，最低 0.25x
             Dim Acc = Math.Max(0, -0.65 - Math.Log((Distance / Difficulty + 0.4) / 200)) * Direction * Difficulty '加速度
-            'FrmMain.Title = CInt(AprilTotalDistance) & " - " & Difficulty
             '5s 不动时回到起始点
             If IdieCount >= 64 * 5 Then
                 Dim SafeDist As Vector = FrmMain.lastMouseArg.GetPosition(FrmMain.PanMain) - New Vector(ButtonWidth, FrmMain.PanMain.ActualHeight - ButtonHeight * 3)
@@ -768,18 +767,22 @@ EndHint:
             End Try
         End If
     End Sub
+    Private MainTimer As Threading.DispatcherTimer
     Public Sub TimerMainStart()
-        RunInNewThread(
-        Sub()
-            Try
-                Do While True
-                    RunInUiWait(AddressOf TimerMain)
-                    Thread.Sleep(50 * 0.98)
-                Loop
-            Catch ex As Exception
-                Logger.Error(ex, "程序主时钟出错")
-            End Try
-        End Sub, "Timer Main")
+        If Not RunInUi() Then
+            RunInUiWait(AddressOf TimerMainStart)
+            Return
+        End If
+        If MainTimer IsNot Nothing Then Return
+        MainTimer = New Threading.DispatcherTimer(Threading.DispatcherPriority.Background) With {.Interval = TimeSpan.FromMilliseconds(50)}
+        AddHandler MainTimer.Tick, Sub()
+                                       If IsProgramEnding Then
+                                           MainTimer.Stop()
+                                       Else
+                                           TimerMain()
+                                       End If
+                                   End Sub
+        MainTimer.Start()
         If Not IsAprilEnabled Then Return
         RunInNewThread(
         Sub()

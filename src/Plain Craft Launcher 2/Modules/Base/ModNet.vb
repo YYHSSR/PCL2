@@ -1914,13 +1914,5 @@ FinishExCatch:
         End If
     End Function
 
-    ''' <summary>
-    ''' 设置是否应当在正版登录时校验 SSL 证书。
-    ''' </summary>
-    Public Sub ShouldValidateSslCertificateOnLogin(Enabled As Boolean)
-        'Certificate validation is mandatory for every request.
-        ServicePointManager.ServerCertificateValidationCallback =
-            Function(Sender, Certificate, Chain, Failure) Failure = Net.Security.SslPolicyErrors.None
-    End Sub
 
 End Module

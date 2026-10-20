@@ -1,9 +1,10 @@
 Public Class PageInstanceSetup
+    Private RamRefreshTimer As VisiblePageTimer
 
     Private LoadedFirst As Boolean = False
     Private Sub PageSetupSystem_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
 
-        '重复加载部分
+        If RamRefreshTimer Is Nothing Then RamRefreshTimer = New VisiblePageTimer(Me, Sub() RefreshRam(True))
         PanBack.ScrollToHome()
         RefreshRam(False)
 
@@ -38,10 +39,6 @@ Public Class PageInstanceSetup
             End Try
         End Function)}
 
-        '内存自动刷新
-        Dim timer As New Threading.DispatcherTimer With {.Interval = New TimeSpan(0, 0, 0, 1)}
-        AddHandler timer.Tick, AddressOf RefreshRam
-        timer.Start()
 
     End Sub
     Public Sub Reload()
@@ -260,8 +257,7 @@ Public Class PageInstanceSetup
             If Instance IsNot Nothing AndAlso Not Instance.IsLoaded Then Instance.Load()
             If Instance IsNot Nothing AndAlso Instance.Modable Then
                 '可安装 Mod 的版本
-                Dim ModDir = DirectoryUtils.GetInfo(Instance.PathIndie & "mods\")
-                Dim ModCount As Integer = If(ModDir.Exists, ModDir.GetFiles.Count(Function(f) {".jar", ".zip", ".litemod"}.Contains(f.Extension.Lower)), 0)
+                Dim ModCount = ModDirectoryCache.GetCount(Instance.PathIndie & "mods\", Not RunInUi())
                 RamMininum = 0.5 + ModCount / 150
                 RamTarget1 = 1.5 + ModCount / 90
                 RamTarget2 = 2.7 + ModCount / 50

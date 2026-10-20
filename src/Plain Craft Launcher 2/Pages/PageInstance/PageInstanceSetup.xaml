@@ -101,7 +101,7 @@
                                           ToolTip="根据安装的 Mod 量与电脑剩余内存动态调整为游戏分配的内存" />
                         <local:MyRadioBox Grid.Row="3" Text="自定义" x:Name="RadioRamType1" local:SettingService.Key="VersionRamType" local:SettingService.Value="1" Margin="0,0,20,0" />
                         <local:MySlider Grid.Row="3" Grid.Column="1" IsEnabled="False" x:Name="SliderRamCustom" local:SettingService.Key="VersionRamCustom" MaxValue="49" Value="13" />
-                        <!--<local:MyTextBox Grid.Row="2" Grid.Column="3" Width="100" VerticalAlignment="Center" Margin="30,0,0,0" Text="2048 MB" />-->
+
                     </Grid>
                     <Grid x:Name="PanRamDisplay" Margin="0,11,2,0" SnapsToDevicePixels="True" Grid.Row="1" Grid.ColumnSpan="2" Grid.Column="1">
                         <Grid.ColumnDefinitions>

@@ -2,6 +2,7 @@ Public Class MyVirtualizingElement(Of T As FrameworkElement)
     Inherits FrameworkElement
 
     Private Initializer As Func(Of T)
+    Private Realized As T
     Public Sub New(Initializer As Func(Of T))
         Me.Initializer = Initializer
         LazyLoadBehavior.OnFirstEnterScrollViewerViewport(Me, AddressOf Init)
@@ -11,7 +12,11 @@ Public Class MyVirtualizingElement(Of T As FrameworkElement)
     ''' 实例化此控件。
     ''' </summary>
     Public Function Init() As T
-        Dim Element As T = Initializer()
+        If Realized Is Nothing Then
+            Realized = Initializer()
+            Initializer = Nothing
+        End If
+        Dim Element As T = Realized
         If Parent IsNot Nothing Then
             If TypeOf Parent IsNot Panel Then Throw New Exception("MyVirtualizingElement 的父级必须是一个 Panel")
             Dim ParentPanel As Panel = Parent
@@ -32,6 +37,7 @@ Public Class MyVirtualizingElement
     Inherits FrameworkElement
 
     Private Initializer As Func(Of FrameworkElement)
+    Private Realized As FrameworkElement
     Public Sub New(Initializer As Func(Of FrameworkElement))
         Me.Initializer = Initializer
         LazyLoadBehavior.OnFirstEnterScrollViewerViewport(Me, AddressOf Init)
@@ -41,7 +47,11 @@ Public Class MyVirtualizingElement
     ''' 实例化此控件。
     ''' </summary>
     Public Function Init() As FrameworkElement
-        Dim Element As FrameworkElement = Initializer()
+        If Realized Is Nothing Then
+            Realized = Initializer()
+            Initializer = Nothing
+        End If
+        Dim Element As FrameworkElement = Realized
         If Parent IsNot Nothing Then
             If TypeOf Parent IsNot Panel Then Throw New Exception("MyVirtualizingElement 的父级必须是一个 Panel")
             Dim ParentPanel As Panel = Parent

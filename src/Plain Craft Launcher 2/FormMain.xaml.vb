@@ -133,7 +133,7 @@ Public Class FormMain
         Sub()
             '启动加载器池
             Try
-                JavaInit() '延后到同意协议后再执行，避免在初次启动时进行进程操作
+                JavaInit()
                 Thread.Sleep(100)
                 DlClientListMojangLoader.Start(1) 'PCL 会同时根据这里的加载结果决定是否使用官方源进行下载
                 RunCountSub()
@@ -141,13 +141,6 @@ Public Class FormMain
             Catch ex As Exception
                 Logger.Error(ex, "初始化加载池运行失败")
             End Try
-            '清理自动更新文件
-            Try
-                FileUtils.Delete(Paths.Base & "PCL\Plain Craft Launcher 2.exe")
-            Catch ex As Exception
-                Logger.Warn(ex, "清理自动更新文件失败")
-            End Try
-            '上报
         End Sub, "初始化", ThreadPriority.Lowest)
 
         Logger.Info($"第三阶段加载用时：{GetTimeMs() - ApplicationStartTick} ms")

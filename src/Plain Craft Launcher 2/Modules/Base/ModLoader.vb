@@ -679,11 +679,14 @@ Restart:
     End Sub
     Public Sub LoaderTaskbarProgressRefresh()
         Try
+            If Not LoaderTaskbar.Any() AndAlso LoaderTaskbarProgressLast = Shell.TaskbarItemProgressState.None AndAlso LoaderTaskbarProgress = 1 Then Return
+            Dim Tasks = LoaderTaskbar.ToList()
+            Dim HasLoading = Tasks.Any(Function(l) l.State = LoadState.Loading)
             Dim NewState As Shell.TaskbarItemProgressState
-            Dim NewProgress As Double = LoaderTaskbarProgressGet()
+            Dim NewProgress As Double = If(Tasks.Count = 0, 1, Tasks.Average(Function(l) l.Progress).Clamp(0, 1))
             '若单个任务已中止，或全部任务已完成，则刷新并移除
-            For Each Task In LoaderTaskbar
-                If LoaderTaskbar.All(Function(l) l.State <> LoadState.Loading) OrElse
+            For Each Task In Tasks
+                If Not HasLoading OrElse
                    (Task.State = LoadState.Waiting OrElse Task.State = LoadState.Canceled) Then
                     FrmSpeedLeft?.TaskRefresh(Task)
                     LoaderTaskbar.Remove(Task)

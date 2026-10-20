@@ -80,7 +80,6 @@ RetryCacheCheck:
             '设置 ToolTipService 默认值
             ToolTipService.InitialShowDelayProperty.OverrideMetadata(GetType(DependencyObject), New FrameworkPropertyMetadata(100))
             '设置网络配置默认值
-            ShouldValidateSslCertificateOnLogin(True)
             ServicePointManager.Expect100Continue = False
             ServicePointManager.DefaultConnectionLimit = 10000
             ServicePointManager.UseNagleAlgorithm = False

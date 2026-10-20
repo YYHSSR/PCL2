@@ -33,13 +33,19 @@ internal static class Program {
         Environment.SetEnvironmentVariable("PCL_SETTINGS_PROFILE", profile);
         Environment.SetEnvironmentVariable("PCL_CACHE_PATH", temp);
         MeloongCore.Main.Init("PCL2Smoke");
+        PCL.Application? app = null;
         try {
             // Initialize the application's UI-thread marker before worker tests.
             PCL.ModBase.RunInUi();
             System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
             System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
-            var app = (PCL.Application)Activator.CreateInstance(typeof(PCL.Application), true)!;
+            app = (PCL.Application)Activator.CreateInstance(typeof(PCL.Application), true)!;
             app.InitializeComponent();
+            app.ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown;
+            // Pumping the dispatcher must not launch the real window or its network workers.
+            typeof(System.Windows.Application).GetField("_startupUri", BindingFlags.NonPublic | BindingFlags.Instance)!.SetValue(app, null);
+            app.Startup -= (System.Windows.StartupEventHandler)Delegate.CreateDelegate(typeof(System.Windows.StartupEventHandler), app,
+                typeof(PCL.Application).GetMethod("Application_Startup", BindingFlags.NonPublic | BindingFlags.Instance)!);
             Run("Embedded resolver does not return a parent DLL for satellite resources", () => {
                 try {
                     Assembly.Load("Newtonsoft.Json.resources, Culture=zh-CN");
@@ -88,11 +94,10 @@ internal static class Program {
                 Check(PCL.Settings.Get<string>("CacheMsV2OAuthRefresh") == "", "Corrupt cache should return the default");
                 Check((string)key.GetValue("CacheMsV2OAuthRefresh")! == "dpapi:v1:corrupt", "Corrupt cache was overwritten");
             });
-            Run("Certificate errors cannot be bypassed", () => {
-                PCL.ModNet.ShouldValidateSslCertificateOnLogin(false);
-                var validate = ServicePointManager.ServerCertificateValidationCallback!;
-                Check(!validate(null!, null, null, System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors), "Invalid certificate accepted");
-                Check(validate(null!, null, null, System.Net.Security.SslPolicyErrors.None), "Valid certificate rejected");
+            Run("Certificate option is removed and platform validation remains unmodified", () => {
+                Check(!PCL.Settings.Entries.ContainsKey("ToolDownloadCert"), "Certificate toggle is still registered");
+                Check(typeof(PCL.ModNet).GetMethod("ShouldValidateSslCertificateOnLogin") == null, "Obsolete validation switch remains");
+                Check(ServicePointManager.ServerCertificateValidationCallback == null, "Platform certificate validation was overridden");
             });
             using var server = new LocalServer();
             Run("Backup URL is used after primary failure", () => {
@@ -189,6 +194,99 @@ internal static class Program {
                     Check(downgrade.KeySeen.Count == 1, "An insecure redirect was followed");
                 } finally { Environment.SetEnvironmentVariable("PCL_CURSEFORGE_API_KEY", savedEnv); }
             });
+            Run("Mod directory snapshots stay nonblocking and launch reads refresh", () => {
+                string folder = Path.Combine(temp, "mods");
+                Directory.CreateDirectory(folder);
+                File.WriteAllText(Path.Combine(folder, "a.JAR"), "");
+                File.WriteAllText(Path.Combine(folder, "b.zip"), "");
+                File.WriteAllText(Path.Combine(folder, "c.litemod"), "");
+                File.WriteAllText(Path.Combine(folder, "disabled.jar.disabled"), "");
+                Check(PCL.ModDirectoryCache.GetCount(folder, true) == 3, "Mod count is incorrect");
+                File.WriteAllText(Path.Combine(folder, "new.jar"), "");
+                Check(PCL.ModDirectoryCache.GetCount(folder) == 3, "A cached UI read rescanned synchronously");
+                Check(PCL.ModDirectoryCache.GetCount(folder, true) == 4, "Launch worker did not refresh");
+                Check(PCL.ModDirectoryCache.GetCount(Path.Combine(temp, "missing-mods"), true) == 0, "Missing mods folder was not handled");
+            });
+            Run("Virtualized controls initialize exactly once", () => {
+                int genericCalls = 0, calls = 0;
+                var generic = new PCL.MyVirtualizingElement<System.Windows.Controls.Border>(() => { genericCalls++; return new(); });
+                var plain = new PCL.MyVirtualizingElement(() => { calls++; return new System.Windows.Controls.Border(); });
+                Check(ReferenceEquals(generic.Init(), generic.Init()) && genericCalls == 1, "Generic initializer ran twice");
+                Check(ReferenceEquals(plain.Init(), plain.Init()) && calls == 1, "Initializer ran twice");
+            });
+            Run("Animation callbacks preserve replacement, cancellation and chaining", () => {
+                var clock = typeof(PCL.ModAnimation).GetField("AniLastTick", BindingFlags.NonPublic | BindingFlags.Static)!;
+                object oldClock = clock.GetValue(null)!;
+                int replaced = 0, canceled = 0, chained = 0;
+                try {
+                    clock.SetValue(null, long.MaxValue);
+                    PCL.ModAnimation.AniStart(PCL.ModAnimation.AaCode(() => PCL.ModAnimation.AniStart(PCL.ModAnimation.AaCode(() => replaced++), "test-replace")), "test-replace");
+                    clock.SetValue(null, long.MaxValue);
+                    PCL.ModAnimation.AniTimer(16);
+                    Check(replaced == 0 && PCL.ModAnimation.AniIsRun("test-replace"), "A replacement was removed with the old group");
+                    PCL.ModAnimation.AniTimer(16);
+                    Check(replaced == 1 && !PCL.ModAnimation.AniIsRun("test-replace"), "Replacement did not complete");
+                    PCL.ModAnimation.AniStart(PCL.ModAnimation.AaCode(() => canceled++), "test-cancel");
+                    PCL.ModAnimation.AniStop("test-cancel");
+                    PCL.ModAnimation.AniTimer(16);
+                    Check(canceled == 0, "Canceled callback ran");
+                    PCL.ModAnimation.AniStart(new System.Collections.ArrayList {
+                        PCL.ModAnimation.AaCode(() => chained++), PCL.ModAnimation.AaCode(() => chained++, After: true)
+                    }, "test-chain");
+                    clock.SetValue(null, long.MaxValue);
+                    PCL.ModAnimation.AniTimer(16);
+                    Check(chained == 1, "Chained callback ran before its predecessor finished");
+                    PCL.ModAnimation.AniTimer(16);
+                    Check(chained == 2, "Chained callback was lost");
+                } finally {
+                    foreach (string name in new[] { "test-replace", "test-cancel", "test-chain" }) PCL.ModAnimation.AniStop(name);
+                    clock.SetValue(null, oldClock);
+                }
+            });
+            Run("Viewport loading and page timers follow visibility and unload", () => {
+                int initialized = 0;
+                bool lastInitialized = false;
+                var panel = new System.Windows.Controls.StackPanel();
+                for (int i = 0; i < 300; i++) {
+                    int index = i;
+                    panel.Children.Add(new PCL.MyVirtualizingElement<System.Windows.Controls.Border>(() => {
+                        initialized++;
+                        if (index == 299) lastInitialized = true;
+                        return new() { Height = 30 };
+                    }) { Height = 30 });
+                }
+                var scroll = new System.Windows.Controls.ScrollViewer { Content = panel };
+                var window = new System.Windows.Window { Content = scroll, Width = 240, Height = 180, Left = -20000, Top = -20000, Opacity = 0, ShowActivated = false, ShowInTaskbar = false };
+                var refresh = new PCL.VisiblePageTimer(scroll, () => { });
+                try {
+                    window.Show();
+                    PumpUntil(() => initialized > 0, 1500);
+                    Check(initialized < 20, "Offscreen list items were initialized eagerly");
+                    Check(refresh.IsRunning, "Visible page timer did not start");
+                    scroll.ScrollToEnd();
+                    PumpUntil(() => lastInitialized, 1500);
+                    Check(initialized < 40, "Scrolling initialized the whole list");
+                    scroll.Visibility = System.Windows.Visibility.Collapsed;
+                    Check(!refresh.IsRunning, "Hidden page timer is still running");
+                    scroll.Visibility = System.Windows.Visibility.Visible;
+                    Check(refresh.IsRunning, "Visible page timer did not restart");
+                    window.Content = null;
+                    PumpUntil(() => !refresh.IsRunning, 1500);
+                    window.Content = scroll;
+                    scroll.ScrollToHome();
+                    PumpUntil(() => refresh.IsRunning, 1500);
+                } finally { window.Close(); }
+            });
+            Run("Delayed animation callbacks finish without a rendered window and stop idle work", () => {
+                bool finished = false;
+                PCL.ModAnimation.AniStart();
+                PCL.ModAnimation.AniStart(PCL.ModAnimation.AaCode(() => finished = true, Delay: 100), "test-hidden-window");
+                PumpUntil(() => finished && PCL.ModAnimation.AniGroups.Count == 0, 3000);
+                Check(!PCL.ModAnimation.AniIsRun("test-hidden-window"), "Completed group remains registered");
+                Check(!(bool)typeof(PCL.ModAnimation).GetField("RenderingSubscribed", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!, "Empty animation engine remains subscribed");
+                var fallback = (System.Windows.Threading.DispatcherTimer)typeof(PCL.ModAnimation).GetField("RenderFallback", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
+                Check(!fallback.IsEnabled, "Empty animation engine fallback is still running");
+            });
             Run("Removed pages, routes, events and settings are absent", () => {
                 var assembly = typeof(PCL.Application).Assembly;
                 Check(Array.TrueForAll(assembly.GetTypes(), t => !t.Name.StartsWith("PageOther") && t.Name != "HelpEntry" && t.Name != "PageSetupUI"), "Removed page is still compiled");
@@ -224,6 +322,7 @@ internal static class Program {
             Console.Error.WriteLine(ex);
             return 1;
         } finally {
+            app?.Shutdown();
             // The randomized profile belongs only to this test process.
             if (profile.StartsWith("PCL2Smoke_") && profile.Length == 42)
                 Registry.CurrentUser.DeleteSubKeyTree("Software\\" + profile, false);
@@ -235,6 +334,17 @@ internal static class Program {
         Check(key == null || PCL.Settings.Entries.ContainsKey(key), "XAML references an unknown setting: " + key);
         foreach (object child in System.Windows.LogicalTreeHelper.GetChildren(control))
             if (child is System.Windows.DependencyObject dependency) CheckSettingKeys(dependency);
+    }
+
+    private static void PumpUntil(Func<bool> condition, int timeout) {
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var timer = new System.Windows.Threading.DispatcherTimer(System.Windows.Threading.DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(5) };
+        timer.Tick += (_, _) => { if (condition() || watch.ElapsedMilliseconds >= timeout) { timer.Stop(); frame.Continue = false; } };
+        timer.Start();
+        try { System.Windows.Threading.Dispatcher.PushFrame(frame); }
+        finally { timer.Stop(); }
+        Check(condition(), "Timed out waiting for dispatcher work");
     }
 
     private sealed class RedirectHandler(string destination) : HttpMessageHandler {

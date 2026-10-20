@@ -7,14 +7,7 @@ Public Module ModAnimation
 
 #Region "声明"
 
-    ''' <summary>
-    ''' 动画速度。最大为 200。
-    ''' </summary>
-    Public ReadOnly Property AniSpeed As Double
-        Get
-            Return 1
-        End Get
-    End Property
+    Public Const AniSpeed As Double = 1
     ''' <summary>
     ''' 动画组列表。
     ''' </summary>
@@ -55,61 +48,50 @@ Public Module ModAnimation
     ''' <summary>
     ''' 单个动画对象。
     ''' </summary>
-    ''' <remarks></remarks>
     Public Structure AniData
 
         ''' <summary>
         ''' 动画种类。
         ''' </summary>
-        ''' <remarks></remarks>
         Public TypeMain As AniType
         ''' <summary>
         ''' 动画副种类。
         ''' </summary>
-        ''' <remarks></remarks>
         Public TypeSub As AniTypeSub
 
         ''' <summary>
         ''' 动画总长度。
         ''' </summary>
-        ''' <remarks></remarks>
         Public TimeTotal As Integer
         ''' <summary>
         ''' 已经执行的动画长度。如果为负数则为延迟。
         ''' </summary>
-        ''' <remarks></remarks>
         Public TimeFinished As Double
         ''' <summary>
         ''' 已经完成的百分比。
         ''' </summary>
-        ''' <remarks></remarks>
         Public TimePercent As Double
 
         ''' <summary>
         ''' 是否为“以后”。
         ''' </summary>
-        ''' <remarks></remarks>
         Public IsAfter As Boolean
 
         ''' <summary>
         ''' 插值器类型。
         ''' </summary>
-        ''' <remarks></remarks>
         Public Ease As AniEase
         ''' <summary>
         ''' 动画对象。
         ''' </summary>
-        ''' <remarks></remarks>
         Public Obj As Object
         ''' <summary>
         ''' 动画值。
         ''' </summary>
-        ''' <remarks></remarks>
         Public Value As Object
         ''' <summary>
         ''' 上次执行时的动画值。
         ''' </summary>
-        ''' <remarks></remarks>
         Public ValueLast As Object
 
         Public Overrides Function ToString() As String
@@ -125,27 +107,22 @@ Public Module ModAnimation
         ''' <summary>
         ''' 单个Double的动画，包括位置、长宽、透明度等。这需要附属类型。
         ''' </summary>
-        ''' <remarks></remarks>
         Number
         ''' <summary>
         ''' 颜色属性的动画。这需要附属类型。
         ''' </summary>
-        ''' <remarks></remarks>
         Color
         ''' <summary>
         ''' 缩放控件大小。比起4个DoubleAnimation来说效率更高。
         ''' </summary>
-        ''' <remarks></remarks>
         Scale
         ''' <summary>
         ''' 文字一个个出现。
         ''' </summary>
-        ''' <remarks></remarks>
         TextAppear
         ''' <summary>
         ''' 执行代码。
         ''' </summary>
-        ''' <remarks></remarks>
         Code
         ''' <summary>
         ''' 以 WPF 方式缩放控件。
@@ -191,8 +168,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaX(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.X,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
@@ -206,8 +181,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaY(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Y,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
@@ -221,8 +194,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaWidth(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Width,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
@@ -236,8 +207,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaHeight(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Height,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
@@ -251,8 +220,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaOpacity(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Opacity,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
@@ -266,8 +233,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaValue(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Value,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
@@ -281,8 +246,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaRadius(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Radius,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
@@ -296,8 +259,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaBorderThickness(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.BorderThickness,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
@@ -341,8 +302,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaDouble(Obj As Object, Prop As DependencyProperty, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Double, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = {Obj, Prop, ""}, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
@@ -354,8 +313,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaDouble(Lambda As ParameterizedThreadStart, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.DoubleParam, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Lambda, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
@@ -372,8 +329,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaColor(Obj As FrameworkElement, Prop As DependencyProperty, Value As MyColor, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Color, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = {Obj, Prop, ""}, .Value = Value, .IsAfter = After, .TimeFinished = -Delay, .ValueLast = New MyColor(0, 0, 0, 0)}
     End Function
@@ -387,8 +342,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaColor(Obj As FrameworkElement, Prop As DependencyProperty, Res As String, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Color, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = {Obj, Prop, Res}, .Value = New MyColor(Application.Current.FindResource(Res)) - New MyColor(Obj.GetValue(Prop)), .IsAfter = After, .TimeFinished = -Delay, .ValueLast = New MyColor(0, 0, 0, 0)}
     End Function
@@ -405,8 +358,6 @@ Public Module ModAnimation
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
     ''' <param name="Absolute">大小改变是否为绝对值。若为 True 则为绝对像素，若为 False 则为相对百分比。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaScale(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False, Optional Absolute As Boolean = False) As AniData
         Dim ChangeRect As MyRect
         If Absolute Then
@@ -428,8 +379,6 @@ Public Module ModAnimation
     ''' <param name="Time">动画长度（毫秒）。若TimePerText为True，这代表每个字所占据的时间。</param>
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaTextAppear(Obj As Object, Optional Hide As Boolean = False, Optional TimePerText As Boolean = True, Optional Time As Integer = 70, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         'Are we cool yet？
         Return New AniData With {.TypeMain = AniType.TextAppear, .Ease = If(Ease, New AniEaseLinear), .TimeTotal = If(TimePerText, Time * If(TypeOf Obj Is TextBlock, Obj.Text, Obj.Context.ToString).ToString.Length, Time), .Obj = Obj, .Value = {If(TypeOf Obj Is TextBlock, Obj.Text, Obj.Context.ToString), Hide}, .IsAfter = After, .TimeFinished = -Delay}
@@ -443,8 +392,6 @@ Public Module ModAnimation
     ''' <param name="Code">一个ThreadStart。这将会在执行时在主线程调用。</param>
     ''' <param name="Delay">代码延迟执行的时间（毫秒）。</param>
     ''' <param name="After">是否等到以前的动画完成后才执行。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaCode(Code As ThreadStart, Optional Delay As Integer = 0, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Code,
                                    .TimeTotal = 1, .Value = Code, .IsAfter = After, .TimeFinished = -Delay}
@@ -461,8 +408,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaScaleTransform(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.ScaleTransform, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
@@ -478,8 +423,6 @@ Public Module ModAnimation
     ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
     ''' <param name="Ease">插值器类型。</param>
     ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <returns></returns>
-    ''' <remarks></remarks>
     Public Function AaRotateTransform(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.RotateTransform, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
@@ -518,7 +461,6 @@ Public Module ModAnimation
     ''' <summary>
     ''' 将一个StackPanel中的各个项目依次显示。
     ''' </summary>
-    ''' <remarks></remarks>
     Public Function AaStack(Stack As StackPanel, Optional Time As Integer = 100, Optional Delay As Integer = 25) As List(Of AniData)
         Dim Result = New List(Of AniData)
         Dim AniDelay As Integer = 0
@@ -750,7 +692,11 @@ Public Module ModAnimation
     ''' <param name="AniGroup">由 Aa 开头的函数初始化的 AniData 对象集合。</param>
     ''' <param name="Name">动画组的名称。如果重复会直接停止同名动画组。</param>
     Public Sub AniStart(AniGroup As IList, Optional Name As String = "", Optional RefreshTime As Boolean = False)
-        If RefreshTime Then AniLastTick = GetTimeMs() '避免处理动画时已经造成了极大的延迟，导致动画突然结束
+        If Application.Current IsNot Nothing AndAlso Not Application.Current.Dispatcher.CheckAccess() Then
+            RunInUiWait(Sub() AniStart(AniGroup, Name, RefreshTime))
+            Return
+        End If
+        If RefreshTime OrElse AniGroups.Count = 0 Then AniLastTick = GetTimeMs() '避免处理动画时已经造成了极大的延迟，导致动画突然结束
         '添加到正在执行的动画组
         Dim AllAnis = New List(Of AniData)
         For Each Element In AniGroup
@@ -767,6 +713,7 @@ Public Module ModAnimation
             AniStop(Name)
         End If
         AniGroups.Add(Name, NewEntry)
+        If AniRunning Then StartRendering()
     End Sub
     ''' <summary>
     ''' 开始一个动画组。
@@ -779,18 +726,25 @@ Public Module ModAnimation
     ''' </summary>
     ''' <param name="name">需要停止的动画组的名称。</param>
     Public Sub AniStop(Name As String)
+        If Application.Current IsNot Nothing AndAlso Not Application.Current.Dispatcher.CheckAccess() Then
+            RunInUiWait(Sub() AniStop(Name))
+            Return
+        End If
         AniGroups.Remove(Name)
+        If AniGroups.Count = 0 Then StopRendering()
     End Sub
     ''' <summary>
     ''' 获取动画是否正在进行中。
     ''' </summary>
     Public Function AniIsRun(Name As String) As Boolean
+        If Application.Current IsNot Nothing AndAlso Not Application.Current.Dispatcher.CheckAccess() Then
+            Return Application.Current.Dispatcher.Invoke(Function() AniIsRun(Name))
+        End If
         Return AniGroups.ContainsKey(Name)
     End Function
 
 #End Region
 
-    Private AniCount As Integer = 0
     Private AniFPSCounter As Integer = 0
     Private AniFPSTimer As Long = 0
     ''' <summary>
@@ -802,66 +756,76 @@ Public Module ModAnimation
     ''' 开始动画执行。
     ''' </summary>
     Public Sub AniStart()
-        '初始化计时器
+        If AniRunning Then Return
+        AniRunning = True
         AniLastTick = GetTimeMs()
         AniFPSTimer = AniLastTick
-        AniRunning = True '标记动画执行开始
-
-        RunInNewThread(
-        Sub()
-            Try
-                Logger.Info("动画线程开始")
-                Do While True
-                    '两帧之间的间隔时间
-                    Dim DeltaTime As Long = (GetTimeMs() - AniLastTick).Clamp(0, 100000)
-                    If DeltaTime < 3 Then GoTo Sleeper
-                    AniLastTick = GetTimeMs()
-                    '记录 FPS
-                    If ModeDebug Then
-                        If (AniLastTick - AniFPSTimer).Clamp(0, 100000) >= 500 Then
-                            AniFPS = AniFPSCounter
-                            AniFPSCounter = 0
-                            AniFPSTimer = AniLastTick
-                        End If
-                        AniFPSCounter += 2
-                    End If
-                    '执行动画
-                    RunInUiWait(
-                    Sub()
-                        AniCount = 0
-                        AniTimer(DeltaTime * AniSpeed)
-                        If RandomInteger(0, 64 * If(ModeDebug, 5, 30)) = 0 AndAlso ((AniFPS < 62 AndAlso AniFPS > 0) OrElse AniCount > 4 OrElse NetManager.FileRemain <> 0) Then
-                            Logger.Info($"FPS {AniFPS}, 动画 {AniCount}, 下载中 {NetManager.FileRemain}（{StringUtils.FormatByteSize(NetManager.Speed)}/s）")
-                            If NetManager.FileRemain < 5 Then
-                                For Each File In NetManager.AllFiles.Values
-                                    If File.State < NetState.Finished Then Logger.Trace($"- {File.State} {StringUtils.FormatByteSize(File.Speed)}/s {File.LocalPath}")
-                                Next
-                            End If
-                        End If
-                    End Sub)
-Sleeper:
-                    '控制 FPS
-                    Thread.Sleep(1)
-                Loop
-            Catch ex As Exception
-                Logger.Error(ex, "动画帧执行失败", LogBehavior.AlertThenCrash)
-            End Try
-        End Sub, "Animation", ThreadPriority.AboveNormal)
+        If AniGroups.Count > 0 Then StartRendering()
     End Sub
 
-    ''' <summary>
-    ''' 动画定时器事件。
-    ''' </summary>
+    Private RenderingSubscribed As Boolean
+    Private RenderFallback As Threading.DispatcherTimer
+    Private LastRenderTime As TimeSpan = TimeSpan.MinValue
+    Private Sub StartRendering()
+        If RenderingSubscribed Then Return
+        RenderingSubscribed = True
+        LastRenderTime = TimeSpan.MinValue
+        AddHandler CompositionTarget.Rendering, AddressOf RenderFrame
+        If RenderFallback Is Nothing Then
+            RenderFallback = New Threading.DispatcherTimer(Threading.DispatcherPriority.Background) With {.Interval = TimeSpan.FromMilliseconds(100)}
+            AddHandler RenderFallback.Tick, Sub()
+                                                'Minimized/hidden windows may not receive render events; delayed actions must still finish.
+                                                If GetTimeMs() - AniLastTick >= 100 Then AdvanceFrame()
+                                            End Sub
+        End If
+        RenderFallback.Start()
+    End Sub
+    Private Sub StopRendering()
+        If Not RenderingSubscribed Then Return
+        RemoveHandler CompositionTarget.Rendering, AddressOf RenderFrame
+        RenderFallback?.Stop()
+        RenderingSubscribed = False
+    End Sub
+    Private Sub RenderFrame(Sender As Object, e As EventArgs)
+        If AniGroups.Count = 0 OrElse IsProgramEnding Then
+            StopRendering()
+            Return
+        End If
+        Dim RenderTime = DirectCast(e, RenderingEventArgs).RenderingTime
+        If RenderTime = LastRenderTime Then Return
+        LastRenderTime = RenderTime
+        AdvanceFrame()
+    End Sub
+    Private Sub AdvanceFrame()
+        If AniGroups.Count = 0 OrElse IsProgramEnding Then
+            StopRendering()
+            Return
+        End If
+        Dim NowTick = GetTimeMs()
+        Dim Delta = (NowTick - AniLastTick).Clamp(0, 100000)
+        AniLastTick = NowTick
+        AniTimer(Delta)
+        If AniGroups.Count = 0 Then StopRendering()
+        If ModeDebug Then
+            AniFPSCounter += 1
+            Dim Elapsed = NowTick - AniFPSTimer
+            If Elapsed >= 500 Then
+                AniFPS = CInt(AniFPSCounter * 1000L / Elapsed)
+                AniFPSCounter = 0
+                AniFPSTimer = NowTick
+            End If
+        End If
+    End Sub
+
     Public Sub AniTimer(DeltaTick As Double)
         Try
             If DeltaTick / AniSpeed > 100 Then Logger.Info($"两个动画帧间隔 {DeltaTick} ms")
-            Dim i As Integer = -1
-            '循环每个动画组
-            Do While i + 1 < AniGroups.Count
-                i += 1
-                '初始化
-                Dim Entry As AniGroupEntry = AniGroups.Values(i)
-                If Entry.StartTick > AniLastTick Then Continue Do '跳过本刻之后开始的动画
+            'A frame snapshot lets callbacks replace or cancel groups without quadratic dictionary indexing.
+            For Each Pair In AniGroups.ToArray()
+                Dim Entry = Pair.Value
+                Dim CurrentEntry As AniGroupEntry = Nothing
+                If Not AniGroups.TryGetValue(Pair.Key, CurrentEntry) OrElse CurrentEntry.Uuid <> Entry.Uuid Then Continue For
+                If Entry.StartTick > AniLastTick Then Continue For '跳过本刻之后开始的动画
                 Dim CanRemoveAfter = True '是否应该去除“之后”标记
                 Dim ii = 0
 
@@ -876,7 +840,6 @@ Sleeper:
                         '执行动画
                         If Anim.TimeFinished > 0 Then
                             Anim = AniRun(Anim)
-                            AniCount += 1
                         End If
                         '如果当前动画已执行完毕
                         If Anim.TimeFinished >= Anim.TimeTotal Then
@@ -904,19 +867,10 @@ Sleeper:
 NextAni:
                 Loop
 
-                '如果当前动画组都执行完毕则删除
-                If Not Entry.Data.Any() Then
-                    '为了避免新添加的动画影响顺序，不能 RemoveAt(i)
-                    '为了允许动画在执行中添加同名动画组，不能按名字移除
-                    For Current = 0 To AniGroups.Count - 1
-                        If AniGroups.ElementAt(Current).Value.Uuid = Entry.Uuid Then
-                            AniGroups.Remove(AniGroups.ElementAt(Current).Key)
-                            Exit For
-                        End If
-                    Next
-                    i -= 1
+                If Entry.Data.Count = 0 AndAlso AniGroups.TryGetValue(Pair.Key, CurrentEntry) AndAlso CurrentEntry.Uuid = Entry.Uuid Then
+                    AniGroups.Remove(Pair.Key)
                 End If
-            Loop
+            Next
 
         Catch ex As Exception
             Logger.Error(ex, "动画刻执行失败", LogBehavior.Toast)
