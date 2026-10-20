@@ -256,7 +256,9 @@ Retry:
                 CancelToken.CancelAfter(Timeout)
                 Dim ClonedRequest As HttpRequestMessage = Request.Clone() 'HttpRequestMessage 只能发送一次，重试时需要克隆一个新的
                 Try
-                    Response = If(CurseForgeAccess.IsAuthenticatedHost(ClonedRequest.RequestUri), AuthenticatedResourceClient, RequestClient).SendAsync(ClonedRequest, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token).GetResultWithTimeout(CancelToken, Timeout)
+                    Response = If(CurseForgeAccess.IsAuthenticatedHost(ClonedRequest.RequestUri),
+                        CurseForgeAccess.SendAsync(AuthenticatedResourceClient, ClonedRequest, CancelToken.Token),
+                        RequestClient.SendAsync(ClonedRequest, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token)).GetResultWithTimeout(CancelToken, Timeout)
                 Finally
                     ClonedRequest.Dispose()
                 End Try
@@ -299,7 +301,7 @@ Retry:
     Private RequestClient As HttpClient = Nothing
     Private ReadOnly AuthenticatedResourceClient As New HttpClient(New HttpClientHandler With {
         .AutomaticDecompression = DecompressionMethods.Deflate Or DecompressionMethods.GZip,
-        .UseCookies = False, .AllowAutoRedirect = True
+        .UseCookies = False, .AllowAutoRedirect = False
     }) With {.Timeout = Timeout.InfiniteTimeSpan}
     Private RequestClientLock As New Object
 
@@ -922,7 +924,9 @@ StartThread:
                 CancelToken = New CancellationTokenSource(Timeout)
                 If Not Th.IsFirstThread Then HttpRequest.Headers.Range = New Headers.RangeHeaderValue(Th.DownloadStart, Nothing)
                 Dim ContentLength As Long = 0
-                Response = If(CurseForgeAccess.IsAuthenticatedHost(HttpRequest.RequestUri), AuthenticatedResourceClient, ThreadClient).SendAsync(HttpRequest, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token).GetResultWithTimeout(CancelToken, Timeout)
+                Response = If(CurseForgeAccess.IsAuthenticatedHost(HttpRequest.RequestUri),
+                    CurseForgeAccess.SendAsync(AuthenticatedResourceClient, HttpRequest, CancelToken.Token),
+                    ThreadClient.SendAsync(HttpRequest, HttpCompletionOption.ResponseHeadersRead, CancelToken.Token)).GetResultWithTimeout(CancelToken, Timeout)
                 If Not Response.IsSuccessStatusCode Then '状态码检查
                     Throw New HttpRequestCodeException($"错误码 {Response.StatusCode} ({CInt(Response.StatusCode)})，{Th.Source.Url}", Response.StatusCode, Nothing)
                 End If

@@ -423,77 +423,23 @@ Finish:
         End If
     End Sub
 
-    '离线皮肤
     Public Shared SkinLegacy As New LoaderTask(Of (String, String), String)("Loader Skin Legacy", AddressOf SkinLegacyLoad, AddressOf SkinLegacyInput, ThreadPriority.AboveNormal)
     Private Shared Function SkinLegacyInput() As (String, String)
-        '根据类型判断输入
-        Dim Type As Integer = Settings.Get(Of Integer)("LaunchSkinType")
-        Select Case Type
-            Case 0
-                If FrmLoginLegacy?.IsReloaded Then
-                    Return ("0", If(FrmLoginLegacy.ComboName.Text.Trim, ""))
-                ElseIf Settings.Get(Of String)("LoginLegacyName") = "" Then
-                    Return ("0", "")
-                Else
-                    Return ("0", If(Settings.Get(Of String)("LoginLegacyName").ToString.BeforeFirst("¨"), ""))
-                End If
-            Case 3
-                Return ("3", Settings.Get(Of String)("LaunchSkinID"))
-            Case Else
-                Return (Type.ToString, "")
-        End Select
+        If FrmLoginLegacy?.IsReloaded Then
+            Return ("0", If(FrmLoginLegacy.ComboName.Text.Trim, ""))
+        ElseIf Settings.Get(Of String)("LoginLegacyName") = "" Then
+            Return ("0", "")
+        Else
+            Return ("0", If(Settings.Get(Of String)("LoginLegacyName").ToString.BeforeFirst("¨"), ""))
+        End If
     End Function
     Private Shared Sub SkinLegacyLoad(Data As LoaderTask(Of (String, String), String))
-        '清空已有皮肤
         RunInUi(Sub() If FrmLoginLegacy IsNot Nothing AndAlso FrmLoginLegacy.Skin IsNot Nothing Then FrmLoginLegacy.Skin.Clear())
-        '获取 Url
-        Select Case CInt(Data.Input.Item1)
-            Case 0 '默认
-                Data.Output = PathImage & "Skins/" & McSkinSex(McLoginLegacyUuid(Data.Input.Item2)) & ".png"
-            Case 1 'Steve
-UseDefault:
-                Data.Output = PathImage & "Skins/Steve.png"
-            Case 2 'Alex
-                Data.Output = PathImage & "Skins/Alex.png"
-            Case 3 '正版
-                Dim ID As String = Data.Input.Item2
-                Try
-                    If ID.Count < 2 Then
-                        Data.Output = PathImage & "Skins/Steve.png"
-                    Else
-                        Dim Result As String = McLoginMojangUuid(ID, True)
-                        If Data.IsCanceled Then Throw New OperationCanceledException("当前任务已取消：" & ID)
-                        Result = McSkinGetAddress(Result, "Mojang")
-                        If Data.IsCanceled Then Throw New OperationCanceledException("当前任务已取消：" & ID)
-                        Result = McSkinDownload(Result)
-                        If Data.IsCanceled Then Throw New OperationCanceledException("当前任务已取消：" & ID)
-                        Data.Output = Result
-                    End If
-                Catch ex As Exception
-                    If ex.IsCanceled Then
-                        Data.Output = ""
-                        Return
-                    ElseIf ex.GetDisplay(False).Contains("(429)") Then
-                        Data.Output = PathImage & "Skins/" & McSkinSex(McLoginLegacyUuid(ID)) & ".png"
-                        Logger.Info($"获取离线登录使用的正版皮肤失败（{ID}）：获取皮肤太过频繁，请 5 分钟后再试！")
-                    Else
-                        Data.Output = PathImage & "Skins/" & McSkinSex(McLoginLegacyUuid(ID)) & ".png"
-                        Logger.Warn(ex, $"获取离线登录使用的正版皮肤失败（{ID}）")
-                    End If
-                End Try
-            Case 4 '自定义
-                If Not FileUtils.Exists(Paths.AppDataThenName & "CustomSkin.png") Then
-                    Hint("未找到离线皮肤自定义文件，可能它已被删除。PCL 将使用默认的 Steve 皮肤！")
-                    Settings.Set("LaunchSkinType", 1)
-                    GoTo UseDefault
-                End If
-                Data.Output = Paths.AppDataThenName & "CustomSkin.png"
-        End Select
-        '刷新显示
+        Data.Output = PathImage & "Skins/" & McSkinSex(McLoginLegacyUuid(Data.Input.Item2)) & ".png"
         If FrmLoginLegacy IsNot Nothing Then
             RunInUi(AddressOf FrmLoginLegacy.Skin.Load)
-        ElseIf Not Data.IsCanceled Then '如果已经中断，Input 也被清空，就不会再次刷新
-            Data.Input = Nothing '清空输入，因为皮肤实际上没有被渲染，如果不清空切换到页面的 Start 会由于输入相同而不渲染
+        ElseIf Not Data.IsCanceled Then
+            Data.Input = Nothing
         End If
     End Sub
 
@@ -635,11 +581,7 @@ Finish:
             CurrentState = 0
         Else
             If McInstanceSelected Is Nothing Then
-                If False AndAlso True Then
-                    CurrentState = 1
-                Else
-                    CurrentState = 2
-                End If
+                CurrentState = 2
             Else
                 CurrentState = 3
             End If
@@ -657,13 +599,6 @@ Finish:
                 FrmLaunchLeft.LabVersion.Text = "正在加载中，请稍候"
                 FrmLaunchLeft.BtnVersion.IsEnabled = False
                 FrmLaunchLeft.BtnMore.Visibility = Visibility.Collapsed
-            Case 1
-                Logger.Info("启动按钮：无 Minecraft 版本，下载已禁用")
-                FrmLaunchLeft.BtnLaunch.Text = "启动游戏"
-                FrmLaunchLeft.BtnLaunch.IsEnabled = False
-                FrmLaunchLeft.LabVersion.Text = "未找到可用的游戏版本"
-                FrmLaunchLeft.BtnVersion.IsEnabled = True
-                FrmLaunchLeft.BtnMore.Visibility = Visibility.Collapsed
             Case 2
                 Logger.Info("启动按钮：无 Minecraft 版本，要求下载")
                 FrmLaunchLeft.BtnLaunch.Text = "下载游戏"
@@ -677,11 +612,9 @@ Finish:
                 FrmLaunchLeft.BtnVersion.IsEnabled = True
                 FrmLaunchLeft.BtnLaunch.IsEnabled = True
                 FrmLaunchLeft.LabVersion.Text = McInstanceSelected.Name
-                'FrmLaunchLeft.BtnMore.Visibility = Visibility.Visible '由功能隐藏设置修改
         End Select
 ExitRefresh:
-        '功能隐藏
-        FrmLaunchLeft.BtnVersion.Visibility = If(True AndAlso False, Visibility.Collapsed, Visibility.Visible)
+        FrmLaunchLeft.BtnVersion.Visibility = Visibility.Visible
         If CurrentState = 3 Then
             FrmLaunchLeft.BtnMore.Visibility = FrmLaunchLeft.BtnVersion.Visibility
         End If

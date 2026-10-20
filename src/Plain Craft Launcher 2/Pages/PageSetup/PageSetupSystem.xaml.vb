@@ -26,12 +26,15 @@ Public Class PageSetupSystem
         Dim HasEnvironmentKey = Not String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("PCL_CURSEFORGE_API_KEY"))
         Dim SavedKey = CurseForgeAccess.GetApiKey()
         If HasEnvironmentKey Then
+            LabCurseForgeStatus.Visibility = Visibility.Visible
             LabCurseForgeStatus.Text = "正在使用环境变量中的 Key。下面的输入框不会改掉它。"
         ElseIf String.IsNullOrWhiteSpace(SavedKey) Then
+            LabCurseForgeStatus.Visibility = Visibility.Visible
             LabCurseForgeStatus.Text = "尚未配置。官方接口没有 Key 会返回 403；备用镜像不可用时就连不上 CurseForge。"
             PasswordCurseForge.Clear()
         Else
-            LabCurseForgeStatus.Text = "已保存。输入框里的圆点就是这把 Key，不会显示明文。"
+            LabCurseForgeStatus.Text = ""
+            LabCurseForgeStatus.Visibility = Visibility.Collapsed
             PasswordCurseForge.Password = SavedKey
         End If
     End Sub

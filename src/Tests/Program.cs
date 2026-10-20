@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http;
@@ -38,6 +40,12 @@ internal static class Program {
             System.Globalization.CultureInfo.CurrentUICulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
             var app = (PCL.Application)Activator.CreateInstance(typeof(PCL.Application), true)!;
             app.InitializeComponent();
+            Run("Embedded resolver does not return a parent DLL for satellite resources", () => {
+                try {
+                    Assembly.Load("Newtonsoft.Json.resources, Culture=zh-CN");
+                    throw new Exception("A missing satellite resource resolved to the main assembly");
+                } catch (FileNotFoundException) { }
+            });
             Run("Build configuration marker is correct", () => {
                 string config = typeof(Program).Assembly.GetCustomAttribute<AssemblyConfigurationAttribute>()!.Configuration;
                 int expected = config == "Debug" ? 100 : config == "Release" ? 50 : 0;
@@ -122,6 +130,65 @@ internal static class Program {
                 catch (InvalidDataException) { }
                 Check(!File.Exists(Path.Combine(temp, "outside.txt")), "ZIP escaped the target directory");
             });
+            Run("G1 policy keeps conservative Java 17 defaults and gates legacy options", () => {
+                var normal = PCL.LaunchJvmPolicy.G1Arguments(new Version(17, 0, 20), false, false, true);
+                Check(normal.SequenceEqual(new[] { "-XX:+UseG1GC", "-XX:+PerfDisableSharedMem" }), "Unexpected default GC tuning");
+                var tuned = PCL.LaunchJvmPolicy.G1Arguments(new Version(17, 0, 20), true, true, true);
+                Check(tuned.Contains("-XX:MaxGCPauseMillis=100") && tuned.Contains("-XX:+UseStringDeduplication"), "Optional tuning missing");
+                Check(!tuned.Any(a => a.Contains("G1HeapRegionSize") || a.Contains("G1NewSizePercent")), "Heap layout was forced");
+                Check(!PCL.LaunchJvmPolicy.G1Arguments(new Version(7, 0, 80), false, true, false).Contains("-XX:+UseStringDeduplication"), "Unsupported Java 7 option");
+                Check(!PCL.LaunchJvmPolicy.G1Arguments(new Version(8, 0, 19), false, true, false).Contains("-XX:+UseStringDeduplication"), "Unsupported Java 8 update");
+                Check(!Convert.ToBoolean(PCL.Settings.GetDefault("LaunchOptG1Tune")) && !Convert.ToBoolean(PCL.Settings.GetDefault("LaunchOptPreTouch")), "Aggressive tuning remains enabled by default");
+            });
+            Run("Forge 1.20.1 accepts Java 17 and rejects Java 8", () => {
+                var version = new PCLCS.McVersion("1.20.1");
+                version.ModLoaderVersions[PCLCS.ModLoaders.Forge] = "47.3.0";
+                var instance = new PCL.ModMinecraft.McInstance(Path.Combine(temp, "forge-1.20.1")) {
+                    Version = version,
+                    JsonObject = Newtonsoft.Json.Linq.JObject.Parse("{\"id\":\"forge-1.20.1\",\"javaVersion\":{\"majorVersion\":17}}")
+                };
+                var requirement = PCL.ModJava.GetJavaRequirement(instance).Range;
+                Check(requirement.Contains(new Version(17, 0, 20)), "Java 17 was rejected");
+                Check(!requirement.Contains(new Version(8, 0, 450)) && !requirement.Contains(new Version(22, 0)), "Incompatible Java accepted");
+            });
+            Run("CurseForge key is encrypted, configurable and scoped to HTTPS official hosts", () => {
+                string? savedEnv = Environment.GetEnvironmentVariable("PCL_CURSEFORGE_API_KEY");
+                try {
+                    Environment.SetEnvironmentVariable("PCL_CURSEFORGE_API_KEY", null);
+                    PCL.Settings.Set("ToolCurseForgeApiKey", "test-local-key");
+                    using var key = Registry.CurrentUser.OpenSubKey("Software\\" + profile)!;
+                    string stored = (string)key.GetValue("ToolCurseForgeApiKey")!;
+                    Check(stored.StartsWith("dpapi:v1:") && !stored.Contains("test-local-key"), "API Key stored in plaintext");
+                    Check(PCL.CurseForgeAccess.GetApiKey() == "test-local-key", "Saved key unavailable");
+                    Environment.SetEnvironmentVariable("PCL_CURSEFORGE_API_KEY", "test-environment-key");
+                    foreach (string host in new[] { "api.curseforge.com", "edge.forgecdn.net", "api.curseforge.com.example.org", "modrinth.com" }) {
+                        using var request = new HttpRequestMessage(HttpMethod.Get, "https://" + host + "/test");
+                        PCL.CurseForgeAccess.ApplyHeaders(request.RequestUri, request);
+                        Check(request.Headers.Contains("x-api-key") == (host == "api.curseforge.com" || host == "edge.forgecdn.net"), "API key host scope error");
+                    }
+                    using var insecure = new HttpRequestMessage(HttpMethod.Get, "http://api.curseforge.com/test");
+                    try { PCL.CurseForgeAccess.ApplyHeaders(insecure.RequestUri, insecure); throw new Exception("HTTP accepted"); }
+                    catch (InvalidOperationException) { }
+                    PCL.Settings.Set("ToolCurseForgeApiKey", "");
+                } finally { Environment.SetEnvironmentVariable("PCL_CURSEFORGE_API_KEY", savedEnv); }
+            });
+            Run("CurseForge redirects do not leak API keys or downgrade HTTPS", () => {
+                string? savedEnv = Environment.GetEnvironmentVariable("PCL_CURSEFORGE_API_KEY");
+                Environment.SetEnvironmentVariable("PCL_CURSEFORGE_API_KEY", "test-only-key");
+                try {
+                    using var handler = new RedirectHandler("https://cdn.example.org/file.jar");
+                    using var client = new HttpClient(handler);
+                    using var request = new HttpRequestMessage(HttpMethod.Get, "https://edge.forgecdn.net/file.jar");
+                    using var response = OnWorker(() => PCL.CurseForgeAccess.SendAsync(client, request, CancellationToken.None).GetAwaiter().GetResult());
+                    Check(response.IsSuccessStatusCode && handler.KeySeen.SequenceEqual(new[] { true, false }), "Key leaked across a redirect");
+                    using var downgrade = new RedirectHandler("http://cdn.example.org/file.jar");
+                    using var downgradeClient = new HttpClient(downgrade);
+                    using var downgradeRequest = new HttpRequestMessage(HttpMethod.Get, "https://edge.forgecdn.net/file.jar");
+                    try { OnWorker(() => PCL.CurseForgeAccess.SendAsync(downgradeClient, downgradeRequest, CancellationToken.None).GetAwaiter().GetResult()); throw new Exception("HTTPS downgrade accepted"); }
+                    catch (HttpRequestException) { }
+                    Check(downgrade.KeySeen.Count == 1, "An insecure redirect was followed");
+                } finally { Environment.SetEnvironmentVariable("PCL_CURSEFORGE_API_KEY", savedEnv); }
+            });
             Run("Removed pages, routes, events and settings are absent", () => {
                 var assembly = typeof(PCL.Application).Assembly;
                 Check(Array.TrueForAll(assembly.GetTypes(), t => !t.Name.StartsWith("PageOther") && t.Name != "HelpEntry" && t.Name != "PageSetupUI"), "Removed page is still compiled");
@@ -144,8 +211,10 @@ internal static class Program {
                 var overall = new PCL.PageInstanceOverall();
                 Check(overall.FindName("PanDisplay") == null, "Instance personalization card remains");
                 _ = new PCL.PageLaunchRight();
-                _ = new PCL.PageSetupLaunch();
-                _ = new PCL.PageInstanceSetup();
+                var launch = new PCL.PageSetupLaunch();
+                var instanceSetup = new PCL.PageInstanceSetup();
+                foreach (var control in new System.Windows.DependencyObject[] { launch, instanceSetup, page })
+                    CheckSettingKeys(control);
                 _ = new PCL.PageInstanceExport();
                 app.Shutdown();
             });
@@ -158,6 +227,23 @@ internal static class Program {
             // The randomized profile belongs only to this test process.
             if (profile.StartsWith("PCL2Smoke_") && profile.Length == 42)
                 Registry.CurrentUser.DeleteSubKeyTree("Software\\" + profile, false);
+        }
+    }
+
+    private static void CheckSettingKeys(System.Windows.DependencyObject control) {
+        string key = PCL.SettingService.GetKey(control);
+        Check(key == null || PCL.Settings.Entries.ContainsKey(key), "XAML references an unknown setting: " + key);
+        foreach (object child in System.Windows.LogicalTreeHelper.GetChildren(control))
+            if (child is System.Windows.DependencyObject dependency) CheckSettingKeys(dependency);
+    }
+
+    private sealed class RedirectHandler(string destination) : HttpMessageHandler {
+        internal readonly List<bool> KeySeen = [];
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) {
+            KeySeen.Add(request.Headers.Contains("x-api-key"));
+            var response = new HttpResponseMessage(KeySeen.Count == 1 ? HttpStatusCode.Redirect : HttpStatusCode.OK);
+            if (KeySeen.Count == 1) response.Headers.Location = new Uri(destination);
+            return Task.FromResult(response);
         }
     }
 

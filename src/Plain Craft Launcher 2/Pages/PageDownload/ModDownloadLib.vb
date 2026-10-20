@@ -370,7 +370,7 @@ pause"
         If Java Is Nothing Then Throw New OperationCanceledException
         '添加 Java Wrapper 作为主 Jar
         Dim Arguments As String
-        If UseJavaWrapper AndAlso Not Settings.Get(Of Boolean)("LaunchAdvanceDisableJLW") Then
+        If UseJavaWrapper AndAlso Settings.Get(Of Boolean)("LaunchOptFixUnicodePath") AndAlso Not Settings.Get(Of Boolean)("LaunchAdvanceDisableJLW") Then
             Arguments = $"-Doolloo.jlw.tmpdir=""{PathUtils.RemoveSlashSuffix(PathPure.Value)}"" -Duser.home=""{PathUtils.RemoveSlashSuffix(BaseMcFolderHome)}"" -cp ""{Target}"" -jar ""{LaunchUtils.ExtractPatch("Launch\JavaWrapper.jar", PathPure.Value)}"" optifine.Installer"
         Else
             Arguments = $"-Duser.home=""{PathUtils.RemoveSlashSuffix(BaseMcFolderHome)}"" -cp ""{Target}"" optifine.Installer"
@@ -934,7 +934,7 @@ Retry:
         If Java Is Nothing Then Throw New OperationCanceledException
         '添加 Java Wrapper 作为主 Jar
         Dim Arguments As String
-        If UseJavaWrapper AndAlso Not Settings.Get(Of Boolean)("LaunchAdvanceDisableJLW") Then
+        If UseJavaWrapper AndAlso Settings.Get(Of Boolean)("LaunchOptFixUnicodePath") AndAlso Not Settings.Get(Of Boolean)("LaunchAdvanceDisableJLW") Then
             Arguments = $"-Doolloo.jlw.tmpdir=""{PathUtils.RemoveSlashSuffix(PathPure.Value)}"" -cp ""{PathTemp}Cache\forge_installer.jar;{Target}"" -jar ""{LaunchUtils.ExtractPatch("Launch\JavaWrapper.jar", PathPure.Value)}"" com.bangbang93.ForgeInstaller ""{McFolder}"
         Else
             Arguments = $"-cp ""{PathTemp}Cache\forge_installer.jar;{Target}"" com.bangbang93.ForgeInstaller ""{McFolder}"

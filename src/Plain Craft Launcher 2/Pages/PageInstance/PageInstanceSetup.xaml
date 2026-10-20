@@ -229,10 +229,10 @@
                     <TextBlock VerticalAlignment="Center" Grid.Row="4" HorizontalAlignment="Left" Text="内存管理" Margin="0,0,25,0" />
                     <local:MyComboBox local:SettingService.Key="VersionAdvanceGC" Grid.Row="4" Grid.ColumnSpan="2" Grid.Column="1">
                         <local:MyComboBoxItem Content="跟随全局设置" />
-                        <local:MyComboBoxItem Content="尽量使用 ZGC" ToolTip="在 Java 21+ 使用分代 ZGC，20~15 使用非分代的 ZGC，14- 使用 G1GC。&#xa;ZGC 的内存占用比 G1GC 更高，不过在回收内存时不会导致卡顿。&#xa;覆盖 “Java 虚拟机参数” 设置中的 GC 相关参数。" />
-                        <local:MyComboBoxItem Content="尽量使用分代 ZGC" ToolTip="在 Java 21+ 使用分代 ZGC，20- 使用 G1GC。&#xa;ZGC 的内存占用比 G1GC 更高，不过在回收内存时不会导致卡顿。&#xa;覆盖 “Java 虚拟机参数” 设置中的 GC 相关参数。" />
-                        <local:MyComboBoxItem Content="标准 G1GC" ToolTip="总是使用 G1GC，附带 Mojang 官方的优化参数。&#xa;G1GC 的内存占用比 ZGC 更低，但在回收内存时会导致突然的卡顿。&#xa;覆盖 “Java 虚拟机参数” 设置中的 GC 相关参数。" />
-                        <local:MyComboBoxItem Content="调优 G1GC" local:SettingService.Value="5" ToolTip="总是使用 G1GC，附带 PCL 调优过的优化参数。&#xa;G1GC 的内存占用比 ZGC 更低，但在回收内存时会导致突然的卡顿。&#xa;覆盖 “Java 虚拟机参数” 设置中的 GC 相关参数。" />
+                        <local:MyComboBoxItem Content="尽量使用 ZGC" ToolTip="在 Java 21+ 使用分代 ZGC，20~15 使用非分代的 ZGC，14- 使用 G1GC。&#xa;ZGC 以降低 GC 停顿为目标，可能增加 CPU 和内存开销；仍可能出现游戏卡顿。Forge 1.20.1 建议先使用 Java 17 + G1。&#xa;覆盖 “Java 虚拟机参数” 设置中的 GC 相关参数。" />
+                        <local:MyComboBoxItem Content="尽量使用分代 ZGC" ToolTip="在 Java 21+ 使用分代 ZGC，20- 使用 G1GC。&#xa;ZGC 以降低 GC 停顿为目标，可能增加 CPU 和内存开销；仍可能出现游戏卡顿。Forge 1.20.1 建议先使用 Java 17 + G1。&#xa;覆盖 “Java 虚拟机参数” 设置中的 GC 相关参数。" />
+                        <local:MyComboBoxItem Content="标准 G1GC" ToolTip="指定 G1GC，堆布局等参数由 Java 自动决定。&#xa;G1 通常是 Java 17 的默认选择，适合 Forge 1.20.1；实际表现取决于模组与内存压力。&#xa;覆盖 “Java 虚拟机参数” 设置中的 GC 相关参数。" />
+                        <local:MyComboBoxItem Content="调优 G1GC" local:SettingService.Value="5" ToolTip="指定 G1GC，并将 GC 停顿软目标设为 100 毫秒；不保证性能提升。&#xa;G1 通常是 Java 17 的默认选择，适合 Forge 1.20.1；实际表现取决于模组与内存压力。&#xa;覆盖 “Java 虚拟机参数” 设置中的 GC 相关参数。" />
                         <local:MyComboBoxItem Content="不指定（可自定义）" local:SettingService.Value="4" ToolTip="不自动添加 GC 参数。&#xa;仅当选择此项时，你可以在 “Java 虚拟机参数” 设置中手动添加 GC 参数。" />
                     </local:MyComboBox>
                     <TextBlock Grid.Row="6" VerticalAlignment="Center" HorizontalAlignment="Left" Text="启动前执行命令" Margin="0,0,25,3" />

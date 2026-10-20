@@ -10,3 +10,6 @@
 *.local.json
 TestResults/
 PCL-YYH.exe
+/.minecraft/
+/PCL/
+/PCL2Local/

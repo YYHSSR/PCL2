@@ -205,7 +205,8 @@ RetryCacheCheck:
         Static LoadedAssemblies As New ConcurrentDictionary(Of String, Lazy(Of Assembly))(StringComparer.Ordinal) '缓存
         AddHandler AppDomain.CurrentDomain.AssemblyResolve,
         Function(sender As Object, Args As ResolveEventArgs) As Assembly
-            Dim Prefix As String = Prefixes.FirstOrDefault(Function(p) Args.Name.StartsWith(p, StringComparison.Ordinal))
+            Dim RequestedName = New AssemblyName(Args.Name).Name
+            Dim Prefix As String = Prefixes.FirstOrDefault(Function(p) p.Equals(RequestedName, StringComparison.OrdinalIgnoreCase))
             If Prefix Is Nothing Then Return Nothing
             Dim LazyAssembly = LoadedAssemblies.GetOrAdd(Prefix, Function(p) New Lazy(Of Assembly)(
             Function()

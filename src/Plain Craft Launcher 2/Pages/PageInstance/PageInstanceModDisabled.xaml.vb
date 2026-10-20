@@ -9,7 +9,7 @@ Public Class PageInstanceModDisabled
     End Sub
 
     Public Sub BtnDownload_Loaded() Handles BtnDownload.Loaded
-        Dim NewVisibility = If((False AndAlso True) OrElse If(FrmSelectRight Is Nothing, False, FrmSelectRight.ShowHidden), Visibility.Collapsed, Visibility.Visible)
+        Dim NewVisibility = If(If(FrmSelectRight Is Nothing, False, FrmSelectRight.ShowHidden), Visibility.Collapsed, Visibility.Visible)
         If BtnDownload.Visibility <> NewVisibility Then
             BtnDownload.Visibility = NewVisibility
             PanMain.TriggerForceResize()

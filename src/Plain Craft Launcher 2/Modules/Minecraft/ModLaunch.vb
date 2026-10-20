@@ -1,5 +1,7 @@
 Public Module ModLaunch
 
+    Public Const LegacyDefaultJvmArgs As String = "-XX:-OmitStackTraceInFastThrow -Djdk.lang.Process.allowAmbiguousCommands=True -Dfml.ignorePatchDiscrepancies=True"
+
 #Region "开始"
 
     Public CurrentLaunchOptions As McLaunchOptions = Nothing
@@ -311,20 +313,12 @@ NextInner:
         ''' 登录用户名。
         ''' </summary>
         Public UserName As String
-        ''' <summary>
-        ''' 皮肤种类。
-        ''' </summary>
-        Public SkinType As Integer
-        ''' <summary>
-        ''' 若采用正版皮肤，则为该皮肤名。
-        ''' </summary>
-        Public SkinName As String
 
         Public Sub New()
             Type = McLoginType.Legacy
         End Sub
         Public Overrides Function GetHashCode() As Integer
-            Return (UserName & SkinType & SkinName & Type).GetStableHashCode() Mod Integer.MaxValue
+            Return (UserName & Type).GetStableHashCode() Mod Integer.MaxValue
         End Function
     End Class
 
@@ -626,7 +620,7 @@ LoginFinish:
         Data.Progress = 0.1
         With Data.Output
             .Name = Input.UserName
-            .Uuid = McLoginLegacyUuidWithCustomSkin(Input.UserName, Input.SkinType, Input.SkinName)
+            .Uuid = McLoginLegacyUuid(Input.UserName)
             .Type = "Legacy"
         End With
         '将结果扩展到所有项目中
@@ -1037,45 +1031,6 @@ Retry:
         Return (UUID, UserName, Result)
     End Function
 
-    '返回符合离线皮肤设置的 UUID
-    Private Function McLoginLegacyUuidWithCustomSkin(UserName As String, SkinType As Integer, SkinName As String) As String
-        Dim Uuid As String = McLoginLegacyUuid(UserName)
-        '根据离线皮肤获取实际使用的 Uuid
-        Select Case SkinType
-            Case 0
-                '默认，不需要处理
-            Case 1
-                'Steve
-                Do Until McSkinSex(Uuid) = "Steve"
-                    If Uuid.EndsWithF("FFFFF") Then Uuid = Uuid.Substring(0, 27) & "00000"
-                    Uuid = Uuid.Substring(0, 27) & (Long.Parse(Uuid.Substring(27), Globalization.NumberStyles.AllowHexSpecifier) + 1).ToString("X").PadLeft(5, "0")
-                Loop
-            Case 2
-                'Alex
-                Do Until McSkinSex(Uuid) = "Alex"
-                    If Uuid.EndsWithF("FFFFF") Then Uuid = Uuid.Substring(0, 27) & "00000"
-                    Uuid = Uuid.Substring(0, 27) & (Long.Parse(Uuid.Substring(27), Globalization.NumberStyles.AllowHexSpecifier) + 1).ToString("X").PadLeft(5, "0")
-                Loop
-            Case 3
-                '使用正版用户名
-                Try
-                    If SkinName <> "" AndAlso
-                        McInstanceSelected IsNot Nothing AndAlso McInstanceSelected.Version.Vanilla.Major < 20 Then '1.20+ 或快照版不能使用该项（#3746）
-                        Logger.Info($"由于离线皮肤设置，使用正版 UUID：{SkinName}")
-                        Uuid = McLoginMojangUuid(SkinName, False)
-                    End If
-                Catch ex As Exception
-                    Logger.Error(ex, "皮肤信息获取失败，游戏将以无皮肤的方式启动", LogBehavior.Toast)
-                End Try
-            Case 4
-                '自定义
-                Do Until McSkinSex(Uuid) = If(Settings.Get(Of Boolean)("LaunchSkinSlim"), "Alex", "Steve")
-                    If Uuid.EndsWithF("FFFFF") Then Uuid = Uuid.Substring(0, 27) & "00000"
-                    Uuid = Uuid.Substring(0, 27) & (Long.Parse(Uuid.Substring(27), Globalization.NumberStyles.AllowHexSpecifier) + 1).ToString("X").PadLeft(5, "0")
-                Loop
-        End Select
-        Return Uuid
-    End Function
     '根据用户名返回对应 UUID，需要多线程
     Public Function McLoginMojangUuid(Name As String, ThrowOnNotFound As Boolean)
         If Name.Trim.Length = 0 Then Return New String("0"c, 32)
@@ -1202,8 +1157,15 @@ NextInstance:
 
         '设置里自定义的参数
         Dim CustomArg As String = Settings.Get(Of String)("VersionAdvanceJvm", Instance:=McInstanceSelected)
-        If CustomArg = "" Then CustomArg = Settings.Get(Of String)("LaunchAdvanceJvm")
+        Dim UsesGlobalJvm = CustomArg = ""
+        If UsesGlobalJvm Then CustomArg = Settings.Get(Of String)("LaunchAdvanceJvm")
+        If CustomArg = LegacyDefaultJvmArgs Then
+            CustomArg = ""
+            Settings.Set(If(UsesGlobalJvm, "LaunchAdvanceJvm", "VersionAdvanceJvm"), "", Instance:=McInstanceSelected)
+        End If
         If CustomArg <> "" Then CustomArg = ArgumentReplace(CustomArg)
+        CustomArg &= " -XX:-OmitStackTraceInFastThrow -Djdk.lang.Process.allowAmbiguousCommands=True"
+        If Settings.Get(Of Boolean)("LaunchOptPreTouch") Then CustomArg &= " -XX:+AlwaysPreTouch"
 
         '重新分割字符串并去重
         Args = DeduplicateJavaArguments(SplitJavaArguments(Args.Join(" "c).Replace("McEmu= ", "McEmu=") & " " & CustomArg).ToList, True)
@@ -1230,7 +1192,7 @@ NextInstance:
         'JLW
         '非 GBK 编码下命令行参数乱码的问题（JDK-8272352）
         Dim UseJLW As Boolean =
-            Not Settings.Get(Of Boolean)("LaunchAdvanceDisableJLW") AndAlso Not Settings.Get(Of Boolean)("VersionAdvanceDisableJLW", McInstanceSelected) AndAlso
+            Settings.Get(Of Boolean)("LaunchOptFixUnicodePath") AndAlso Not Settings.Get(Of Boolean)("LaunchAdvanceDisableJLW") AndAlso Not Settings.Get(Of Boolean)("VersionAdvanceDisableJLW", McInstanceSelected) AndAlso
             Not IsGBKEncoding '即使游戏文件夹名称不含非 ASCII 字符，但玩家名等也可能出现中文，因此依然需要 JLW（#8739）
         If UseJLW AndAlso CustomArg.Contains("-javaagent") Then
             UseJLW = False
@@ -1246,7 +1208,7 @@ NextInstance:
 
         'LUA
         Dim UseLUA As Boolean =
-            Not Settings.Get(Of Boolean)("LaunchAdvanceDisableLUA") AndAlso Not Settings.Get(Of Boolean)("VersionAdvanceDisableLUA", McInstanceSelected) AndAlso
+            Settings.Get(Of Boolean)("LaunchOptFixLwjgl") AndAlso Not Settings.Get(Of Boolean)("LaunchAdvanceDisableLUA") AndAlso Not Settings.Get(Of Boolean)("VersionAdvanceDisableLUA", McInstanceSelected) AndAlso
             McLibListGet(McInstanceSelected, False).Select(Function(e) e.OriginalName).Contains("org.lwjgl:lwjgl:3.4.1")
         If UseLUA Then Args.Add($"-javaagent:""{LaunchUtils.ExtractPatch("Launch\LwjglUnsafeAgent.jar", PathPure.Value)}""")
         McLaunchLog("使用 LUA：" & UseLUA)
@@ -1257,14 +1219,27 @@ NextInstance:
         Dim TargetRam As Integer = Math.Floor(PageInstanceSetup.GetRam(McInstanceSelected) * 1024)
         Args.Add("-Xmx" & TargetRam & "m")
 
-        '获取设置的管理方式
+        '版本独立设置仍使用原来的数字选项。全局设置由可单独勾选的优化项决定。
         '0：在 Java 21+ 使用分代 ZGC，20~15 使用非分代的 ZGC，14- 使用 G1GC
         '1：在 Java 21+ 使用分代 ZGC，20- 使用 G1GC
         '2：仅 G1GC
         '3：不指定，玩家自定义
-        Dim SetupType As Integer = Settings.Get(Of Integer)("LaunchAdvanceGC")
-        If McInstanceSelected IsNot Nothing AndAlso Settings.Get(Of Integer)("VersionAdvanceGC", McInstanceSelected) > 0 Then SetupType = Settings.Get(Of Integer)("VersionAdvanceGC", McInstanceSelected) - 1 '去掉默认
-        If SetupType <> 3 Then
+        '4：调优 G1GC
+        Dim InstanceGc As Integer = If(McInstanceSelected Is Nothing, 0, Settings.Get(Of Integer)("VersionAdvanceGC", McInstanceSelected))
+        Dim SetupType As Integer = If(InstanceGc > 0, InstanceGc - 1, -1)
+        If SetupType = -1 Then
+            Dim JavaMajor = McLaunchJavaSelected.Version.Major
+            Dim UseG1 = Settings.Get(Of Boolean)("LaunchOptUseG1")
+            McLaunchLog($"GC 勾选：G1={UseG1}，Java {JavaMajor}")
+            If UseG1 Then
+                Args = Args.Where(Function(a) Not a.RegexCheck(
+                    "( )*-XX:[+-]?(Use\w+GC|ZGenerational|UseCompactObjectHeaders|G1\w+Percent|G1\w+Size|(Max|Min)(GCPauseMillis|HeapFreeRatio))")).ToList
+                Args.AddRange(LaunchJvmPolicy.G1Arguments(McLaunchJavaSelected.Version,
+                    Settings.Get(Of Boolean)("LaunchOptG1Tune"),
+                    Settings.Get(Of Boolean)("LaunchOptStringDedup"),
+                    Settings.Get(Of Boolean)("LaunchOptDisableSharedMem") AndAlso Not ModeDebug))
+            End If
+        ElseIf SetupType <> 3 Then
             '确定是使用 G1GC 还是 ZGC
             Dim UseG1GC As Boolean = False
             If (SetupType = 0 AndAlso McLaunchJavaSelected.Version.Major < 15) OrElse
@@ -1278,26 +1253,9 @@ NextInstance:
             '添加 GC 参数
             Args.Add("-XX:+UnlockExperimentalVMOptions")
             If McLaunchJavaSelected.Version.Major >= 24 Then Args.Add("-XX:+UseCompactObjectHeaders")
-            If UseG1GC AndAlso SetupType = 4 Then
-                '优化的 G1GC
-                Args.Add("-XX:+UseG1GC")
-                Args.Add("-XX:G1NewSizePercent=20")
-                Args.Add("-XX:G1ReservePercent=20")
-                Args.Add("-XX:G1HeapRegionSize=32M")
-                Args.Add("-XX:MaxGCPauseMillis=50")
-                If Not ModeDebug Then Args.Add("-XX:+PerfDisableSharedMem")
-                If McLaunchJavaSelected.Version.Major <= 7 Then Args.Add("-XX:MaxPermSize=512m") '#8286
-                If McLaunchJavaSelected.Version.Major = 8 Then Args.Add("-XX:+ParallelRefProcEnabled")
-                If McLaunchJavaSelected.Version.Major >= 12 Then Args.Add("-XX:MinHeapFreeRatio=25") '需要比 G1NewSizePercent 大一点
-                If McLaunchJavaSelected.Version.Major >= 12 Then Args.Add("-XX:MaxHeapFreeRatio=40") '需要比 MinHeapFreeRatio 大一些
-            ElseIf UseG1GC Then
-                'Mojang G1GC
-                Args.Add("-XX:+UseG1GC")
-                Args.Add("-XX:G1NewSizePercent=20")
-                Args.Add("-XX:G1ReservePercent=20")
-                Args.Add("-XX:G1HeapRegionSize=32M")
-                Args.Add("-XX:MaxGCPauseMillis=50")
-                If McLaunchJavaSelected.Version.Major <= 7 Then Args.Add("-XX:MaxPermSize=512m") '#8286
+            If UseG1GC Then
+                Args.AddRange(LaunchJvmPolicy.G1Arguments(McLaunchJavaSelected.Version,
+                    SetupType = 4, False, SetupType = 4 AndAlso Not ModeDebug))
             Else
                 'ZGC
                 Args.Add("-XX:+UseZGC")
@@ -1814,124 +1772,19 @@ NextInstance:
             Logger.Error(ex, "更新 options.txt 失败", LogBehavior.Toast)
         End Try
 
-        '离线皮肤 Alex 警告
-        If McInstanceSelected.Version.Vanilla.Major <= 7 AndAlso McInstanceSelected.Version.Vanilla.Major >= 2 AndAlso '1.2 ~ 1.7
-               McLoginLoader.Input.Type = McLoginType.Legacy AndAlso '离线登录
-               (Settings.Get(Of Integer)("LaunchSkinType") = 2 OrElse '强制 Alex
-               (Settings.Get(Of Integer)("LaunchSkinType") = 4 AndAlso Settings.Get(Of Boolean)("LaunchSkinSlim"))) Then '或选用 Alex 皮肤
-            Hint("此 Minecraft 版本尚不支持 Alex 皮肤，你的皮肤可能会显示为 Steve！", HintType.Red)
-        End If
-
-        '离线皮肤资源包
         Try
             Dim ZipFileAddress As String = McInstanceSelected.PathIndie & "resourcepacks\PCL2 Skin.zip"
-            Dim NewTypeSetup As Boolean = McInstanceSelected.Version.Vanilla.Major >= 13 OrElse McInstanceSelected.Version.Vanilla.Major < 6
-            If McLoginLoader.Input.Type = McLoginType.Legacy AndAlso Settings.Get(Of Integer)("LaunchSkinType") = 4 AndAlso FileUtils.Exists(Paths.AppDataThenName & "CustomSkin.png") Then
-                Dim MetaFileAddress As String = PathTemp & "pack.mcmeta"
-                Dim PackPicAddress As String = PathTemp & "pack.png"
-                If McInstanceSelected.Version.Vanilla.Major < 6 Then
-                    McLaunchLog("Minecraft 版本过老，尚不支持自定义离线皮肤")
-                    GoTo IgnoreCustomSkin
-                End If
-                Dim PackVersionJToken As JToken = McInstanceSelected.JsonVersion?("pack_version")
-                If TypeOf PackVersionJToken Is JObject Then PackVersionJToken = DirectCast(PackVersionJToken, JObject)("resource") '从 1.17 开始，可以从 pack_version.resource 获取资源包版本
-                Dim PackVersion As Integer = Val(PackVersionJToken?.ToString)
-                If PackVersion <= 0 Then '没有对应字段的老版本 MC，或兜底
-                    Select Case McInstanceSelected.Version.Vanilla.Major
-                        Case 6, 7, 8
-                            PackVersion = 1
-                        Case 9, 10
-                            PackVersion = 2
-                        Case 11, 12
-                            PackVersion = 3
-                        Case 13, 14
-                            PackVersion = 4
-                        Case 15
-                            PackVersion = 5
-                        Case 16
-                            PackVersion = If(McInstanceSelected.Version.Vanilla.Build <= 1, 5, 6)
-                        Case 17
-                            PackVersion = 7
-                        Case 18
-                            PackVersion = 8
-                        Case Else '旧版快照可能没有可用的资源包格式声明
-                            PackVersion = 17
-                    End Select
-                End If
-                McLaunchLog($"正在构建自定义皮肤资源包，版本号 {PackVersion}，MC 版本 {McInstanceSelected.Version.Vanilla}")
-                '准备文件
-                Dim Bit As New MyBitmap(PathImage & "Heads/Logo.png")
-                Bit.Save(PackPicAddress)
-                FileUtils.Write(MetaFileAddress, "{""pack"":{""pack_format"":" & PackVersion & ",""description"":""PCL 自定义离线皮肤资源包""}}")
-                Dim Skin As New MyBitmap(Paths.AppDataThenName & "CustomSkin.png")
-                If (McInstanceSelected.Version.Vanilla.Major = 6 OrElse McInstanceSelected.Version.Vanilla.Major = 7) AndAlso Skin.Pic.Height = 64 Then
-                    McLaunchLog("该 Minecraft 版本不支持双层皮肤，已进行裁剪")
-                    Skin = Skin.Clip(0, 0, 64, 32)
-                End If
-                Skin.Save(Paths.Base & "PCL\CustomSkin_Cliped.png")
-                '构建压缩文件
-                Dim FilesToCompress As New Dictionary(Of String, String) From {
-                    {"pack.mcmeta", MetaFileAddress}, {"pack.png", PackPicAddress}}
-                If McInstanceSelected.Version.Vanilla >= New Version(19, 0, 3) Then
-                    '1.19.3+ 使用复杂版本的替换
-                    For Each SkinName In {"alex", "ari", "efe", "kai", "makena", "noor", "steve", "sunny", "zuri"}
-                        FilesToCompress.Add(
-                                $"assets/minecraft/textures/entity/player/{If(Settings.Get(Of Boolean)("LaunchSkinSlim"), "slim", "wide")}/{SkinName}.png",
-                                Paths.Base & "PCL\CustomSkin_Cliped.png")
-                    Next
-                Else
-                    FilesToCompress.Add(
-                            $"assets/minecraft/textures/entity/{If(Settings.Get(Of Boolean)("LaunchSkinSlim"), "alex.png", "steve.png")}",
-                            Paths.Base & "PCL\CustomSkin_Cliped.png")
-                End If
-                FileUtils.CreateZipFromFiles(ZipFileAddress, FilesToCompress)
-                FileUtils.Delete(Paths.Base & "PCL\CustomSkin_Cliped.png")
-                '更改设置文件
-                IniClearCache(SetupFileAddress)
-                Dim EnabledResourcePack As String = ReadIni(SetupFileAddress, "resourcePacks", "[]").TrimStart("[").TrimEnd("]")
-                If NewTypeSetup Then
-                    If EnabledResourcePack = "" Then EnabledResourcePack = """vanilla"""
-                    Dim EnabledResourcePacks As New List(Of String)(EnabledResourcePack.Split(","))
-                    Dim NewResourcePacks As New List(Of String)
-                    For Each Res In EnabledResourcePacks
-                        If Res <> """file/PCL2 Skin.zip""" AndAlso Res <> "" Then NewResourcePacks.Add(Res)
-                    Next
-                    NewResourcePacks.Add("""file/PCL2 Skin.zip""")
-                    Dim Result As String = "[" & NewResourcePacks.Join(","c) & "]"
-                    WriteIni(SetupFileAddress, "resourcePacks", Result)
-                Else
-                    Dim EnabledResourcePacks As New List(Of String)(EnabledResourcePack.Split(","))
-                    Dim NewResourcePacks As New List(Of String)
-                    For Each Res In EnabledResourcePacks
-                        If Res <> """PCL2 Skin.zip""" AndAlso Res <> "" Then NewResourcePacks.Add(Res)
-                    Next
-                    NewResourcePacks.Add("""PCL2 Skin.zip""")
-                    Dim Result As String = "[" & NewResourcePacks.Join(","c) & "]"
-                    WriteIni(SetupFileAddress, "resourcePacks", Result)
-                End If
-IgnoreCustomSkin:
-            ElseIf FileUtils.Exists(ZipFileAddress) Then
-                McLaunchLog("正在清空自定义皮肤资源包")
-                '删除压缩文件
+            If FileUtils.Exists(ZipFileAddress) Then
                 FileUtils.Delete(ZipFileAddress)
-                '更改设置文件
                 IniClearCache(SetupFileAddress)
                 Dim EnabledResourcePack As String = ReadIni(SetupFileAddress, "resourcePacks", "[]").TrimStart("[").TrimEnd("]")
-                If NewTypeSetup Then
-                    If EnabledResourcePack = "" Then EnabledResourcePack = """vanilla"""
-                    Dim EnabledResourcePacks As New List(Of String)(EnabledResourcePack.Split(","))
-                    EnabledResourcePacks.Remove("""file/PCL2 Skin.zip""")
-                    Dim Result As String = "[" & EnabledResourcePacks.Join(","c) & "]"
-                    WriteIni(SetupFileAddress, "resourcePacks", Result)
-                Else
-                    Dim EnabledResourcePacks As New List(Of String)(EnabledResourcePack.Split(","))
-                    EnabledResourcePacks.Remove("""PCL2 Skin.zip""")
-                    Dim Result As String = "[" & EnabledResourcePacks.Join(","c) & "]"
-                    WriteIni(SetupFileAddress, "resourcePacks", Result)
-                End If
+                Dim EnabledResourcePacks As New List(Of String)(EnabledResourcePack.Split(","))
+                EnabledResourcePacks.Remove("""file/PCL2 Skin.zip""")
+                EnabledResourcePacks.Remove("""PCL2 Skin.zip""")
+                WriteIni(SetupFileAddress, "resourcePacks", "[" & EnabledResourcePacks.Join(","c) & "]")
             End If
         Catch ex As Exception
-            Logger.Error(ex, "离线皮肤资源包设置失败", LogBehavior.Toast)
+            Logger.Warn(ex, "清理旧的自定义皮肤资源包失败")
         End Try
 
     End Sub

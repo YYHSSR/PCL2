@@ -263,8 +263,8 @@
                             <local:MyCheckBox.Tag>
                                 <local:ExportOption 
                                 Title="PCL 启动器程序"
-                                Description="打包当前启动器，以便没有启动器的玩家安装整合包"
-                                DefaultChecked="False" />
+                                Description="打包正式版 PCL，以便没有启动器的玩家安装整合包"
+                                DefaultChecked="True" />
                             </local:MyCheckBox.Tag>
                         </local:MyCheckBox>
                     </StackPanel>

@@ -218,6 +218,7 @@
     <Compile Include="Controls\MyVirtualizingElement.vb" />
     <Compile Include="Modules\Base\PclLogger.vb" />
     <Compile Include="Modules\Resource\CurseForgeAccess.vb" />
+    <Compile Include="Modules\Minecraft\LaunchJvmPolicy.vb" />
     <Compile Include="Modules\Resource\LocalResourceFile.vb" />
     <Compile Include="Modules\Resource\ResourceProject.vb" />
     <Compile Include="Modules\Resource\ResourceVersion.vb" />

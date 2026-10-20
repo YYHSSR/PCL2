@@ -36,7 +36,7 @@ Public Class PageLoginLegacy
     ''' </summary>
     Public Shared Function GetLoginData() As McLoginData
         Dim UserName As String = If(FrmLoginLegacy Is Nothing, "", FrmLoginLegacy.ComboName.Text.Replace("¨", "").Trim)
-        Return New McLoginLegacy With {.UserName = UserName, .SkinType = Settings.Get(Of Integer)("LaunchSkinType"), .SkinName = Settings.Get(Of String)("LaunchSkinID")}
+        Return New McLoginLegacy With {.UserName = UserName}
     End Function
     ''' <summary>
     ''' 当前页面的登录信息是否有效。
@@ -62,12 +62,8 @@ Public Class PageLoginLegacy
         End If
     End Sub
     Private Sub ComboLegacy_TextChanged(sender As Object, e As TextChangedEventArgs) Handles ComboName.TextChanged
-        If Settings.Get(Of Integer)("LaunchSkinType") = 0 Then PageLaunchLeft.SkinLegacy.Start(IsForceRestart:=True)
+        PageLaunchLeft.SkinLegacy.Start(IsForceRestart:=True)
         HintChinese.Visibility = If(ComboName.Text.RegexCheck("^[0-9A-Za-z_]*$"), Visibility.Collapsed, Visibility.Visible)
         RunInUi(Sub() PanMain.InvalidateMeasure(), True) '由于 WPF 的 Bug，它不一定会自动更新 HintChinese 的大小（#6627）
     End Sub
-    Private Sub Skin_Click() Handles Skin.Click
-        FrmMain.PageChange(FormMain.PageType.Setup, FormMain.PageSubType.SetupLaunch)
-    End Sub
-
 End Class

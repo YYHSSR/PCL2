@@ -22,6 +22,34 @@ Public NotInheritable Class CurseForgeAccess
         Request.Headers.Add("x-api-key", Key)
     End Sub
 
+    Public Shared Async Function SendAsync(Client As HttpClient, Request As HttpRequestMessage, Cancellation As CancellationToken) As Task(Of HttpResponseMessage)
+        Dim Address = Request.RequestUri
+        Dim HasRedirected As Boolean = False
+        For RedirectCount = 0 To 5
+            Using Current = Request.Clone()
+                Current.RequestUri = Address
+                Current.Headers.Remove("x-api-key")
+                If HasRedirected Then
+                    Current.Headers.Remove("Authorization")
+                    Current.Headers.Remove("Cookie")
+                    Current.Headers.Remove("Proxy-Authorization")
+                End If
+                ApplyHeaders(Address, Current)
+                Dim Response = Await Client.SendAsync(Current, HttpCompletionOption.ResponseHeadersRead, Cancellation).ConfigureAwait(False)
+                Dim Code = CInt(Response.StatusCode)
+                If Not {301, 302, 303, 307, 308}.Contains(Code) OrElse Response.Headers.Location Is Nothing Then Return Response
+                If Request.Method <> HttpMethod.Get AndAlso Request.Method <> HttpMethod.Head Then Return Response
+                Dim NextAddress = New Uri(Address, Response.Headers.Location)
+                Response.Dispose()
+                If NextAddress.Scheme <> Uri.UriSchemeHttps Then Throw New HttpRequestException("拒绝将 CurseForge 请求重定向到非 HTTPS 地址。")
+                If RedirectCount = 5 Then Throw New HttpRequestException("CurseForge 重定向次数过多。")
+                Address = NextAddress
+                HasRedirected = True
+            End Using
+        Next
+        Throw New HttpRequestException("CurseForge 重定向次数过多。")
+    End Function
+
     Public Shared Function GetFailureHint(ErrorInfo As Exception) As String
         Dim SawForbidden = False
         Dim SawMirrorDown = False
