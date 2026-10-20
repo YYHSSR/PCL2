@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+*.binlog
+*.pfx
+*.snk
+*.wpftmp.*
+*.local.json
+TestResults/
+PCL-YYH.exe

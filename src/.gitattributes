@@ -1,0 +1,10 @@
+* text=auto
+*.vb text eol=lf
+*.cs text eol=lf
+*.xaml text eol=lf
+*.ps1 text eol=crlf
+*.zip binary
+*.dll binary
+*.jar binary
+*.png binary
+*.jpg binary

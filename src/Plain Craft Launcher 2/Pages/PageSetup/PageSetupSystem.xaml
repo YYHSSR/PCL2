@@ -1,0 +1,100 @@
+<local:MyPageRight
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:PCL" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    mc:Ignorable="d" x:Class="PageSetupSystem"
+    PanScroll="PanBack">
+    <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="PanBack">
+        <StackPanel x:Name="PanMain" Margin="25,10">
+            <local:MyCard Margin="0,15" Title="下载">
+                <StackPanel Margin="25,37,25,15">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="Name" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="28" />
+                            <RowDefinition Height="7" />
+                            <RowDefinition Height="28" />
+                            <RowDefinition Height="7" />
+                            <RowDefinition Height="27" />
+                            <RowDefinition Height="27" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <TextBlock VerticalAlignment="Center" HorizontalAlignment="Left" Text="文件下载源" Margin="0,0,25,0" />
+                        <local:MyComboBox x:Name="ComboDownloadSource" Grid.ColumnSpan="2" local:SettingService.Key="ToolDownloadSource" Grid.Column="1">
+                            <local:MyComboBoxItem Content="尽量使用镜像源" />
+                            <local:MyComboBoxItem Content="优先使用官方源，在加载缓慢时换用镜像源" IsSelected="True" />
+                            <local:MyComboBoxItem Content="尽量使用官方源" />
+                        </local:MyComboBox>
+                        <TextBlock VerticalAlignment="Center" HorizontalAlignment="Left" Text="版本列表源" Margin="0,0,25,0" Grid.Row="2" />
+                        <local:MyComboBox x:Name="ComboDownloadVersion" Grid.ColumnSpan="2" local:SettingService.Key="ToolDownloadVersion" Grid.Column="1" Grid.Row="2">
+                            <local:MyComboBoxItem Content="尽量使用镜像源（可能缺少刚刚更新的版本）" />
+                            <local:MyComboBoxItem Content="优先使用官方源，在加载缓慢时换用镜像源" IsSelected="True" />
+                            <local:MyComboBoxItem Content="尽量使用官方源" />
+                        </local:MyComboBox>
+                        <TextBlock Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Left" Text="最大线程数" Margin="0,0,25,0" />
+                        <local:MySlider x:Name="SliderDownloadThread" Grid.Row="4" local:SettingService.Key="ToolDownloadThread" MaxValue="255" Value="63" Grid.Column="1"
+                                        ToolTip="线程数越多，限速的文件下载越快，但过高的线程数会造成下载时非常严重的卡顿。&#xa;一般而言，64 线程已可以保证足够的下载速度。" />
+                        <TextBlock VerticalAlignment="Center" Grid.Row="5" HorizontalAlignment="Left" Text="速度限制" Margin="0,0,25,0" />
+                        <local:MySlider x:Name="SliderDownloadSpeed" Grid.Row="5" local:SettingService.Key="ToolDownloadSpeed" MaxValue="42" Value="42" Grid.Column="1"
+                                        ToolTip="设置下载的速度上限，以避免在下载时导致其他需要联网的程序卡死" />
+                        <TextBlock VerticalAlignment="Top" Grid.Row="6" HorizontalAlignment="Left" Text="目标文件夹" Margin="0,5,25,5" />
+                        <TextBlock Margin="0,5" HorizontalAlignment="Left" Text="请在 启动 → 版本选择 → 文件夹列表 中更改下载目标文件夹。&#xa;在某个文件夹或游戏版本上右键，即可选择打开对应文件夹。" Grid.Row="6" Grid.Column="1" VerticalAlignment="Center" Opacity="0.5" />
+                    </Grid>
+                </StackPanel>
+            </local:MyCard>
+            <local:MyCard Margin="0,0,0,15" Title="社区资源">
+                <StackPanel Margin="25,37,25,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="Name" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="28" />
+                            <RowDefinition Height="7" />
+                            <RowDefinition Height="28" />
+                            <RowDefinition Height="7" />
+                            <RowDefinition Height="28" />
+                            <RowDefinition Height="7" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Left" Text="来源" Margin="0,0,25,0" />
+                        <local:MyComboBox x:Name="ComboDownloadMod" Grid.Row="0" Grid.ColumnSpan="2" local:SettingService.Key="ToolDownloadMod" Grid.Column="1">
+                            <local:MyComboBoxItem Content="尽量使用镜像源（可能缺少刚刚更新的版本）" />
+                            <local:MyComboBoxItem Content="仅在官方源加载缓慢时改用镜像源" />
+                            <local:MyComboBoxItem Content="尽量使用官方源" IsSelected="True" />
+                        </local:MyComboBox>
+                        <TextBlock Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Left" Text="文件名格式" Margin="0,0,25,0" />
+                        <local:MyComboBox Grid.Row="2" x:Name="ComboDownloadTranslateV2" Grid.ColumnSpan="2" local:SettingService.Key="ToolDownloadTranslateV2" Grid.Column="1" 
+                                          ToolTip="下载社区资源时，其默认文件名的格式">
+                            <local:MyComboBoxItem Content="【机械动力】create-1.21.1-6.0.4" />
+                            <local:MyComboBoxItem Content="[机械动力] create-1.21.1-6.0.4" IsSelected="True" />
+                            <local:MyComboBoxItem Content="机械动力-create-1.21.1-6.0.4" />
+                            <local:MyComboBoxItem Content="create-1.21.1-6.0.4-机械动力" />
+                            <local:MyComboBoxItem Content="create-1.21.1-6.0.4" />
+                        </local:MyComboBox>
+                        <TextBlock Grid.Row="4" VerticalAlignment="Center" HorizontalAlignment="Left" Text="Mod 管理样式" Margin="0,0,25,0" />
+                        <local:MyComboBox Grid.Row="4" x:Name="ComboModLocalNameStyle" Grid.ColumnSpan="2" local:SettingService.Key="ToolModLocalNameStyle" Grid.Column="1" 
+                                          ToolTip="在 Mod 管理页面中，Mod 项的显示方式">
+                            <local:MyComboBoxItem Content="标题显示译名，详情显示文件名" IsSelected="True" />
+                            <local:MyComboBoxItem Content="标题显示文件名，详情显示译名" />
+                        </local:MyComboBox>
+                    </Grid>
+                    <TextBlock Text="CurseForge API Key" Margin="0,15,0,5" />
+                    <TextBlock x:Name="LabCurseForgeStatus" TextWrapping="Wrap" Margin="0,0,0,8" Opacity="0.7" />
+                    <PasswordBox x:Name="PasswordCurseForge" Height="30" Padding="6,3" MaxLength="512"
+                                 ToolTip="输入自己的 CurseForge API Key。保存后仅供当前 Windows 用户使用。" />
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
+                        <local:MyButton x:Name="BtnCurseForgeSave" Text="保存 Key" Width="120" Height="32" Margin="0,0,12,0" />
+                        <local:MyButton x:Name="BtnCurseForgeClear" Text="清除本地 Key" Width="130" Height="32" Margin="0,0,12,0" />
+                        <local:MyButton x:Name="BtnCurseForgeTest" Text="测试连接" Width="110" Height="32" Margin="0,0,12,0" />
+                        <local:MyButton x:Name="BtnCurseForgeDocs" Text="申请 Key" Width="100" Height="32" />
+                    </StackPanel>
+                </StackPanel>
+            </local:MyCard>
+        </StackPanel>
+    </local:MyScrollViewer>
+</local:MyPageRight>

@@ -1,0 +1,15 @@
+{
+  "sourceBaseline": "5ef81e4",
+  "sourceVersion": "2.14.0.0",
+  "coreSnapshot": "c774ae4c85fd94e0eaa171db21e78a65870df19b",
+  "coreLayout": ["MeloongCore/Shared", "MeloongCore/Wpf"],
+  "dependencyMode": "vendored source; no submodule initialization required",
+  "targetFramework": "net48",
+  "compilerSdk": "9.0",
+  "configuration": {
+    "PCL_MS_CLIENT_ID": "Microsoft application identifier; supplied at runtime",
+    "PCL_CURSEFORGE_API_KEY": "CurseForge resource API key; supplied at runtime",
+    "PCL_SETTINGS_PROFILE": "Optional isolated settings profile; default PCL2Local",
+    "PCL_CACHE_PATH": "Optional cache directory override"
+  }
+}
