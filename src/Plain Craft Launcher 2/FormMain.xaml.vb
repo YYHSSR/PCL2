@@ -256,7 +256,7 @@ Public Class FormMain
                 WriteDiagnostics()
                 Logger.Info("请保留本地日志，用于诊断启动器问题。")
                 IsLogShown = True
-                StartProcess(Paths.BaseThenName & "Log1.txt")
+                StartProcess(Paths.Base & "PCL\Log1.txt")
             End If
             Thread.Sleep(500) 'Prevent PCL from being killed before Notepad opens
         End If

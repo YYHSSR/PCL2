@@ -11,7 +11,7 @@ Public Class Application
             MeloongCore.Wpf.Main.Init()
             If Not e.Args.Contains("--gpu") Then 'When invoked from the command line, skip the single-instance check and log rotation (#9137)
                 WaitingMutex(e)
-                Logger.Instance = New PclLogger With {.logFolder = Paths.BaseThenName, .MinLevel = If(ModeDebug, LogLevel.Trace, LogLevel.Info)}
+                Logger.Instance = New PclLogger With {.logFolder = Paths.Base & "PCL\", .MinLevel = If(ModeDebug, LogLevel.Trace, LogLevel.Info)}
             End If
             'Raise the main thread priority
             Thread.CurrentThread.Priority = ThreadPriority.Highest
