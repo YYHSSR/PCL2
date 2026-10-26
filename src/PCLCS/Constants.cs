@@ -1,32 +1,32 @@
 namespace PCLCS;
 
 /// <summary>
-/// 社区资源的类型。
+/// Type of community resource.
 /// </summary>
 [Flags]
 public enum ResourceTypes {
     /// <summary>Mod。</summary>
     Mod = 1,
-    /// <summary>整合包。</summary>
+    /// <summary>Modpack.</summary>
     ModPack = 2,
-    /// <summary>资源包。</summary>
+    /// <summary>Resource pack.</summary>
     ResourcePack = 4,
-    /// <summary>光影包。</summary>
+    /// <summary>Shader pack.</summary>
     Shader = 8,
-    /// <summary>数据包。</summary>
+    /// <summary>Data pack.</summary>
     DataPack = 16,
-    /// <summary>服务端插件。</summary>
+    /// <summary>Server plugin.</summary>
     Plugin = 32,
-    /// <summary>地图。</summary>
+    /// <summary>World.</summary>
     Map = 64,
-    /// <summary>同时包含数据包以及 Mod。</summary>
+    /// <summary>Contains both data packs and mods.</summary>
     ModOrDataPack = Mod | DataPack,
-    /// <summary>允许任意种类，或种类未知。</summary>
+    /// <summary>Any kind is allowed, or the kind is unknown.</summary>
     Any = Mod | ModPack | ResourcePack | Shader | DataPack | Plugin | Map,
 }
 
 /// <summary>
-/// 社区资源的来源平台。
+/// Source platform of community resources.
 /// </summary>
 [Flags]
 public enum ResourcePlatforms {
@@ -36,7 +36,7 @@ public enum ResourcePlatforms {
 }
 
 /// <summary>
-/// Mod 加载器的类型。
+/// Type of mod loader.
 /// </summary>
 [Flags]
 public enum ModLoaders {
@@ -50,19 +50,19 @@ public enum ModLoaders {
 
 public static class Versions {
     /// <summary>
-    /// 版本管理中 Mod 信息缓存的版本号。
+    /// Version of the mod info cache in version management.
     /// </summary>
     public const int LocalModCacheVersion = 21;
     /// <summary>
-    /// Minecraft 本地实例信息缓存的版本号。
+    /// Version of the local Minecraft instance info cache.
     /// </summary>
     public const int McInstanceCacheVersion = 39;
     /// <summary>
-    /// Java 相关配置的版本号。
+    /// Version of the Java-related config.
     /// </summary>
     public const int JavaConfigVersion = 1;
     /// <summary>
-    /// Minecraft 安装清单的版本号。
+    /// Version of the Minecraft install manifest.
     /// </summary>
     public const int McInstallManifestVersion = 1;
 }

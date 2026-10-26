@@ -2,7 +2,7 @@ namespace MeloongCore;
 public static class GeneralUtils {
 
     /// <summary>
-    /// 判断对象是否为指定泛型类型的实例。
+    /// Whether the object is an instance of the specified generic type.
     /// </summary>
     public static bool IsGenericInstanceOf(object? instance, Type genericTypeDefinition) {
         if (instance is null) return false;

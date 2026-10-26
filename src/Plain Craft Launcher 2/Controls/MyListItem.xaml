@@ -19,9 +19,5 @@
         <RowDefinition Height="Auto" />
         <RowDefinition Height="1*" />
     </Grid.RowDefinitions>
-    <!--<Border x:Name="RectBack" CornerRadius="3" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" IsHitTestVisible="False" Opacity="0" Grid.ColumnSpan="4" Background="{DynamicResource ColorBrush7}" BorderBrush="{DynamicResource ColorBrush6}" BorderThickness="1" />-->
-
     <TextBlock Grid.Row="1" SnapsToDevicePixels="False" UseLayoutRounding="False" HorizontalAlignment="Left" x:Name="LabTitle" IsHitTestVisible="False" Grid.Column="3" Text="{Binding Title, ElementName=PanBack}" TextTrimming="CharacterEllipsis" FontSize="{Binding FontSize, ElementName=PanBack}" Foreground="{Binding Foreground, ElementName=PanBack}" Margin="4,0,0,0" />
-
-    <!--</StackPanel>-->
 </Grid>

@@ -1,4 +1,4 @@
-# 如果要从更高级别的目录继承 .editorconfig 设置，请删除以下行
+# Remove the line below if you want to inherit .editorconfig settings from higher directories
 root = true
 
 [*]
@@ -6,18 +6,18 @@ charset = utf-8
 
 [*.cs]
 
-# IDE0320: 使匿名函数成为静态函数
+# IDE0320: Make anonymous function static
 csharp_prefer_static_anonymous_function = false
-# CS8618: 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 "required" 修饰符或声明为可为 null。
+# CS8618: Non-nullable field must contain a non-null value when exiting constructor. Consider adding the "required" modifier or declaring it as nullable.
 dotnet_diagnostic.CS8618.severity = suggestion
-# IDE0305: 使用 [.. ] 简化集合初始化
+# IDE0305: Simplify collection initialization with [.. ]
 dotnet_diagnostic.IDE0305.severity = none
-# CS8524: switch 表达式不会处理其输入类型的某些值(它不是穷举)，这包括未命名的枚举值。
+# CS8524: The switch expression does not handle some values of its input type (it is not exhaustive) involving an unnamed enum value.
 dotnet_diagnostic.CS8524.severity = suggestion
 
 [*.{cs,vb}]
 
-# IDE0028: 简化集合初始化
+# IDE0028: Simplify collection initialization
 dotnet_style_collection_initializer = true:silent
-# IDE0130: 命名空间与文件夹结构不匹配
+# IDE0130: Namespace does not match folder structure
 dotnet_diagnostic.IDE0130.severity = silent

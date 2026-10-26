@@ -1,20 +1,20 @@
 Public Class MyScrollBar
     Inherits Primitives.ScrollBar
 
-    '基础
+    'Basics
 
     Public Uuid As Integer = GetUuid()
 
-    '指向动画
+    'Hover animation
 
     Private Sub RefreshColor() Handles Me.IsEnabledChanged, Me.GotMouseCapture, Me.LostMouseCapture, Me.MouseEnter, Me.MouseLeave, Me.IsVisibleChanged
         Try
 
-            '判断当前颜色
+            'Determine the current color
             Dim NewOpacity As Double, NewColor As String, Time As Integer
             If Not IsVisible Then
                 NewOpacity = 0
-                Time = 20 '防止错误的尺寸判断导致闪烁
+                Time = 20 'Prevent flickering caused by incorrect size detection
                 NewColor = "ColorBrush4"
             ElseIf IsMouseCaptureWithin Then
                 NewOpacity = 1
@@ -29,15 +29,15 @@ Public Class MyScrollBar
                 NewColor = "ColorBrush4"
                 Time = 180
             End If
-            '触发颜色动画
-            If IsLoaded AndAlso AniControlEnabled = 0 Then '防止默认属性变更触发动画
-                '有动画
+            'Trigger the color animation
+            If IsLoaded AndAlso AniControlEnabled = 0 Then 'Prevent default property changes from triggering animations
+                'With animation
                 AniStart({
                          AaColor(Me, ForegroundProperty, NewColor, Time),
                          AaOpacity(Me, NewOpacity - Opacity, Time)
                  }, "MyScrollBar Color " & Uuid)
             Else
-                '无动画
+                'Without animation
                 AniStop("MyScrollBar Color " & Uuid)
                 SetResourceReference(ForegroundProperty, NewColor)
                 Opacity = NewOpacity

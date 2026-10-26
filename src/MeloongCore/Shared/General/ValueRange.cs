@@ -1,7 +1,7 @@
 namespace MeloongCore;
 
 /// <summary>
-/// 表示一个由可选下界和可选上界组成的范围。
+/// A range made up of an optional lower bound and an optional upper bound.
 /// </summary>
 public sealed class ValueRange<T>(
     T? lower, T? upper,
@@ -9,7 +9,7 @@ public sealed class ValueRange<T>(
     bool hasLower, bool hasUpper
 ) : IEquatable<ValueRange<T>?> where T : IComparable<T> {
 
-    #region 基础字段
+    #region Basic fields
 
     public T? Lower { get; private set; } = hasLower && lower is null ? throw new ArgumentNullException(nameof(lower)) : lower;
     public T? Upper { get; private set; } = hasUpper && upper is null ? throw new ArgumentNullException(nameof(upper)) : upper;
@@ -31,43 +31,43 @@ public sealed class ValueRange<T>(
         IsUpperInclusive = isInclusive;
     }
 
-    /// <summary> 下界值是否为闭区间。 </summary>
+    /// <summary> Whether the lower bound is inclusive. </summary>
     public bool IsLowerInclusive = isLowerInclusive;
-    /// <summary> 上界值是否为闭区间。 </summary>
+    /// <summary> Whether the upper bound is inclusive. </summary>
     public bool IsUpperInclusive = isUpperInclusive;
 
     #endregion
 
-    #region ClosedOpen、AtLeast 等工厂方法
+    #region ClosedOpen, AtLeast and other factory methods
 
-    /// <summary> 创建等同于 <c>[lower, upper]</c> 的闭区间。 </summary>
+    /// <summary> Creates a closed range equivalent to <c>[lower, upper]</c>. </summary>
     public static ValueRange<T> Closed(T lower, T upper) => new(lower, upper, true, true, true, true);
-    /// <summary> 创建形如 <c>[lower, upper)</c> 的左闭右开区间。 </summary>
+    /// <summary> Creates a half-open range of the form <c>[lower, upper)</c>. </summary>
     public static ValueRange<T> ClosedOpen(T lower, T upper) => new(lower, upper, true, false, true, true);
-    /// <summary> 创建形如 <c>(lower, upper]</c> 的左开右闭区间。 </summary>
+    /// <summary> Creates a half-open range of the form <c>(lower, upper]</c>. </summary>
     public static ValueRange<T> OpenClosed(T lower, T upper) => new(lower, upper, false, true, true, true);
-    /// <summary> 创建形如 <c>(lower, upper)</c> 的开区间。 </summary>
+    /// <summary> Creates an open range of the form <c>(lower, upper)</c>. </summary>
     public static ValueRange<T> Open(T lower, T upper) => new(lower, upper, false, false, true, true);
-    /// <summary> 创建形如 <c>[value, value]</c> 的单值闭区间。 </summary>
+    /// <summary> Creates a single-value closed range of the form <c>[value, value]</c>. </summary>
     public static ValueRange<T> Exactly(T value) => new(value, value, true, true, true, true);
 
-    /// <summary> 创建形如 <c>[lower, +∞)</c> 的范围。 </summary>
+    /// <summary> Creates a range of the form <c>[lower, +∞)</c>. </summary>
     public static ValueRange<T> AtLeast(T lower) => new(lower, default, true, true, true, false);
-    /// <summary> 创建形如 <c>(lower, +∞)</c> 的范围。 </summary>
+    /// <summary> Creates a range of the form <c>(lower, +∞)</c>. </summary>
     public static ValueRange<T> GreaterThan(T lower) => new(lower, default, false, true, true, false);
-    /// <summary> 创建形如 <c>(-∞, upper]</c> 的范围。 </summary>
+    /// <summary> Creates a range of the form <c>(-∞, upper]</c>. </summary>
     public static ValueRange<T> AtMost(T upper) => new(default, upper, true, true, false, true);
-    /// <summary> 创建形如 <c>(-∞, upper)</c> 的范围。 </summary>
+    /// <summary> Creates a range of the form <c>(-∞, upper)</c>. </summary>
     public static ValueRange<T> LessThan(T upper) => new(default, upper, true, false, false, true);
-    /// <summary> 创建形如 <c>(-∞, +∞)</c> 的无限范围。 </summary>
+    /// <summary> Creates an unbounded range of the form <c>(-∞, +∞)</c>. </summary>
     public static ValueRange<T> All() => new(default, default, true, true, false, false);
 
     #endregion
 
-    #region 字符串双向转换
+    #region Bidirectional string conversion
 
     /// <summary>
-    /// 从字符串解析 <see cref="ValueRange{T}"/> 实例。
+    /// Parses a <see cref="ValueRange{T}"/> instance from a string.
     /// </summary>
     public static ValueRange<T> FromString(string str, Func<string, T>? parseFunc = null) {
         if (string.IsNullOrEmpty(str)) throw new ArgumentException("不能为空");
@@ -100,7 +100,7 @@ public sealed class ValueRange<T>(
     #endregion
 
     /// <summary>
-    /// 判断指定值是否位于当前范围内。
+    /// Whether the specified value is within this range.
     /// </summary>
     public bool Contains(T value) {
         if (HasLower) {
@@ -117,7 +117,7 @@ public sealed class ValueRange<T>(
     }
 
     /// <summary>
-    /// 该范围是否不包含任何值。
+    /// Whether this range contains no values.
     /// </summary>
     public bool IsEmpty() {
         if (!HasLower || !HasUpper) return false;
@@ -126,9 +126,9 @@ public sealed class ValueRange<T>(
     }
 
     /// <summary>
-    /// 取当前范围与另一个范围的交集。
+    /// Gets the intersection of this range and another range.
     /// </summary>
-    /// <returns> 若两个范围存在交集，则返回交集范围；否则返回 <see langword="null" />。 </returns>
+    /// <returns> The intersection if the two ranges overlap; otherwise <see langword="null" />. </returns>
     public ValueRange<T> Intersect(ValueRange<T> other) {
         T? lower = default;
         T? upper = default;
@@ -186,7 +186,7 @@ public sealed class ValueRange<T>(
         return new(lower, upper, isLowerInclusive, isUpperInclusive, anyHasLower, anyHasUpper);
     }
 
-    #region 相等判断（自动生成）
+    #region Equality (auto-generated)
 
     public override bool Equals(object? obj) => Equals(obj as ValueRange<T>);
     public bool Equals(ValueRange<T>? other) {
@@ -208,9 +208,9 @@ public sealed class ValueRange<T>(
         hashCode=hashCode*-1521134295+IsUpperInclusive.GetHashCode();
         return hashCode;
     }
-#pragma warning disable CS8604 // 引用类型参数可能为 null。
+#pragma warning disable CS8604 // Possible null reference argument.
     public static bool operator ==(ValueRange<T>? left, ValueRange<T>? right) => EqualityComparer<ValueRange<T>>.Default.Equals(left, right);
-#pragma warning restore CS8604 // 引用类型参数可能为 null。
+#pragma warning restore CS8604 // Possible null reference argument.
     public static bool operator !=(ValueRange<T>? left, ValueRange<T>? right) => !(left==right);
 
     #endregion

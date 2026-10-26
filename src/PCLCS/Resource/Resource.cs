@@ -2,7 +2,7 @@ namespace PCLCS;
 public static class Resource {
 
     /// <summary>
-    /// 将 CurseForge 的 ModLoaderType 映射为 <see cref="ModLoaders"/> 枚举。
+    /// Maps a CurseForge ModLoaderType to the <see cref="ModLoaders"/> enum.
     /// </summary>
     public static ModLoaders FromCurseForgeModLoaderType(int modLoaderType) => modLoaderType switch {
         // https://docs.curseforge.com/rest-api/#tocS_ModLoaderType
@@ -14,7 +14,7 @@ public static class Resource {
     };
 
     /// <summary>
-    /// 将 <see cref="ModLoaders"/> 映射为 CurseForge 的单一 ModLoaderType。
+    /// Maps <see cref="ModLoaders"/> to a single CurseForge ModLoaderType.
     /// </summary>
     public static int ToCurseForgeModLoaderType(ModLoaders loaders) {
         if (loaders == ModLoaders.None) return 0;

@@ -1,6 +1,6 @@
 namespace MeloongCore;
 public readonly struct OneOf<T1, T2> {
-    private readonly int _index = -1; // -1 表示未初始化（这是一个 struct，所以这可以让默认值不为 0）
+    private readonly int _index = -1; // -1 means uninitialized (this is a struct, so this keeps the default value from being 0)
     private readonly T1? _value1;
     private readonly T2? _value2;
     public static implicit operator OneOf<T1, T2>(T1 value) => new(1, value, default);
@@ -14,7 +14,7 @@ public readonly struct OneOf<T1, T2> {
     }
 
     /// <summary>
-    /// 对不同类型执行不同的操作，并返回同一个值。
+    /// Performs a different action for each type and returns a single value.
     /// </summary>
     public TResult Switch<TResult>(Func<T1, TResult> f1, Func<T2, TResult> f2) => _index switch {
         1 => f1(_value1!), 
@@ -22,7 +22,7 @@ public readonly struct OneOf<T1, T2> {
         _ => throw new InvalidOperationException()
     };
     /// <summary>
-    /// 对不同类型执行不同的操作。
+    /// Performs a different action for each type.
     /// </summary>
     public void Switch(Action<T1> f1, Action<T2> f2) {
         if (_index == 1) f1(_value1!);
@@ -30,7 +30,7 @@ public readonly struct OneOf<T1, T2> {
         else throw new InvalidOperationException();
     }
     /// <summary>
-    /// 判断当前的类型是否为 T。
+    /// Whether the current type is T.
     /// </summary>
     public bool Is<T>() => _index switch {
         1 when typeof(T) == typeof(T1) => true, 
@@ -40,8 +40,8 @@ public readonly struct OneOf<T1, T2> {
     public bool IsT1() => _index == 1;
     public bool IsT2() => _index == 2;
     /// <summary>
-    /// 假定当前的类型为 T，并返回该值。
-    /// 若当前值的类型不为 T，则抛出 <see cref="InvalidOperationException"/>。
+    /// Assumes the current type is T and returns the value.
+    /// Throws <see cref="InvalidOperationException"/> if the current value is not of type T.
     /// </summary>
     public T As<T>() => _index switch {
         1 when typeof(T) == typeof(T1) => (T)(object)_value1!, 
@@ -53,7 +53,7 @@ public readonly struct OneOf<T1, T2> {
 }
 
 public readonly struct OneOf<T1, T2, T3> {
-    private readonly int _index = -1; // -1 表示未初始化（这是一个 struct，所以这可以让默认值不为 0）
+    private readonly int _index = -1; // -1 means uninitialized (this is a struct, so this keeps the default value from being 0)
     private readonly T1? _value1;
     private readonly T2? _value2;
     private readonly T3? _value3;
@@ -71,7 +71,7 @@ public readonly struct OneOf<T1, T2, T3> {
     }
 
     /// <summary>
-    /// 对不同类型执行不同的操作，并返回同一个值。
+    /// Performs a different action for each type and returns a single value.
     /// </summary>
     public TResult Switch<TResult>(Func<T1, TResult> f1, Func<T2, TResult> f2, Func<T3, TResult> f3) => _index switch {
         1 => f1(_value1!), 
@@ -80,7 +80,7 @@ public readonly struct OneOf<T1, T2, T3> {
         _ => throw new InvalidOperationException()
     };
     /// <summary>
-    /// 对不同类型执行不同的操作。
+    /// Performs a different action for each type.
     /// </summary>
     public void Switch(Action<T1> f1, Action<T2> f2, Action<T3> f3) {
         if (_index == 1) f1(_value1!);
@@ -89,7 +89,7 @@ public readonly struct OneOf<T1, T2, T3> {
         else throw new InvalidOperationException();
     }
     /// <summary>
-    /// 判断当前的类型是否为 T。
+    /// Whether the current type is T.
     /// </summary>
     public bool Is<T>() => _index switch {
         1 when typeof(T) == typeof(T1) => true,
@@ -101,8 +101,8 @@ public readonly struct OneOf<T1, T2, T3> {
     public bool IsT2() => _index == 2;
     public bool IsT3() => _index == 3;
     /// <summary>
-    /// 假定当前的类型为 T，并返回该值。
-    /// 若当前值的类型不为 T，则抛出 <see cref="InvalidOperationException"/>。
+    /// Assumes the current type is T and returns the value.
+    /// Throws <see cref="InvalidOperationException"/> if the current value is not of type T.
     /// </summary>
     public T As<T>() => _index switch {
         1 when typeof(T) == typeof(T1) => (T) (object) _value1!,

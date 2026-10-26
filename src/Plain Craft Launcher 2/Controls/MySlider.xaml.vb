@@ -3,13 +3,13 @@ Imports System.Windows.Shapes
 Public Class MySlider
     Implements ISettingControl
 
-    '基础
+    'Basics
 
     Public Uuid As Integer = GetUuid()
     Public Event Change(sender As Object, user As Boolean)
     Public Event PreviewChange(sender As Object, e As RouteEventArgs)
 
-    '自定义属性
+    'Custom properties
 
     Private _MaxValue As Integer = 100
     Public Property MaxValue As Integer
@@ -34,7 +34,7 @@ Public Class MySlider
                 newValue = newValue.Clamp(0, MaxValue)
                 If _Value = newValue Then Return
 
-                '触发 Preview 事件，修改新值
+                'Raise the Preview event to modify the new value
                 Dim OldValue = _Value
                 _Value = newValue
                 If AniControlEnabled = 0 Then
@@ -76,11 +76,11 @@ Public Class MySlider
         ShapeDot.Margin = New Thickness(NewWidth, ShapeDot.Margin.Top, ShapeDot.Margin.Right, ShapeDot.Margin.Bottom)
     End Sub
 
-    '拖动
+    'Dragging
 
     Public GetHintText As [Delegate]
     Private Sub DragStart(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseLeftButtonDown
-        e.Handled = True '防止 ScrollViewer 失焦问题
+        e.Handled = True 'Prevent the ScrollViewer from losing focus
         DragControl = Me
         RefreshColor()
         FrmMain.DragDoing()
@@ -111,15 +111,15 @@ Public Class MySlider
         TextHint.Text = GetHintText.DynamicInvoke(Value)
         Dim typeface As New Typeface(TextHint.FontFamily, TextHint.FontStyle, TextHint.FontWeight, TextHint.FontStretch)
         Dim formattedText As New FormattedText(TextHint.Text, Thread.CurrentThread.CurrentCulture, TextHint.FlowDirection, typeface, TextHint.FontSize, TextHint.Foreground, DPI)
-        TextHint.Width = formattedText.Width '使用手动测量的宽度修复 #1057
+        TextHint.Width = formattedText.Width 'Use the manually measured width to fix #1057
     End Sub
 
-    '指向动画
+    'Hover animation
 
     Private Sub RefreshColor() Handles Me.IsEnabledChanged, Me.MouseEnter, Me.MouseLeave
         Try
 
-            '判断当前颜色
+            'Determine the current color
             Dim ForegroundName As String, DotFillName As String
             Dim AnimationTime As Integer
             If IsEnabled Then
@@ -141,15 +141,15 @@ Public Class MySlider
                 DotFillName = "ColorBrushGray5"
                 AnimationTime = 200
             End If
-            '触发颜色动画
-            If IsLoaded AndAlso AniControlEnabled = 0 Then '防止默认属性变更触发动画
-                '有动画
+            'Trigger the color animation
+            If IsLoaded AndAlso AniControlEnabled = 0 Then 'Prevent default property changes from triggering animations
+                'With animation
                 AniStart({
                             AaColor(Me, BorderBrushProperty, ForegroundName, AnimationTime),
                             AaColor(ShapeDot, Ellipse.FillProperty, DotFillName, AnimationTime)
                          }, "MySlider Color " & Uuid)
             Else
-                '无动画
+                'Without animation
                 AniStop("MySlider Color " & Uuid)
                 SetResourceReference(BorderBrushProperty, ForegroundName)
                 ShapeDot.SetResourceReference(Ellipse.FillProperty, DotFillName)
@@ -160,16 +160,16 @@ Public Class MySlider
         End Try
     End Sub
 
-    '按键改变
+    'Keyboard changes
 
     Public Property ValueByKey As UInteger = 1
     Private Sub MySlider_MouseEnter() Handles Me.MouseEnter
-        Focus() '确保按键能改变值
+        Focus() 'Make sure key presses can change the value
     End Sub
     Private Sub MySlider_KeyDown(sender As Object, e As KeyEventArgs) Handles Me.KeyDown
-        '拒绝一边拖动一边用按键改变
+        'Do not allow changing the value with keys while dragging
         If ReferenceEquals(Me, DragControl) Then Return
-        '改变值
+        'Change the value
         If e.Key = Key.Left Then
             ChangeByKey = True
             Value -= ValueByKey
@@ -183,7 +183,7 @@ Public Class MySlider
         Else
             Return
         End If
-        '更新 Popup
+        'Update the Popup
         If GetHintText IsNot Nothing Then
             RefreshPopup()
             AniStop("MySlider KeyPopup " & Uuid)
@@ -191,7 +191,7 @@ Public Class MySlider
         End If
     End Sub
 
-#Region "设置"
+#Region "Settings"
 
     Private Sub RefreshSetting(NewValue As String) Implements ISettingControl.RefreshSetting
         Value = Val(NewValue)

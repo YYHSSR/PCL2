@@ -3,43 +3,35 @@ Imports System.Windows.Threading
 
 Public Class Application
 
-    '开始
+    'Startup
     Private Sub Application_Startup(sender As Object, e As StartupEventArgs) Handles Me.Startup
         Try
-            '核心初始化
+            'Core initialization
             MeloongCore.Main.Init("PCL2Local")
             MeloongCore.Wpf.Main.Init()
-            If Not e.Args.Contains("--gpu") Then '若是通过命令行调用，则不检查单例、不轮换日志（#9137）
+            If Not e.Args.Contains("--gpu") Then 'When invoked from the command line, skip the single-instance check and log rotation (#9137)
                 WaitingMutex(e)
                 Logger.Instance = New PclLogger With {.logFolder = Paths.BaseThenName, .MinLevel = If(ModeDebug, LogLevel.Trace, LogLevel.Info)}
             End If
-            '提升主线程优先级
+            'Raise the main thread priority
             Thread.CurrentThread.Priority = ThreadPriority.Highest
-            '执行开发版测试
-            If BuildType = BuildTypes.Debug Then
-                Try
-                    ModDevelop.Start()
-                Catch ex As Exception
-                    Logger.Error(ex, "开发者模式测试出错", LogBehavior.Alert)
-                End Try
-            End If
-            '检查 .NET Framework 版本
+            'Check the .NET Framework version
             Try
                 If CInt(RegistryUtils.TryRead("HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full", "Release", 999999)) < 528040 Then OldEnvironmentAssert()
             Catch ex As Exception
                 Logger.Warn(ex, "检查 .NET Framework 版本失败")
             End Try
-            '修复 WPF 字体加载（#3467）
+            'Fix WPF font loading (#3467)
             Try
                 Dim _unused As New FormattedText("", Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Fonts.SystemTypefaces.First, 96, New MyColor, DPI)
             Catch ex As UriFormatException
                 Environment.SetEnvironmentVariable("windir", Environment.GetEnvironmentVariable("SystemRoot"), EnvironmentVariableTarget.User)
                 Dim _unused As New FormattedText("", Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Fonts.SystemTypefaces.First, 96, New MyColor, DPI)
             End Try
-            '检查参数调用
+            'Handle command-line arguments
             If e.Args.Length > 0 Then
                 If e.Args(0) = "--gpu" Then
-                    '调整显卡设置
+                    'Adjust GPU settings
                     Try
                         SetGPUPreference(e.Args(1).Trim(""""))
                         Environment.Exit(ProcessReturnValues.TaskDone)
@@ -48,7 +40,7 @@ Public Class Application
                     End Try
                 End If
             End If
-            '初始化文件结构
+            'Initialize the folder structure
             Try
                 DirectoryUtils.Create(Paths.Base & "PCL\")
                 CheckPermissionWithException(Paths.Base & "PCL\")
@@ -77,19 +69,19 @@ RetryCacheCheck:
             End Try
             DirectoryUtils.Create(PathTemp & "Cache\")
             DirectoryUtils.Create(Paths.AppDataThenName)
-            '设置 ToolTipService 默认值
+            'Set ToolTipService defaults
             ToolTipService.InitialShowDelayProperty.OverrideMetadata(GetType(DependencyObject), New FrameworkPropertyMetadata(100))
-            '设置网络配置默认值
+            'Set network configuration defaults
             ServicePointManager.Expect100Continue = False
             ServicePointManager.DefaultConnectionLimit = 10000
             ServicePointManager.UseNagleAlgorithm = False
             ServicePointManager.EnableDnsRoundRobin = True
             ServicePointManager.ReusePort = True
-            If Environment.OSVersion.Version < New Version(6, 2) Then 'Windows 7 回退（#8519）
+            If Environment.OSVersion.Version < New Version(6, 2) Then 'Windows 7 fallback (#8519)
                 ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12
             End If
-            '设置初始窗口
-            '基础信息
+            'Set up the initial window
+            'Basic info
             Logger.Info($"程序版本：{VersionDisplay} ({VersionCode}{If(CommitHash = "", "", $"，#{CommitHash}")})")
             If BuildType = BuildTypes.Snapshot Then
                 Logger.Info($"识别码：{Identify}")
@@ -99,7 +91,7 @@ RetryCacheCheck:
             Logger.Info($"程序路径：{PathExe}")
             Logger.Info($"系统编码：{Encoding.Default.HeaderName} ({Encoding.Default.CodePage}, GBK={IsGBKEncoding})")
             Logger.Info($"管理员权限：{WindowsUtils.HasAdminRole()}")
-            '检测异常环境
+            'Detect abnormal environments
             If Paths.Base.Contains(Path.GetTempPath()) OrElse Paths.Base.Contains("AppData\Local\Temp\") Then
                 MyMsgBox("请将 PCL 从压缩包中解压后再使用！" & vbCrLf & "如果不会解压，可以在网上寻找教程。", "需要解压！", "我知道了", IsWarn:=True, ForceWait:=True)
                 FormMain.EndProgramForce(ProcessReturnValues.Cancel)
@@ -108,7 +100,7 @@ RetryCacheCheck:
                 MyMsgBox("PCL 和新版 Minecraft 均不再支持 32 位系统，请重装为 64 位系统后再进行游戏！", "环境警告", "我知道了", IsWarn:=True, ForceWait:=True)
                 FormMain.EndProgramForce(ProcessReturnValues.Cancel)
             End If
-            '计时
+            'Timing
             Logger.Info($"第一阶段加载用时：{GetTimeMs() - ApplicationStartTick} ms")
             ApplicationStartTick = GetTimeMs()
             AniControlEnabled += 1
@@ -123,8 +115,8 @@ RetryCacheCheck:
         End Try
     End Sub
     ''' <summary>
-    ''' 要求程序以单例运行。
-    ''' 如果已在运行，则将其窗口拖出来并播放提示音，然后结束当前进程。
+    ''' Requires the program to run as a single instance.
+    ''' If it is already running, bring its window to the front, play a sound, and exit the current process.
     ''' </summary>
     Private Shared Sub WaitingMutex(e As StartupEventArgs)
         If BuildType = BuildTypes.Debug Then Return
@@ -133,19 +125,19 @@ RetryCacheCheck:
             PclMutex = New Mutex(True, "PCL2Local_SingletonMutex", MutexCreatedNew)
             If MutexCreatedNew Then Return
             Logger.Warn("已有一个 PCL 实例正在运行")
-            '等待已有的 PCL 退出
+            'Wait for the existing PCL to exit
             If e.Args.Length > 0 AndAlso e.Args(0) = "--wait" Then
                 Try
-                    If PclMutex.WaitOne(10000) Then Return '等待至多 10 秒
+                    If PclMutex.WaitOne(10000) Then Return 'Wait for at most 10 seconds
                 Catch Ignored As AbandonedMutexException
-                    Return '已有实例异常退出，继续启动
+                    Return 'The existing instance exited abnormally, continue starting
                 End Try
             End If
-            '将已有的 PCL 窗口拖出来
+            'Bring the existing PCL window to the front
             Dim WindowHwnd As IntPtr = FindWindow(Nothing, "Plain Craft Launcher　")
             If WindowHwnd = IntPtr.Zero Then WindowHwnd = FindWindow(Nothing, "Plain Craft Launcher 2　")
             If WindowHwnd <> IntPtr.Zero Then ShowWindowToTop(WindowHwnd)
-            '播放提示音并退出
+            'Play a sound and exit
             Beep()
             Environment.[Exit](ProcessReturnValues.Cancel)
         Catch ex As Exception
@@ -154,15 +146,15 @@ RetryCacheCheck:
     End Sub
     Private Shared PclMutex As Mutex
 
-    '结束
+    'Exit
     Private Sub Application_SessionEnding(sender As Object, e As SessionEndingCancelEventArgs) Handles Me.SessionEnding
         FrmMain?.EndProgram(False)
     End Sub
 
-    '异常
+    'Exceptions
     Private Sub Application_DispatcherUnhandledException(sender As Object, e As DispatcherUnhandledExceptionEventArgs) Handles Me.DispatcherUnhandledException
         On Error Resume Next
-        '触发页面的 Dispatcher
+        'Forward to the page's Dispatcher
         If FrmMain?.PageLeft IsNot Nothing AndAlso TypeOf FrmMain.PageLeft Is IDispatcherUnhandledException Then
             CType(FrmMain.PageLeft, IDispatcherUnhandledException).DispatcherUnhandledException(sender, e)
             If e.Handled Then Return
@@ -171,13 +163,13 @@ RetryCacheCheck:
             CType(FrmMain.PageRight, IDispatcherUnhandledException).DispatcherUnhandledException(sender, e)
             If e.Handled Then Return
         End If
-        '正常处理
+        'Normal handling
         e.Handled = True
         If IsProgramEnding Then Return
         WriteDiagnostics()
         Dim Detail As String = e.Exception.GetDisplay(True)
         If Detail.Contains("System.Windows.Threading.Dispatcher.Invoke") OrElse Detail.Contains("MS.Internal.AppModel.ITaskbarList.HrInit") OrElse Detail.Contains("未能加载文件或程序集") OrElse
-           Detail.Contains(".NET Framework") Then ' “自动错误判断” 的结果分析
+           Detail.Contains(".NET Framework") Then 'Analysis result of the automatic error diagnosis
             OldEnvironmentAssert(e.Exception)
         Else
             Logger.Error(e.Exception, "程序出现未知错误", LogBehavior.AlertThenCrash)
@@ -192,8 +184,8 @@ RetryCacheCheck:
         End If
     End Sub
 
-    '动态 DLL 加载
-    Private Sub New() '先设置中文环境并注册内嵌程序集解析，再使用第三方库。
+    'Dynamic DLL loading
+    Private Sub New() 'Set up the Chinese locale and register embedded assembly resolution before using any third-party library.
         Dim Chinese = Globalization.CultureInfo.GetCultureInfo("zh-CN")
         Globalization.CultureInfo.DefaultThreadCurrentCulture = Chinese
         Globalization.CultureInfo.DefaultThreadCurrentUICulture = Chinese
@@ -201,7 +193,7 @@ RetryCacheCheck:
         Thread.CurrentThread.CurrentUICulture = Chinese
         FrameworkElement.LanguageProperty.OverrideMetadata(GetType(FrameworkElement), New FrameworkPropertyMetadata(Markup.XmlLanguage.GetLanguage("zh-CN")))
         Static Prefixes As String() = {"Newtonsoft.Json", "Ookii.Dialogs.Wpf", "Imazen.WebP", "CacheCow.Common", "CacheCow.Client.FileStore", "CacheCow.Client", "ThrottleDebounce", "System.Net.Http.Formatting", "Microsoft.Win32.Registry", "System.Security.AccessControl", "System.Security.Principal.Windows", "PCLCS", "MeloongCore.Wpf", "MeloongCore"}
-        Static LoadedAssemblies As New ConcurrentDictionary(Of String, Lazy(Of Assembly))(StringComparer.Ordinal) '缓存
+        Static LoadedAssemblies As New ConcurrentDictionary(Of String, Lazy(Of Assembly))(StringComparer.Ordinal) 'Cache
         AddHandler AppDomain.CurrentDomain.AssemblyResolve,
         Function(sender As Object, Args As ResolveEventArgs) As Assembly
             Dim RequestedName = New AssemblyName(Args.Name).Name
@@ -210,34 +202,34 @@ RetryCacheCheck:
             Dim LazyAssembly = LoadedAssemblies.GetOrAdd(Prefix, Function(p) New Lazy(Of Assembly)(
             Function()
                 Dim LoadedAssembly = Assembly.Load(DirectCast(My.Resources.ResourceManager.GetObject(p), Byte()))
-                If p = "Imazen.WebP" Then ExtractLibwebp() 'WebP 特判
+                If p = "Imazen.WebP" Then ExtractLibwebp() 'Special case for WebP
                 Return LoadedAssembly
             End Function, LazyThreadSafetyMode.ExecutionAndPublication))
             Return LazyAssembly.Value
         End Function
     End Sub
-    Private Shared Sub ExtractLibwebp() '这个方法会调用 ModBase，进而调用 MeloongCore，所以不能放在 New 里
+    Private Shared Sub ExtractLibwebp() 'This method calls ModBase, which in turn calls MeloongCore, so it cannot be placed in New
         SetDllDirectory(PathUtils.RemoveSlashSuffix(PathPure.Value))
         Try
             ExtractResources(PathPure.Value & "libwebp.dll", "libwebp64")
         Catch ex As Exception
-            Logger.Warn(ex, "写入 libwebp.dll 失败") '防止同时加载多个图片时，同时写入文件导致文件占用，进而导致崩溃
+            Logger.Warn(ex, "写入 libwebp.dll 失败") 'Prevents a crash when several images load at once and write the file simultaneously, causing the file to be locked
         End Try
     End Sub
     Private Declare Function SetDllDirectory Lib "kernel32" Alias "SetDllDirectoryA" (lpPathName As String) As Boolean
 
-    '控件模板事件
+    'Control template events
     Private Sub MyIconButton_Click(sender As Object, e As EventArgs)
         Select Case Settings.Get(Of McLoginType)("LoginType")
             Case McLoginType.Ms
-                '微软
+                'Microsoft
                 Dim MsJson As JObject = Settings.Get(Of String)("LoginMsJson").DeserializeJson()
                 MsJson.Remove(sender.Tag)
                 Settings.Set("LoginMsJson", MsJson.ToString(Newtonsoft.Json.Formatting.None))
                 If FrmLoginMs.ComboAccounts.SelectedItem Is sender.Parent Then FrmLoginMs.ComboAccounts.SelectedIndex = 0
                 FrmLoginMs.ComboAccounts.Items.Remove(sender.Parent)
             Case McLoginType.Legacy
-                '离线
+                'Offline
                 Dim Names As New List(Of String)
                 Names.AddRange(Settings.Get(Of String)("LoginLegacyName").ToString.Split("¨"))
                 Names.Remove(sender.Tag)
@@ -245,7 +237,7 @@ RetryCacheCheck:
                 FrmLoginLegacy.ComboName.ItemsSource = Names
                 FrmLoginLegacy.ComboName.Text = If(Names.Any, Names(0), "")
             Case Else
-                '第三方
+                'Third-party
                 Dim Token As String = Settings.Get(Of McLoginType)("LoginType").ToString()
                 Dim Dict As New Dictionary(Of String, String)
                 Dim Names As New List(Of String)

@@ -9,7 +9,7 @@ Public Class PageLoginAuthSkin
     End Sub
 
     ''' <summary>
-    ''' 刷新页面显示的所有信息。
+    ''' Refresh everything shown on this page.
     ''' </summary>
     Public Sub Reload(KeepInput As Boolean)
         TextName.Text = Settings.Get(Of String)("CacheAuthName")
@@ -18,7 +18,7 @@ Public Class PageLoginAuthSkin
         PageLoginLegacy_Loaded()
     End Sub
     ''' <summary>
-    ''' 获取当前页面的登录信息。
+    ''' Get this page's login info.
     ''' </summary>
     Public Shared Function GetLoginData() As McLoginServer
         Dim Server As String = If(IsNothing(McInstanceSelected), Settings.Get(Of String)("CacheAuthServerServer"), Settings.Get(Of String)("VersionServerAuthServer", Instance:=McInstanceSelected)) & "/authserver"
@@ -55,7 +55,7 @@ Public Class PageLoginAuthSkin
             Return
         End If
         Hint("正在尝试更换，请稍候！")
-        Settings.Set("CacheAuthUuid", "") '清空选择缓存
+        Settings.Set("CacheAuthUuid", "") 'Clear the selection cache
         Settings.Set("CacheAuthName", "")
         RunInThread(
         Sub()
@@ -73,7 +73,7 @@ Public Class PageLoginAuthSkin
         Settings.Set("CacheAuthAccess", "")
         Settings.Set("CacheAuthUuid", "")
         Settings.Set("CacheAuthName", "")
-        McLoginAuthLoader.Input = Nothing '防止因为输入的用户名密码相同，直接使用了上次登录的加载器结果
+        McLoginAuthLoader.Input = Nothing 'Avoid reusing the last login result when the username and password are unchanged
         FrmLaunchLeft.RefreshPage(False, True)
     End Sub
 

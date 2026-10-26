@@ -6,23 +6,23 @@ Public Class MyMenuItem
             Dim IconControl As Shapes.Path = GetTemplateChild("Icon")
             If IconControl IsNot Nothing Then IconControl.Data = (New GeometryConverter).ConvertFromString(Icon)
         End If
-        '对父级设置透明度
+        'Set the opacity on the parent
         If TypeOf Parent Is ContextMenu Then
             CType(Parent, ContextMenu).Opacity = 600 / 1000 + 0.4
         End If
     End Sub
 
-    '基础
+    'Basics
 
     Public Uuid As Integer = GetUuid()
 
-    '指向动画
+    'Hover animation
 
     Private Const AnimationTimeIn As Integer = 100
     Private Const AnimationTimeOut As Integer = 200
     Private ColorName As String
     Private Sub RefreshColor() Handles Me.MouseEnter, Me.MouseLeave, Me.IsEnabledChanged
-        '判断当前颜色
+        'Determine the current color
         Dim BackName As String, ForeName As String
         Dim Time As Integer
         If Not IsEnabled Then
@@ -38,18 +38,18 @@ Public Class MyMenuItem
             ForeName = "ColorBrush1"
             Time = AnimationTimeOut
         End If
-        '重复性验证
+        'Skip if unchanged
         If ColorName = BackName Then Return
         ColorName = BackName
-        '触发颜色动画
-        If IsLoaded AndAlso AniControlEnabled = 0 Then '防止默认属性变更触发动画
-            '有动画
+        'Trigger the color animation
+        If IsLoaded AndAlso AniControlEnabled = 0 Then 'Prevent default property changes from triggering animations
+            'With animation
             AniStart({
                      AaColor(Me, BackgroundProperty, BackName, Time),
                      AaColor(Me, ForegroundProperty, ForeName, Time)
                  }, "MyMenuItem Color " & Uuid)
         Else
-            '无动画
+            'Without animation
             AniStop("MyMenuItem Color " & Uuid)
             SetResourceReference(BackgroundProperty, BackName)
             SetResourceReference(ForegroundProperty, ForeName)

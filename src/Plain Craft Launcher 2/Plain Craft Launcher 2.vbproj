@@ -263,7 +263,6 @@
     <Compile Include="Controls\MyTextButton.vb" />
     <Compile Include="GlobalSuppressions.vb" />
     <Compile Include="Modules\Minecraft\ModCrash.vb" />
-    <Compile Include="Modules\ModDevelop.vb" />
     <Compile Include="Modules\Minecraft\ModWatcher.vb" />
     <Compile Include="Modules\ModSecret.vb" />
     <Compile Include="Pages\PageDownload\Resource\PageResource.xaml.vb">
@@ -312,9 +311,6 @@
     </Compile>
     <Compile Include="Pages\PageLaunch\PageLoginNideSkin.xaml.vb">
       <DependentUpon>PageLoginNideSkin.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Pages\PageLink\PageLinkMain.xaml.vb">
-      <DependentUpon>PageLinkMain.xaml</DependentUpon>
     </Compile>
     <Compile Include="Pages\PageInstance\PageInstanceExport.xaml.vb">
       <DependentUpon>PageInstanceExport.xaml</DependentUpon>
@@ -374,9 +370,6 @@
     </Compile>
     <Compile Include="Pages\PageSetup\PageSetupSystem.xaml.vb">
       <DependentUpon>PageSetupSystem.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Pages\PageSetup\PageSetupLink.xaml.vb">
-      <DependentUpon>PageSetupLink.xaml</DependentUpon>
     </Compile>
     <Compile Include="Pages\PageSetup\SettingService.vb" />
     <Compile Include="Pages\PageSpeedLeft.xaml.vb">
@@ -552,10 +545,6 @@
       <SubType>Designer</SubType>
     </Page>
     <None Include="app.manifest" />
-    <Page Include="Pages\PageLink\PageLinkMain.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <Page Include="Pages\PageInstance\PageInstanceExport.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -601,10 +590,6 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Pages\PageSetup\PageSetupSystem.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Pages\PageSetup\PageSetupLink.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -692,7 +677,6 @@
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.vb</LastGenOutput>
     </EmbeddedResource>
-    <None Include="My Project\app.manifest" />
     <None Include="My Project\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.vb</LastGenOutput>
@@ -704,7 +688,7 @@
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
       <Visible>False</Visible>
-      <ProductName>Microsoft .NET Framework 4.5.2 %28x86 和 x64%29</ProductName>
+      <ProductName>Microsoft .NET Framework 4.5.2 %28x86 and x64%29</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
     <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
@@ -784,7 +768,6 @@
     <None Include="Resources\forge-installer.jar" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Images\Heads\Logo.png" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\transformer.jar" />
@@ -798,7 +781,6 @@
     <Resource Include="Images\Icons\NoIcon.png" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Images\Heads\PCL2.png" />
   </ItemGroup>
   <ItemGroup>
   </ItemGroup>

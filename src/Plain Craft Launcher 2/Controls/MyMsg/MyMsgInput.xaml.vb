@@ -33,11 +33,11 @@ Public Class MyMsgInput
     Private Sub Load(sender As Object, e As EventArgs) Handles MyBase.Loaded
         Try
 
-            'UI 初始化
+            'UI initialization
             If Btn2.IsVisible AndAlso Not Btn1.ColorType = MyButton.ColorState.Red Then Btn1.ColorType = MyButton.ColorState.Highlight
             TextArea.Focus()
             TextArea.SelectionStart = TextArea.Text.Length
-            '动画
+            'Animation
             Opacity = 0
             AniStart(AaColor(FrmMain.PanMsg, Grid.BackgroundProperty, If(MyConverter.IsWarn, New MyColor(140, 80, 0, 0), New MyColor(90, 0, 0, 0)) - FrmMain.PanMsg.Background, 200), "PanMsg Background")
             AniStart({
@@ -45,7 +45,7 @@ Public Class MyMsgInput
                 AaDouble(Sub(i) TransformPos.Y += i, -TransformPos.Y, 300, 60, New AniEaseOutBack(AniEasePower.Weak)),
                 AaDouble(Sub(i) TransformRotate.Angle += i, -TransformRotate.Angle, 300, 60, New AniEaseOutFluent(AniEasePower.Weak))
             }, "MyMsgBox " & Uuid)
-            '记录日志
+            'Logging
             Logger.Info($"输入弹窗：{LabTitle.Text}")
 
         Catch ex As Exception
@@ -53,10 +53,10 @@ Public Class MyMsgInput
         End Try
     End Sub
     Private Sub Close()
-        '结束线程阻塞
+        'Release the blocked thread
         MyConverter.WaitFrame.Continue = False
         Interop.ComponentDispatcher.PopModal()
-        '动画
+        'Animation
         AniStart({
             AaCode(
             Sub()

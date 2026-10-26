@@ -1,20 +1,20 @@
 Friend Module ModSecret
 
-    '标注 PCL 的不同分支，仅用于替换标记
+    'Marks the different PCL branches; used only for replacement markers
     Public Const VersionBranchMain As String = "Local"
-    '保留旧开发版设置路径以支持账号缓存迁移
+    'Keep the old dev build settings path to support account cache migration
     Public ReadOnly RegFolder As String = GetSettingsProfile()
-    '用于微软登录的 ClientId
+    'ClientId used for Microsoft login
     Public OAuthClientId As String = If(Environment.GetEnvironmentVariable("PCL_MS_CLIENT_ID"), "")
 
-#Region "网络鉴权"
+#Region "Network Authentication"
 
     Friend Function SecretCdnSign(UrlWithMark As String) As String
         If Not UrlWithMark.EndsWithF("{CDN}") Then Return UrlWithMark
         Return UrlWithMark.Replace("{CDN}", "").Replace(" ", "%20")
     End Function
     ''' <summary>
-    ''' 设置请求标识与资源 API 配置。
+    ''' Sets the request identifier and resource API configuration.
     ''' </summary>
     Friend Sub SecretHeadersSign(Url As String, ByRef Req As HttpRequestMessage, Optional SimulateBrowserHeaders As Boolean = False)
         If Not Req.Headers.UserAgent.Any Then
@@ -31,7 +31,7 @@ Friend Module ModSecret
 
 #End Region
 
-#Region "主题"
+#Region "Theme"
 
     Public Color1 As New MyColor(52, 61, 74)
     Public Color2 As New MyColor(11, 91, 203)
@@ -62,18 +62,7 @@ Friend Module ModSecret
 
 #End Region
 
-#Region "联网配置"
-
-    ''' <summary>
-    ''' 联网获取的配置信息。
-    ''' 若获取失败或仍在获取中，可能为 Nothing。
-    ''' </summary>
-    Public ServerConfig As JObject
-
-
-#End Region
-
-#Region "兼容接口"
+#Region "Compatibility Interfaces"
     Private Function GetSettingsProfile() As String
         Dim Profile = Environment.GetEnvironmentVariable("PCL_SETTINGS_PROFILE")
         If String.IsNullOrWhiteSpace(Profile) Then Return "PCL2Local"

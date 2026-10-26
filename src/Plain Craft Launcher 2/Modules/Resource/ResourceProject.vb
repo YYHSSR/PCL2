@@ -1,87 +1,87 @@
 ''' <summary>
-''' 社区资源的项目信息。
+''' Project info of a community resource.
 ''' </summary>
 Public Class ResourceProject
 
-    '源信息
+    'Source info
 
     ''' <summary>
-    ''' 该项目信息的所属平台。
+    ''' The platform this project info comes from.
     ''' </summary>
     Public ReadOnly Platform As ResourcePlatforms
     ''' <summary>
-    ''' 工程中包含的文件种类。
-    ''' 若为 Modrinth 工程，可能为 Mod 或 数据包。
+    ''' The type of files contained in the project.
+    ''' For a Modrinth project, may be Mod or data pack.
     ''' </summary>
     Public ReadOnly Types As ResourceTypes
     ''' <summary>
-    ''' 工程的短名。例如 technical-enchant。
+    ''' Short name of the project, e.g. technical-enchant.
     ''' </summary>
     Public ReadOnly Slug As String
     ''' <summary>
-    ''' CurseForge 工程的数字 ID。Modrinth 工程的乱码 ID。
+    ''' Numeric ID of a CurseForge project, or the random-looking ID of a Modrinth project.
     ''' </summary>
     Public ReadOnly Id As String
     ''' <summary>
-    ''' CurseForge 文件列表的数字 ID。Modrinth 工程的此项无效。
+    ''' Numeric ID of the CurseForge file list. Not used for Modrinth projects.
     ''' </summary>
     Public ReadOnly CurseForgeFileIds As List(Of Integer)
 
-    '描述性信息
+    'Descriptive info
 
     ''' <summary>
-    ''' 原始的英文名称。
+    ''' The original English name.
     ''' </summary>
     Public ReadOnly RawName As String
     ''' <summary>
-    ''' 英文描述。
+    ''' English description.
     ''' </summary>
     Public ReadOnly Description As String
     ''' <summary>
-    ''' 来源网站的工程页面网址。确保格式一定标准。
+    ''' URL of the project page on the source website. Guaranteed to be in a standard format.
     ''' CurseForge：https://www.curseforge.com/minecraft/mc-mods/jei
     ''' Modrinth：https://modrinth.com/mod/technical-enchant
     ''' </summary>
     Public ReadOnly Website As String
     ''' <summary>
-    ''' 最后一次更新的时间。
+    ''' Time of the last update.
     ''' </summary>
     Public ReadOnly LastUpdate As Date
     ''' <summary>
-    ''' 下载量计数。注意，该计数仅为一个来源，无法反应两边加起来的下载量！
+    ''' Download count. Note: this count is from a single source only and does not reflect the combined downloads!
     ''' </summary>
     Public ReadOnly DownloadCount As Integer
     ''' <summary>
-    ''' 所有支持的 Mod 加载器。可能为 <see cref="ModLoaders.None"/>。
+    ''' All supported mod loaders. May be <see cref="ModLoaders.None"/>.
     ''' </summary>
     Public ReadOnly ModLoaders As ModLoaders = ModLoaders.None
     ''' <summary>
-    ''' 描述性标签的内容。已转换为中文。
+    ''' Content of the descriptive tags. Already converted to Chinese.
     ''' </summary>
     Public ReadOnly Tags As List(Of String)
     ''' <summary>
-    ''' Logo 图片的下载地址。
-    ''' 若为 Nothing 则没有，保证不为空字符串。
+    ''' Download URL of the logo image.
+    ''' Nothing if there is none; guaranteed not to be an empty string.
     ''' </summary>
     Public LogoUrl As String = Nothing
     ''' <summary>
-    ''' 支持的 Drop 编号，从高到低排序，不为 Nothing。
-    ''' 例如：261（26.1.x）、180（1.18.x）。
+    ''' Supported drop numbers, sorted from high to low; never Nothing.
+    ''' For example: 261 (26.1.x), 180 (1.18.x).
     ''' </summary>
     Public ReadOnly Drops As List(Of Integer)
     ''' <summary>
-    ''' Modrinth API 返回的原始版本列表。
-    ''' 仅用于 Modrinth 工程的二次筛选，不会被缓存，不会被预处理。
-    ''' 若非从 Modrinth 获取则为 Nothing。
+    ''' The raw version list returned by the Modrinth API.
+    ''' Only used for secondary filtering of Modrinth projects; not cached and not preprocessed.
+    ''' Nothing if not fetched from Modrinth.
     ''' </summary>
     Public ReadOnly UnsafeGameVersions As List(Of String)
 
-    '数据库信息
+    'Database info
 
     Private LoadedDatabase As Boolean = False
     Private _WikiEntry As WikiEntry = Nothing
     ''' <summary>
-    ''' 关联的数据库条目。若为 Nothing 则没有。
+    ''' The associated database entry. Nothing if there is none.
     ''' </summary>
     Private Property WikiEntry As WikiEntry
         Get
@@ -99,7 +99,7 @@ Public Class ResourceProject
         End Set
     End Property
     ''' <summary>
-    ''' MC 百科的页面 ID。若为 0 则没有。
+    ''' Page ID on MCMOD. 0 if there is none.
     ''' </summary>
     Public ReadOnly Property WikiId As Integer
         Get
@@ -107,7 +107,7 @@ Public Class ResourceProject
         End Get
     End Property
     ''' <summary>
-    ''' 翻译后的中文名。若数据库没有则等同于 RawName。
+    ''' The translated Chinese name. Equal to RawName if the database has none.
     ''' </summary>
     Public ReadOnly Property TranslatedName As String
         Get
@@ -115,14 +115,14 @@ Public Class ResourceProject
         End Get
     End Property
 
-    '实例化
+    'Instantiation
 
     ''' <summary>
-    ''' 从工程 Json 中初始化实例。若出错会抛出异常。
+    ''' Initializes the instance from the project JSON. Throws an exception on error.
     ''' </summary>
     Public Sub New(Data As JObject)
         If Data.ContainsKey("Tags") Then
-#Region "缓存 JSON"
+#Region "Cache JSON"
             Platform = Data("Platform").ToObject(Of Integer)
             Types = Data("Types").ToObject(Of Integer)
             Slug = Data("Slug")
@@ -146,7 +146,7 @@ Public Class ResourceProject
             Platform = If(Data.ContainsKey("summary"), ResourcePlatforms.CurseForge, ResourcePlatforms.Modrinth)
             If Platform = ResourcePlatforms.CurseForge Then
 #Region "CurseForge"
-                '简单信息
+                'Simple info
                 Id = Data("id")
                 Slug = Data("slug")
                 RawName = Data("name")
@@ -187,7 +187,7 @@ Public Class ResourceProject
                     If Not GameVersions.Any(Function(v) McVersion.IsStandardFormat(v)) Then Continue For
                     Files.Add(New KeyValuePair(Of Integer, List(Of String))(File("id"), GameVersions))
                 Next
-                For Each File In If(Data("latestFilesIndexes"), New JArray) '这俩玩意儿包含的文件不一样，见 #3599
+                For Each File In If(Data("latestFilesIndexes"), New JArray) 'These two contain different files, see #3599
                     If Not McVersion.IsStandardFormat(File("gameVersion")) Then Continue For
                     Files.Add(New KeyValuePair(Of Integer, List(Of String))(File("fileId"), {File("gameVersion").ToString}.ToList))
                 Next
@@ -196,7 +196,7 @@ Public Class ResourceProject
                     Select(Function(v) McVersion.VersionToDrop(v)).Where(Function(v) v <> 209).Distinct.OrderByDescending(Function(v) v).ToList
                 'Tags
                 Tags = New List(Of String)
-                For Each Category In If(Data("categories"), New JArray). '镜像源 API 可能丢失此字段 (4267#issuecomment-2254590831)
+                For Each Category In If(Data("categories"), New JArray). 'Mirror source APIs may drop this field (4267#issuecomment-2254590831)
                     Select(Of Integer)(Function(t) t("id")).Distinct.OrderByDescending(Function(c) c)
                     Select Case Category
                             'Mod
@@ -225,7 +225,7 @@ Public Class ResourceProject
                         Case 435 : Tags.Add("服务器")
                         Case 5191 : Tags.Add("改良")
                         Case 421 : Tags.Add("支持库")
-                            '整合包
+                            'Modpack
                         Case 4484 : Tags.Add("多人")
                         Case 4479 : Tags.Add("硬核")
                         Case 4483 : Tags.Add("战斗")
@@ -242,7 +242,7 @@ Public Class ResourceProject
                         Case 4480 : Tags.Add("基于地图")
                         Case 4481 : Tags.Add("轻量")
                         Case 4482 : Tags.Add("大型")
-                            '资源包
+                            'Resource pack
                         Case 403 : Tags.Add("原版风")
                         Case 400 : Tags.Add("写实风")
                         Case 401 : Tags.Add("现代风")
@@ -257,12 +257,12 @@ Public Class ResourceProject
                         Case 396 : Tags.Add("128x")
                         Case 397 : Tags.Add("256x")
                         Case 398 : Tags.Add("超高清")
-                        Case 5193 : Tags.Add("数据包") '有这个 Tag 的项会从资源包请求中被移除
-                            '光影包
+                        Case 5193 : Tags.Add("数据包") 'Items with this tag are removed from resource pack requests
+                            'Shader pack
                         Case 6553 : Tags.Add("写实风")
                         Case 6554 : Tags.Add("幻想风")
                         Case 6555 : Tags.Add("原版风")
-                            '数据包
+                            'Data pack
                         Case 6948 : Tags.Add("冒险")
                         Case 6949 : Tags.Add("幻想")
                         Case 6950 : Tags.Add("支持库")
@@ -275,8 +275,8 @@ Public Class ResourceProject
 #End Region
             Else
 #Region "Modrinth"
-                '简单信息
-                Id = If(Data("project_id"), Data("id")) '两个 API 会返回的 key 不一样
+                'Simple info
+                Id = If(Data("project_id"), Data("id")) 'The two APIs return different keys
                 Slug = Data("slug")
                 RawName = Data("title")
                 Description = Data("description")
@@ -286,7 +286,7 @@ Public Class ResourceProject
                 If LogoUrl = "" Then LogoUrl = Nothing
                 Website = $"https://modrinth.com/{Data("project_type")}/{Slug}"
                 'GameVersions
-                '搜索结果的键为 versions，获取特定工程的键为 game_versions
+                'The key is versions in search results and game_versions when fetching a specific project
                 UnsafeGameVersions = If(CType(If(Data("game_versions"), Data("versions")), JArray), New JArray).Select(Function(v) v.ToString).Distinct.ToList
                 Drops = UnsafeGameVersions.Select(Function(v) McVersion.VersionToDrop(v)).Where(Function(v) v <> 209).Distinct.OrderByDescending(Function(v) v).ToList
                 'Type
@@ -294,7 +294,7 @@ Public Class ResourceProject
                     Case "modpack" : Types = ResourceTypes.ModPack
                     Case "resourcepack" : Types = ResourceTypes.ResourcePack
                     Case "shader" : Types = ResourceTypes.Shader
-                    Case Else : Types = ResourceTypes.Mod 'Modrinth 将数据包标为 Mod，但 categories 字段里有 datapack
+                    Case Else : Types = ResourceTypes.Mod 'Modrinth marks data packs as Mod, but the categories field contains datapack
                 End Select
                 'Tags & ModLoaders
                 Tags = New List(Of String)
@@ -310,7 +310,7 @@ Public Class ResourceProject
                 For Each Category In Data("categories").Select(Function(t) t.ToString)
                     Select Case Category
                         Case "datapack" : Types = ResourceTypes.DataPack
-                            '共用
+                            'Shared
                         Case "technology" : Tags.Add("科技")
                         Case "magic" : Tags.Add("魔法")
                         Case "adventure" : Tags.Add("冒险")
@@ -318,7 +318,7 @@ Public Class ResourceProject
                         Case "optimization" : Tags.Add("性能优化")
                         Case "vanilla-like" : Tags.Add("原版风")
                         Case "realistic" : Tags.Add("写实风")
-                            'Mod/数据包
+                            'Mod / data pack
                         Case "worldgen" : Tags.Add("世界元素")
                         Case "food" : Tags.Add("食物/烹饪")
                         Case "game-mechanics" : Tags.Add("游戏机制")
@@ -329,14 +329,14 @@ Public Class ResourceProject
                         Case "equipment" : If Types <> ResourceTypes.ResourcePack Then Tags.Add("装备")
                         Case "social" : Tags.Add("服务器")
                         Case "library" : Tags.Add("支持库")
-                            '整合包
+                            'Modpack
                         Case "multiplayer" : Tags.Add("多人")
                         Case "challenging" : Tags.Add("硬核")
                         Case "combat" : Tags.Add("战斗")
                         Case "quests" : Tags.Add("任务")
                         Case "kitchen-sink" : Tags.Add("水槽包")
                         Case "lightweight" : Tags.Add("轻量")
-                            '资源包
+                            'Resource pack
                         Case "simplistic" : Tags.Add("简洁")
                         Case "combat" : Tags.Add("战斗")
                         Case "tweaks" : Tags.Add("改良")
@@ -357,15 +357,11 @@ Public Class ResourceProject
                         Case "locale" : Tags.Add("含语言")
                         Case "core-shaders" : Tags.Add("核心着色器")
                         Case "modded" : Tags.Add("兼容 Mod")
-                            '光影包
+                            'Shader pack
                         Case "fantasy" : Tags.Add("幻想风")
                         Case "semi-realistic" : Tags.Add("半写实风")
                         Case "cartoon" : Tags.Add("卡通风")
-                            '暂时不添加性能负荷 Tag
-                            'Case "potato" : Tags.Add("极低")
-                            'Case "low" : Tags.Add("低")
-                            'Case "medium" : Tags.Add("中")
-                            'Case "high" : Tags.Add("高")
+                            'Performance load tags are not added for now
                         Case "colored-lighting" : Tags.Add("彩色光照")
                         Case "path-tracing" : Tags.Add("路径追踪")
                         Case "pbr" : Tags.Add("PBR")
@@ -382,15 +378,15 @@ Public Class ResourceProject
             If Not Tags.Any() Then Tags.Add("其他")
             Tags.Sort()
         End If
-        '保存缓存
+        'Save the cache
         Cache(Id) = Me
     End Sub
     ''' <summary>
-    ''' 从工程 ID 联网获取对应工程的信息。
+    ''' Fetches the project info online from the project ID.
     ''' </summary>
     Public Shared Function FromProjectId(ProjectId As String, Platform As ResourcePlatforms) As ResourceProject
         If Not Platform.Flags.IsSingle Then Throw New ArgumentException($"必须指定单一平台，当前值为 {Platform}")
-        If Cache.ContainsKey(ProjectId) Then '存在缓存
+        If Cache.ContainsKey(ProjectId) Then 'Cache exists
             Return Cache(ProjectId)
         ElseIf Platform = ResourcePlatforms.CurseForge Then 'CurseForge
             Return New ResourceProject(DlModRequest("https://api.curseforge.com/v1/mods/" & ProjectId)("data"))
@@ -399,11 +395,11 @@ Public Class ResourceProject
         End If
     End Function
     ''' <summary>
-    ''' 从工程 ID 列表联网获取工程信息，结果不按原顺序排列。
+    ''' Fetches project info online from a list of project IDs; results are not in the original order.
     ''' </summary>
     Public Shared Iterator Function FromProjectIds(ProjectIds As IEnumerable(Of String), Platform As ResourcePlatforms) As IEnumerable(Of ResourceProject)
         If Not Platform.Flags.IsSingle Then Throw New ArgumentException($"必须指定单一平台，当前值为 {Platform}")
-        '获取缓存
+        'Get the cache
         Dim MissingProjectIds As New List(Of String)
         For Each ProjectId In ProjectIds
             If Cache.ContainsKey(ProjectId) Then
@@ -413,7 +409,7 @@ Public Class ResourceProject
             End If
         Next
         If Not MissingProjectIds.Any() Then Return
-        '联网获取剩余的工程对象
+        'Fetch the remaining project objects online
         Dim Projects As JArray
         If Platform.HasFlagF(ResourcePlatforms.CurseForge) Then
             Projects = DlModRequest("https://api.curseforge.com/v1/mods",
@@ -427,7 +423,7 @@ Public Class ResourceProject
     End Function
 
     ''' <summary>
-    ''' 将当前实例转为可用于保存缓存的 Json。
+    ''' Converts the current instance to JSON for saving to the cache.
     ''' </summary>
     Public Function ToJson() As JObject
         Dim Json As New JObject
@@ -445,25 +441,25 @@ Public Class ResourceProject
         Json("Tags") = New JArray(Tags)
         If LogoUrl IsNot Nothing Then Json("LogoUrl") = LogoUrl
         If Drops.Any Then Json("Drops") = New JArray(Drops)
-        Json("CacheTime") = Date.Now '用于检查缓存时间
+        Json("CacheTime") = Date.Now 'Used to check the cache time
         Return Json
     End Function
 
     ''' <summary>
-    ''' 将当前工程信息实例化为控件。
+    ''' Creates a control from the current project info.
     ''' </summary>
     Public Function ToResourceItem(ShowMcVersionDesc As Boolean, ShowLoaderDesc As Boolean) As MyVirtualizingElement(Of MyResourceItem)
-        '获取版本描述
+        'Get the version description
         Dim GameVersionDescription As String
         If Drops Is Nothing OrElse Not Drops.Any() Then
             GameVersionDescription = "仅快照版本" '#5412
         Else
             Dim Segments As New List(Of String)
             Dim IsOld As Boolean = False
-            For i = 0 To Drops.Count - 1 '版本号一定为降序
-                '获取当前连续的版本号段
+            For i = 0 To Drops.Count - 1 'Version numbers are always in descending order
+                'Get the current contiguous version ranges
                 Dim StartDrop As Integer = Drops(i), EndDrop As Integer = Drops(i)
-                If StartDrop < 120 Then '如果支持新版本，则不显示 1.11-
+                If StartDrop < 120 Then 'If newer versions are supported, do not show 1.11-
                     If Segments.Any() AndAlso Not IsOld Then
                         Exit For
                     Else
@@ -475,7 +471,7 @@ Public Class ResourceProject
                     EndDrop = Drops(ii)
                     i = ii
                 Next
-                '将版本号段转为描述文本
+                'Convert the version ranges to description text
                 Dim StartName = McVersion.DropToVersion(StartDrop)
                 Dim EndName = McVersion.DropToVersion(EndDrop)
                 If StartDrop = EndDrop Then
@@ -499,7 +495,7 @@ Public Class ResourceProject
             Next
             GameVersionDescription = Segments.Join(", ")
         End If
-        '获取 Mod 加载器描述
+        'Get the mod loader description
         Dim ModLoaderDescriptionFull As String, ModLoaderDescriptionPart As String
         Dim ModLoadersForDesc = ModLoaders.Flags().ToList()
         Select Case ModLoadersForDesc.Count
@@ -526,7 +522,7 @@ Public Class ResourceProject
                     ModLoaderDescriptionPart = ModLoadersForDesc.Join(" / ")
                 End If
         End Select
-        '实例化 UI
+        'Create the UI
         Return New MyVirtualizingElement(Of MyResourceItem)(
         Function()
             Dim NewItem As New MyResourceItem With {.Tag = Me}
@@ -540,22 +536,22 @@ Public Class ResourceProject
             End If
             NewItem.Tags = Tags
             NewItem.Description = Description.ReplaceLineEndings("")
-            '下边栏
+            'Bottom bar
             If Not ShowMcVersionDesc AndAlso Not ShowLoaderDesc Then
-                '全部隐藏
+                'Hide all
                 CType(NewItem.PathVersion.Parent, Grid).Children.Remove(NewItem.PathVersion)
                 CType(NewItem.LabVersion.Parent, Grid).Children.Remove(NewItem.LabVersion)
                 NewItem.ColumnVersion1.Width = New GridLength(0)
                 NewItem.ColumnVersion2.MaxWidth = 0
                 NewItem.ColumnVersion3.Width = New GridLength(0)
             ElseIf ShowMcVersionDesc AndAlso ShowLoaderDesc Then
-                '全部显示
+                'Show all
                 NewItem.LabVersion.Text = If(ModLoaderDescriptionPart = "", "", ModLoaderDescriptionPart & " ") & GameVersionDescription
             ElseIf ShowMcVersionDesc Then
-                '仅显示版本
+                'Show versions only
                 NewItem.LabVersion.Text = GameVersionDescription
             Else
-                '仅显示 Mod 加载器
+                'Show mod loaders only
                 NewItem.LabVersion.Text = ModLoaderDescriptionFull
             End If
             NewItem.LabSource.Text = Platform.ToString
@@ -575,74 +571,74 @@ Public Class ResourceProject
         End If
     End Sub
     Public Function GetControlTitle(HasModLoaderDescription As Boolean) As (Title As String, SubTitle As String)
-        '检查下列代码时可以参考 #1567 的测试例
+        'See the test cases in #1567 when reviewing the code below
         Dim Title As String = RawName
         Dim SubtitleList As List(Of String)
         If TranslatedName = RawName Then
-            '没有中文翻译
-            '将所有名称分段
+            'No Chinese translation
+            'Split all names into segments
             Dim NameLists = TranslatedName.Split({" | ", " - ", "(", ")", "[", "]", "{", "}"}, True).
                 Select(Function(s) s.Trim(" /\".ToCharArray)).Where(Function(w) Not String.IsNullOrEmpty(w))
             If NameLists.IsSingle Then GoTo NoSubtitle
-            '查找其中的缩写、Forge/Fabric 等版本标记
+            'Find abbreviations and Forge/Fabric version markers among them
             SubtitleList = New List(Of String)
             Dim NormalNameList = New List(Of String)
             For Each Name In NameLists
                 Dim LowerName As String = Name.Lower
                 If Name = Name.Upper AndAlso Name <> "FPS" AndAlso Name <> "HUD" Then
-                    '缩写
+                    'Abbreviation
                     SubtitleList.Add(Name)
                 ElseIf {"neoforge", "forge", "fabric", "quilt"}.Any(Function(l) LowerName.Contains(l)) AndAlso
-                    Not LowerName.Replace("neoforge", "").Replace("forge", "").Replace("fabric", "").Replace("quilt", "").RegexCheck("[a-z]+") Then '去掉关键词后没有其他字母
-                    'Forge/Fabric 等版本标记
+                    Not LowerName.Replace("neoforge", "").Replace("forge", "").Replace("fabric", "").Replace("quilt", "").RegexCheck("[a-z]+") Then 'No other letters remain after removing the keywords
+                    'Forge/Fabric version marker
                     SubtitleList.Add(Name)
                 Else
-                    '其他部分
+                    'Other parts
                     NormalNameList.Add(Name)
                 End If
             Next
-            '根据分类后的结果处理
+            'Process according to the classified results
             If Not NormalNameList.Any() OrElse Not SubtitleList.Any() Then GoTo NoSubtitle
-            '同时包含 NormalName 和 Subtitle
+            'Contains both NormalName and Subtitle
             Title = NormalNameList.Join(" - ")
         Else
-            '有中文翻译
-            '尝试将文本分为三段：Title (EnglishName) - Suffix
-            '检查时注意 Carpet（它没有中文译名，但有 Suffix）和 “汤姆存储 - 星的奇妙优化 (Tom's balabala)”
+            'Has a Chinese translation
+            'Try to split the text into three parts: Title (EnglishName) - Suffix
+            'When checking, mind Carpet (no Chinese name but has a Suffix) and "汤姆存储 - 星的奇妙优化 (Tom's balabala)"
             Title = If(TranslatedName.Contains(" ("), TranslatedName.BeforeFirst(" ("), TranslatedName.BeforeLast(" - "))
             Dim Suffix As String = ""
             If TranslatedName.AfterLast(")").Contains(" - ") Then Suffix = TranslatedName.AfterLast(")").AfterLast(" - ")
             Dim EnglishName As String = TranslatedName
             If Suffix <> "" Then EnglishName = EnglishName.Replace(" - " & Suffix, "")
             EnglishName = EnglishName.Replace(Title, "").Trim("("c, ")"c, " "c)
-            '中段的额外信息截取
+            'Extract extra info from the middle part
             SubtitleList = EnglishName.Split({" | ", " - ", "(", ")", "[", "]", "{", "}"}, True).
                     Select(Function(s) s.Trim(" /".ToCharArray)).Where(Function(w) Not String.IsNullOrEmpty(w)).ToList
             If SubtitleList.Count > 1 AndAlso
-               Not SubtitleList.Any(Function(s) s.Lower.Contains("forge") OrElse s.Lower.Contains("fabric") OrElse s.Lower.Contains("quilt")) AndAlso '不是标注 XX 版
-               Not (SubtitleList.Count = 2 AndAlso SubtitleList.Last.Upper = SubtitleList.Last) Then '不是缩写
-                SubtitleList = New List(Of String) From {EnglishName} '使用原名
+               Not SubtitleList.Any(Function(s) s.Lower.Contains("forge") OrElse s.Lower.Contains("fabric") OrElse s.Lower.Contains("quilt")) AndAlso 'Not a "XX 版" marker
+               Not (SubtitleList.Count = 2 AndAlso SubtitleList.Last.Upper = SubtitleList.Last) Then 'Not an abbreviation
+                SubtitleList = New List(Of String) From {EnglishName} 'Use the original name
             End If
-            '添加后缀
+            'Add the suffix
             If Suffix <> "" Then SubtitleList.Add(Suffix)
         End If
         SubtitleList = SubtitleList.Distinct.ToList()
-        '设置标题与描述
+        'Set the title and description
         Dim Subtitle As String = ""
         If SubtitleList.Any Then
             For Each Ex In SubtitleList
                 Dim IsModLoaderDescription As Boolean =
                     Ex.Lower.Contains("neoforge") OrElse Ex.Lower.Contains("forge") OrElse Ex.Lower.Contains("fabric") OrElse Ex.Lower.Contains("quilt")
-                '是否显示 ModLoader 信息
+                'Whether to show ModLoader info
                 If Not HasModLoaderDescription AndAlso IsModLoaderDescription Then Continue For
-                '去除 “Forge/Fabric” 这一无意义提示
+                'Remove the meaningless "Forge/Fabric" hint
                 If Ex.Length < 16 AndAlso Ex.Lower.Contains("fabric") AndAlso Ex.Lower.Contains("forge") Then Continue For
-                '将 “Forge” 等提示改为 “Forge 版”
+                'Change hints like "Forge" to "Forge 版"
                 If IsModLoaderDescription AndAlso Not Ex.Contains("版") AndAlso
                     Ex.Lower.Replace("neoforge", "").Replace("forge", "").Replace("fabric", "").Replace("quilt", "").Length <= 3 Then
                     Ex = Ex.Replace("Edition", "").Replace("edition", "").Trim.Capitalize & " 版"
                 End If
-                '将 “forge” 等词语的首字母大写
+                'Capitalize words like "forge"
                 Ex = Ex.Replace("neoforge", "NeoForge").Replace("forge", "Forge").Replace("neo", "Neo").Replace("fabric", "Fabric").Replace("quilt", "Quilt")
                 Subtitle &= "  |  " & Ex.Trim
             Next
@@ -654,16 +650,16 @@ NoSubtitle:
     End Function
 
     ''' <summary>
-    ''' 工程 ID 对应的工程实例的缓存。不会保存到文件。
+    ''' Cache of project instances by project ID. Not saved to a file.
     ''' </summary>
     Protected Friend Shared Cache As New Dictionary(Of String, ResourceProject)
 
     ''' <summary>
-    ''' 检查是否与某个 Project 是相同的工程，只是在不同的网站。
+    ''' Checks whether this is the same project as another Project, just on a different website.
     ''' </summary>
     Public Function IsLike(Project As ResourceProject) As Boolean
-        If Id = Project.Id Then Return True '相同实例
-        '提取字符串中的字母和数字
+        If Id = Project.Id Then Return True 'Same instance
+        'Extract letters and digits from the string
         Dim GetRaw =
         Function(Data As String) As String
             Dim Result As New StringBuilder()
@@ -672,20 +668,20 @@ NoSubtitle:
             Next
             Return Result.ToString.Lower
         End Function
-        '来自不同的网站
+        'From different websites
         If Platform = Project.Platform Then Return False
-        'Mod 加载器一致
+        'Same mod loader
         If ModLoaders <> Project.ModLoaders Then Return False
-        '若不为光影，则要求 MC 版本一致
+        'Unless it is a shader, require the same MC version
         If Types <> ResourceTypes.Shader AndAlso Drops.Ordered.SequenceEqual(Project.Drops.Ordered) Then Return False
-        '最近更新时间差距在一周以内
+        'Last update times are within a week of each other
         If Math.Abs((LastUpdate - Project.LastUpdate).TotalDays) > 7 Then Return False
-        'MCMOD 翻译名 / 原名 / 描述文本 / Slug 的英文部分相同
+        'MCMOD translated name / original name / description / English part of the slug are the same
         If TranslatedName = Project.TranslatedName OrElse
            RawName = Project.RawName OrElse Description = Project.Description OrElse
            GetRaw(Slug) = GetRaw(Project.Slug) Then
             Logger.Info($"将 {RawName} ({Slug}) 与 {Project.RawName} ({Project.Slug}) 认定为相似工程")
-            '如果只有一个有 DatabaseEntry，设置给另外一个
+            'If only one has a DatabaseEntry, assign it to the other
             If WikiEntry Is Nothing AndAlso Project.WikiEntry IsNot Nothing Then WikiEntry = Project.WikiEntry
             If WikiEntry IsNot Nothing AndAlso Project.WikiEntry Is Nothing Then Project.WikiEntry = WikiEntry
             Return True
@@ -693,7 +689,7 @@ NoSubtitle:
         Return False
     End Function
 
-    '辅助函数
+    'Helper functions
     Public Overrides Function ToString() As String
         Return $"{Id} ({Slug}): {RawName}"
     End Function

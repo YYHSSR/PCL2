@@ -3,11 +3,11 @@ using System.Globalization;
 namespace PCLCS;
 
 /// <summary>
-/// Minecraft 版本号和组件信息
+/// Minecraft version number and component info
 /// </summary>
 public sealed class McVersion {
     /// <summary>
-    /// 原版版本名，如 26.1、26.1-snapshot-1、1.12.2、16w01a。
+    /// Vanilla version name, such as 26.1, 26.1-snapshot-1, 1.12.2, 16w01a.
     /// </summary>
     public string VanillaName {
         get => _vanillaName;
@@ -18,52 +18,52 @@ public sealed class McVersion {
     }
     private string _vanillaName = "Unknown";
     /// <summary>
-    /// 可比较的三段式原版版本号。
-    /// 旧格式会将次版本号移到主版本号，例如 1.20.1 会转换为 20.0.1，若没有版本号，例如旧快照，则为 9999.0.0。
+    /// Comparable three-part vanilla version number.
+    /// The old format moves the minor version into the major version, e.g. 1.20.1 becomes 20.0.1; without a version number, such as old snapshots, it is 9999.0.0.
     /// </summary>
     public Version Vanilla = new(9999, 0, 0);
-    /// <summary> 原版版本号是否可靠（不是通过猜测获取）。</summary>
+    /// <summary> Whether the vanilla version number is reliable (not guessed).</summary>
     public bool Reliable;
-    /// <summary> 原版版本号是否有效。</summary>
+    /// <summary> Whether the vanilla version number is valid.</summary>
     public bool Valid => Vanilla.Major < 1000;
-    /// <summary> 可供比较的原版 Drop 序数，例如 26.3.2 为 263，1.21.5 为 210；若没有版本号，例如旧快照，则直接指定为 209。</summary>
+    /// <summary> Comparable vanilla Drop ordinal, e.g. 263 for 26.3.2 and 210 for 1.21.5; without a version number, such as old snapshots, it is set to 209.</summary>
     public int Drop => Valid ? Vanilla.Major * 10 + Vanilla.Minor : 209;
-    /// <summary> 已安装的 Mod Loader，可能有多个。未安装时为 <see cref="ModLoaders.None"/>。</summary>
+    /// <summary> Installed mod loaders; there may be several. <see cref="ModLoaders.None"/> if none is installed.</summary>
     public ModLoaders ModLoaders => ModLoaderVersions.Keys.Aggregate(ModLoaders.None, (result, loader) => result | loader);
-    /// <summary> 已安装的各个 Mod Loader 及其版本；无法确定精确版本时为“未知版本”。</summary>
+    /// <summary> Installed mod loaders and their versions; "未知版本" when the exact version cannot be determined.</summary>
     public Dictionary<ModLoaders, string> ModLoaderVersions { get; } = [];
-    /// <summary> OptiFine 版本名，如 C8、C9_pre10；未识别到时为 null。</summary>
+    /// <summary> OptiFine version name, such as C8 or C9_pre10; null if not detected.</summary>
     public string? OptiFine;
-    /// <summary> OptiFine 是否以 Mod 形式安装。</summary>
+    /// <summary> Whether OptiFine is installed as a mod.</summary>
     public bool OptiFineAsMod;
-    /// <summary> 版本的发布时间。</summary>
+    /// <summary> Release time of the version.</summary>
     public DateTime ReleaseTime = new(1970, 1, 1, 15, 0, 0);
-    /// <summary> 是否为愚人节版本。</summary>
+    /// <summary> Whether this is an April Fools version.</summary>
     public bool IsFool;
-    /// <summary> 是否为快照、预发布版、发布候选或实验性版本。</summary>
+    /// <summary> Whether this is a snapshot, pre-release, release candidate or experimental version.</summary>
     public bool IsSnapshot;
-    /// <summary> 是否识别到已安装的 OptiFine。</summary>
+    /// <summary> Whether an installed OptiFine was detected.</summary>
     public bool HasOptiFine => OptiFine is not null;
     /// <summary>
-    /// 可供比较的 OptiFine 版本序数。
+    /// Comparable OptiFine version ordinal.
     /// </summary>
     public int OptiFineCode {
         get {
             if (OptiFine is null or "未知版本" || OptiFine.Length == 0) return 0;
-            // 字母编号，如 G2 中的 G（7）
+            // Letter code, e.g. G (7) in G2
             int result = char.ToUpperInvariant(OptiFine[0]) - 'A' + 1;
-            // 末尾数字，如 C5 beta4 中的 5
+            // Trailing number, e.g. 5 in C5 beta4
             result = result * 100 + (int.TryParse(OptiFine.Substring(1).RegexSeek(@"\d+"), out int mainVersion) ? mainVersion : 0);
-            // 测试标记（正式版为 99，Pre[x] 为 50+x，Beta[x] 为 x）
+            // Preview marker (99 for releases, 50+x for Pre[x], x for Beta[x])
             result *= 100;
             string? preview = OptiFine.RegexSeek(@"(?i)(pre|beta)\d*");
             if (preview is null) return result + 99;
-            int sequence = int.TryParse(preview.RegexSeek(@"\d+"), out int value) ? value : 1; // 为 pre 或 beta 结尾，视作 1
+            int sequence = int.TryParse(preview.RegexSeek(@"\d+"), out int value) ? value : 1; // Treat a bare pre or beta suffix as 1
             return result + (preview.StartsWithF("pre", true) ? 50 : 0) + sequence;
         }
     }
     /// <summary>
-    /// 可供比较的类 Forge 版本序数。
+    /// Comparable Forge-like version ordinal.
     /// </summary>
     public int ForgelikeCode {
         get {
@@ -71,7 +71,7 @@ public sealed class McVersion {
                 ModLoaderVersions.TryGetValue(ModLoaders.NeoForge, out version);
             }
             if (version is null or "未知版本") return 0;
-            // 提取所有数字段，以兼容 beta、alpha 和 snapshot 等非数字后缀。
+            // Extract all numeric segments to support non-numeric suffixes such as beta, alpha and snapshot.
             int[] segments = version.RegexSearch(@"\d+")
                 .Select(segment => int.TryParse(segment, out int value) ? value : 0).ToArray();
             return segments.Length switch {
@@ -85,10 +85,10 @@ public sealed class McVersion {
     }
 
     /// <summary>
-    /// 创建默认 Minecraft 版本。
+    /// Creates a default Minecraft version.
     /// </summary>
-    /// <param name="vanillaName">原版版本名。</param>
-    /// <param name="reliable">版本名是否来自可靠依据。</param>
+    /// <param name="vanillaName">Vanilla version name.</param>
+    /// <param name="reliable">Whether the version name comes from a reliable source.</param>
     public McVersion(string vanillaName, bool reliable = true) {
         Reliable = reliable;
         VanillaName = vanillaName;
@@ -97,7 +97,7 @@ public sealed class McVersion {
     }
 
     /// <summary>
-    /// 通过 Components 创建 Minecraft 版本信息。
+    /// Creates Minecraft version info from Components.
     /// </summary>
     public McVersion(McComponents components) : this(components.MinecraftVersion) {
         OptiFine = components.OptiFineVersion?.AfterLast("HD_").AfterFirst("_");
@@ -105,29 +105,29 @@ public sealed class McVersion {
     }
 
     /// <summary>
-    /// 通过 JSON 识别 Minecraft 版本和已安装组件。
+    /// Detects the Minecraft version and installed components from JSON.
     /// </summary>
-    /// <param name="instanceName">实例文件夹名。</param>
-    /// <param name="json">展开的版本 JSON。</param>
-    /// <param name="jarVersionJson">版本 JAR 中的 version.json。</param>
+    /// <param name="instanceName">Instance folder name.</param>
+    /// <param name="json">Expanded version JSON.</param>
+    /// <param name="jarVersionJson">version.json inside the version JAR.</param>
     public McVersion(string instanceName, JObject json, JObject? jarVersionJson = null) {
         string jsonText = json.ToString(Formatting.None);
-        DateTime releaseTime = new(1970, 1, 1, 15, 0, 0); // 未知版本也可能显示为 1970 年
+        DateTime releaseTime = new(1970, 1, 1, 15, 0, 0); // Unknown versions may also show as 1970
         try {
             if (json["releaseTime"] is JToken releaseTimeToken) releaseTime = releaseTimeToken.ToObject<DateTime>();
         } catch {
         }
         bool reliable = true;
-        // 获取游戏版本
+        // Get the game version
         string vanillaName = (GetVanillaName(instanceName, json, jarVersionJson, releaseTime, ref reliable) ?? "Unknown").Replace("_unobfuscated", "").Replace(" Unobfuscated", "");
         Reliable = reliable;
         VanillaName = vanillaName;
         ReleaseTime = releaseTime;
-        // 确定版本分类
+        // Determine the version category
         string jsonType = json.Value<string>("type") ?? "";
         // OptiFine
         OptiFine = jsonText.ContainsIgnoreCase("optifine") ? jsonText.RegexSeek(@"(?<=HD_U_)[^\"":/]+") ?? "未知版本": null;
-        // 愚人节与快照版本
+        // April Fools and snapshot versions
         DateTime fixedReleaseTime = releaseTime.ToUniversalTime().AddHours(2);
         IsFool = jsonType == "fool" || IsFoolName(vanillaName) || (fixedReleaseTime.Month == 4 && fixedReleaseTime.Day == 1 && jsonType == "snapshot");
         IsSnapshot = IsSnapshotName(vanillaName) || instanceName.ContainsIgnoreCase("combat") || jsonType is "snapshot" or "pending" or "fool";
@@ -141,8 +141,8 @@ public sealed class McVersion {
             ModLoaderVersions[ModLoaders.Fabric] = jsonText.RegexSeek(@"(?<=(net\.fabricmc:fabric-loader:|org\.quiltmc:quilt-loader:))[0-9\.]+(\+build.[0-9]+)?")?
                                                         .Replace("+build", "") ?? "未知版本";
         } else if (jsonText.ContainsIgnoreCase("net.neoforge")) {
-            // 1.20.1 JSON 范例："--fml.forgeVersion", "47.1.99"
-            // 1.20.2+ JSON 范例："--fml.neoForgeVersion", "20.6.119-beta"
+            // 1.20.1 JSON example: "--fml.forgeVersion", "47.1.99"
+            // 1.20.2+ JSON example: "--fml.neoForgeVersion", "20.6.119-beta"
             ModLoaderVersions[ModLoaders.NeoForge] = FindArgumentValue(json, "--fml.neoForgeVersion") ?? FindArgumentValue(json, "--fml.forgeVersion") ?? "未知版本";
         } else if (jsonText.ContainsIgnoreCase("minecraftforge")) {
             ModLoaderVersions[ModLoaders.Forge] = jsonText.RegexSeek(@"(?<=forge:[0-9\.]+(?:_pre[0-9]*)?-)[0-9\.]+")
@@ -152,29 +152,29 @@ public sealed class McVersion {
     }
 
     private static string? GetVanillaName(string instanceName, JObject json, JObject? jarVersionJson, DateTime releaseTime, ref bool reliable) {
-        // 获取发布时间并判断是否为老版本
+        // Get the release time and determine whether it is an old version
         if (releaseTime.Year is > 2000 and < 2013) return "Old";
-        // 实验性快照
+        // Experimental snapshot
         if (json.Value<string>("type") == "pending") return "pending";
-        // 从 PCL 下载的版本信息中获取版本号
+        // Get the version number from version info downloaded by PCL
         if (json["clientVersion"] is JToken clientVersion) return clientVersion.ToString();
-        // 从 HMCL 下载的版本信息中获取版本号
+        // Get the version number from version info downloaded by HMCL
         if (json["patches"] is JArray patches) {
             JToken? gameVersion = patches.OfType<JObject>().FirstOrDefault(patch => patch.Value<string>("id") == "game")?["version"];
             if (gameVersion is not null) return gameVersion.ToString();
         }
-        // 从 Forge / NeoForge Arguments 中获取版本号
+        // Get the version number from Forge / NeoForge arguments
         if (FindArgumentValue(json, "--fml.mcVersion") is { Length: > 0 } fmlVersion) return fmlVersion;
-        // 从继承版本中获取版本号
+        // Get the version number from the inherited version
         string inherit = json["inheritsFrom"]?.ToString() ?? "";
         if (inherit.Length > 0) {
-            string jar = json["jar"]?.ToString() ?? ""; // LiteLoader 优先使用 Jar
+            string jar = json["jar"]?.ToString() ?? ""; // LiteLoader prefers Jar
             return jar.Length > 0 ? jar : inherit;
         }
-        // 从下载地址中获取版本号
+        // Get the version number from the download URL
         string? download = json["downloads"]?.ToString(Formatting.None).RegexSeek(@"(?<=launcher.mojang.com/mc/game/)[^/]*");
         if (download is not null) return download;
-        // 从 Forge/OptiFine/Fabric 版本中获取版本号
+        // Get the version number from the Forge/OptiFine/Fabric version
         string librariesText = json["libraries"]!.ToString();
         string[] libraryPatterns = [
             @"(?<=net.minecraftforge:forge:)[0-9]{1,2}.[0-9+.]+",
@@ -185,22 +185,22 @@ public sealed class McVersion {
         foreach (string pattern in libraryPatterns) {
             if (librariesText.RegexSeek(pattern) is string match) return match;
         }
-        // 从 jar 项中获取版本号
+        // Get the version number from the jar entry
         if (json["jar"] is JToken jarToken) return jarToken.ToString();
-        // 从 jar 文件的 version.json 中获取版本号
-        if (jarVersionJson?["name"] is JToken jarNameToken && jarNameToken.ToString() is { Length: < 32 } jarName) { // 因为 wiki 说这玩意儿可能是个 hash，虽然我没发现
+        // Get the version number from version.json in the jar file
+        if (jarVersionJson?["name"] is JToken jarNameToken && jarNameToken.ToString() is { Length: < 32 } jarName) { // The wiki says this may be a hash, though I have never seen one
             Logger.Info($"从版本 jar 中的 version.json 获取到版本号：{jarName}");
             return jarName;
         }
         string VersionPattern = @"(([1-9][0-9]w[0-9]{2}[a-g])|((1|[2-9][0-9])\.[0-9]+(\.[0-9]+)?(-(pre|rc|snapshot-?)[1-9]*| Pre-Release( [1-9])?)?))(_unobfuscated)?";
-        // 从 JSON 的 ID 中获取
+        // Get it from the JSON ID
         if (json["id"]!.ToString().RegexSeek(VersionPattern, RegexOptions.IgnoreCase) is string idMatch) return idMatch;
-        // 非准确的版本判断警告
+        // Warning for an inexact version detection
         Logger.Info($"无法完全确认 MC 版本号的版本：{instanceName}");
         reliable = false;
-        // 从文件夹名中获取
+        // Get it from the folder name
         if (instanceName.RegexSeek(VersionPattern, RegexOptions.IgnoreCase) is string folderMatch) return folderMatch;
-        // 从 JSON 出现的版本号中获取
+        // Get it from version numbers appearing in the JSON
         JObject withoutLibraries = (JObject) json.DeepClone();
         withoutLibraries.Remove("libraries");
         return withoutLibraries.ToString(Formatting.None).RegexSeek(VersionPattern, RegexOptions.IgnoreCase);
@@ -217,7 +217,7 @@ public sealed class McVersion {
         new[] { "w", "snapshot", "rc", "pre", "experimental", "-" }.Any(name.ContainsIgnoreCase);
 
     /// <summary>
-    /// 读取 arguments 中指定参数的字符串值。
+    /// Reads the string value of the specified argument in arguments.
     /// </summary>
     private static string? FindArgumentValue(JObject json, string name) {
         JArray? arguments = json["arguments"]?["game"] as JArray;
@@ -229,7 +229,7 @@ public sealed class McVersion {
     }
 
     /// <summary>
-    /// 判断版本字符串是否符合 Minecraft 原版格式，例如 1.x、26.x。
+    /// Whether the version string matches the vanilla Minecraft format, such as 1.x or 26.x.
     /// </summary>
     public static bool IsStandardFormat(string? version) {
         if (version is null) return false;
@@ -239,7 +239,7 @@ public sealed class McVersion {
     }
 
     /// <summary>
-    /// 将版本名转换为 Drop 序数；无法转换时返回 209。
+    /// Converts a version name to a Drop ordinal; returns 209 if it cannot be converted.
     /// </summary>
     public static int VersionToDrop(string? vanillaName) {
         if (vanillaName is null) return 209;
@@ -248,7 +248,7 @@ public sealed class McVersion {
     }
 
     /// <summary>
-    /// 将 Drop 序数转换为版本字符串。
+    /// Converts a Drop ordinal to a version string.
     /// </summary>
     public static string DropToVersion(int drop) {
         if (drop >= 250) return $"{drop / 10}.{drop % 10}";
@@ -258,15 +258,15 @@ public sealed class McVersion {
     }
 
     /// <summary>
-    /// 将版本名转换为可比较的三段式原版版本号。
-    /// 对老版本格式，例如 1.20.3，会被转换为 20.0.3。
-    /// 对愚人节版本，返回其基于的正式版版本号。
-    /// 若没有版本号，例如旧快照，则为 9999.0.0。
+    /// Converts a version name to a comparable three-part vanilla version number.
+    /// Old-format versions such as 1.20.3 are converted to 20.0.3.
+    /// For April Fools versions, returns the version number of the release it is based on.
+    /// Without a version number, such as old snapshots, it is 9999.0.0.
     /// </summary>
     public static Version NameToVersion(string? name) {
         if (name is null) return new Version(9999, 0, 0);
         name = name.Lower().Replace("_unobfuscated", "").Replace(" unobfuscated", "");
-        // 愚人节版本
+        // April Fools versions
         if (name.StartsWithF("2.0")) return NameToVersion("1.5.1");
         if (name == "15w14a") return NameToVersion("1.8.3");
         if (name.ContainsIgnoreCase(".rv-pre")) return NameToVersion("1.9.2");
@@ -277,10 +277,10 @@ public sealed class McVersion {
         if (name == "24w14potato") return NameToVersion("1.20.4");
         if (name == "25w14craftmine") return NameToVersion("1.21.4");
         if (name == "26w14a") return NameToVersion("26.1.1");
-        // 其余版本
+        // Other versions
         static int ParseSegment(string[] segments, int index) {
             if (index >= segments.Length) return 0;
-            // 只读取该段开头连续的数字，忽略其后的预览版标记。
+            // Read only the leading digits of the segment, ignoring any preview marker after it.
             return int.TryParse(segments[index].RegexSeek(@"^\d+"), out int value) ? value : 0;
         }
         string[] segments = name.Split([' ', '_', '-', '.'], StringSplitOptions.None);

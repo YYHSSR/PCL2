@@ -2,7 +2,7 @@ Public Class MyDropShadow
     Inherits Decorator
 
     ''' <summary>
-    ''' 阴影颜色。
+    ''' Shadow color.
     ''' </summary>
     Public Property Color As Color
         Get
@@ -16,7 +16,7 @@ Public Class MyDropShadow
         New FrameworkPropertyMetadata(Color.FromArgb(&H71, &H0, &H0, &H0), FrameworkPropertyMetadataOptions.AffectsRender, New PropertyChangedCallback(AddressOf ClearBrushes)))
 
     ''' <summary>
-    ''' 阴影模糊半径。
+    ''' Shadow blur radius.
     ''' </summary>
     Public Property ShadowRadius As Double
         Get
@@ -30,7 +30,7 @@ Public Class MyDropShadow
         New FrameworkPropertyMetadata(CDbl(5), FrameworkPropertyMetadataOptions.AffectsRender, New PropertyChangedCallback(AddressOf ClearBrushes)))
 
     ''' <summary>
-    ''' 圆角大小。
+    ''' Corner radius.
     ''' </summary>
     Public Property CornerRadius As CornerRadius
         Get
@@ -49,7 +49,7 @@ Public Class MyDropShadow
 
 
     ' =======================================
-    '  渲染
+    '  Rendering
     ' =======================================
 
 
@@ -321,4 +321,4 @@ Public Class MyDropShadow
 
 End Class
 
-'参考自：https://referencesource.microsoft.com/#PresentationFramework.Aero/parent/Shared/Microsoft/Windows/Themes/SystemDropShadowChrome.cs,6d9c27d92a8128c1
+'Based on: https://referencesource.microsoft.com/#PresentationFramework.Aero/parent/Shared/Microsoft/Windows/Themes/SystemDropShadowChrome.cs,6d9c27d92a8128c1

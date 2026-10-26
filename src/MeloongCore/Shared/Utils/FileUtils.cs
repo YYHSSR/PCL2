@@ -3,11 +3,11 @@ using System.IO.Compression;
 namespace MeloongCore;
 public static class FileUtils {
 
-    #region 读取
+    #region Reading
 
     /// <summary>
-    /// 打开指定文件的只读 <see cref="Stream"/>。
-    /// <para/>若指定了 <paramref name="type"/>，则会改为从该类型的程序集中读取嵌入的资源。
+    /// Opens a read-only <see cref="Stream"/> for the specified file.
+    /// <para/>If <paramref name="type"/> is specified, reads the embedded resource from that type's assembly instead.
     /// </summary>
     public static Stream ReadAsStream(string filePath, Type? type = null) {
         if (type is null) {
@@ -19,26 +19,26 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 读取文件中的所有内容。
-    /// <para/>若指定了 <paramref name="type"/>，则会改为从该类型的程序集中读取嵌入的资源。
+    /// Reads all content of the file.
+    /// <para/>If <paramref name="type"/> is specified, reads the embedded resource from that type's assembly instead.
     /// </summary>
     public static byte[] ReadAsBytes(string filePath, Type? type = null) {
-        using Stream fs = FileUtils.ReadAsStream(filePath, type); // 不能使用 File.ReadAllBytes，它不指定 FileShare.ReadWrite，会在文件被占用时抛出异常
+        using Stream fs = FileUtils.ReadAsStream(filePath, type); // File.ReadAllBytes cannot be used: it does not specify FileShare.ReadWrite and throws when the file is in use
         using MemoryStream ms = new();
         fs.CopyTo(ms);
         return ms.ToArray();
     }
 
     /// <summary>
-    /// 读取文件中的所有内容。
-    /// <para/>若指定了 <paramref name="type"/>，则会改为从该类型的程序集中读取嵌入的资源。
+    /// Reads all content of the file.
+    /// <para/>If <paramref name="type"/> is specified, reads the embedded resource from that type's assembly instead.
     /// </summary>
     public static string ReadAsString(string filePath, Encoding? encoding = null, Type? type = null) 
         => FileUtils.ReadAsBytes(filePath, type).GetString(encoding);
     /// <summary>
-    /// 读取文件中的所有内容。
-    /// <para/>若文件不存在或读取失败，返回 <see langword="null"/>，而不是抛出异常。
-    /// <para/>若指定了 <paramref name="type"/>，则会改为从该类型的程序集中读取嵌入的资源。
+    /// Reads all content of the file.
+    /// <para/>Returns <see langword="null"/> instead of throwing if the file does not exist or cannot be read.
+    /// <para/>If <paramref name="type"/> is specified, reads the embedded resource from that type's assembly instead.
     /// </summary>
     public static string? TryReadAsString(string filePath, Encoding? encoding = null, Type? type = null) {
         try {
@@ -50,51 +50,51 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 读取文件中的所有内容，并按行分割。
-    /// <para/>若指定了 <paramref name="type"/>，则会改为从该类型的程序集中读取嵌入的资源。
+    /// Reads all content of the file and splits it into lines.
+    /// <para/>If <paramref name="type"/> is specified, reads the embedded resource from that type's assembly instead.
     /// </summary>
     public static string[] ReadAsLines(string filePath, bool skipEmptyLines = false, Encoding? encoding = null, Type? type = null)
         => FileUtils.ReadAsString(filePath, encoding, type).SplitLines(skipEmptyLines);
     /// <summary>
-    /// 读取文件中的所有内容，并按行分割。
-    /// <para/>若文件不存在或读取失败，返回空数组，而不是抛出异常。
-    /// <para/>若指定了 <paramref name="type"/>，则会改为从该类型的程序集中读取嵌入的资源。
+    /// Reads all content of the file and splits it into lines.
+    /// <para/>Returns an empty array instead of throwing if the file does not exist or cannot be read.
+    /// <para/>If <paramref name="type"/> is specified, reads the embedded resource from that type's assembly instead.
     /// </summary>
     public static string[] TryReadAsLines(string filePath, bool skipEmptyLines = false, Encoding? encoding = null, Type? type = null)
         => FileUtils.TryReadAsString(filePath, encoding, type)?.SplitLines(skipEmptyLines) ?? [];
 
     /// <summary>
-    /// 读取 JSON 文件中的所有内容。
-    /// <para/>若指定了 <paramref name="type"/>，则会改为从该类型的程序集中读取嵌入的资源。
+    /// Reads all content of a JSON file.
+    /// <para/>If <paramref name="type"/> is specified, reads the embedded resource from that type's assembly instead.
     /// </summary>
     public static JToken? ReadAsJson(string filePath, Encoding? encoding = null, Type? type = null)
         => FileUtils.ReadAsString(filePath, encoding, type).DeserializeJson();
     /// <summary>
-    /// 读取 JSON 文件中的所有内容。
-    /// <para/>若指定了 <paramref name="type"/>，则会改为从该类型的程序集中读取嵌入的资源。
+    /// Reads all content of a JSON file.
+    /// <para/>If <paramref name="type"/> is specified, reads the embedded resource from that type's assembly instead.
     /// </summary>
     public static T? ReadAsJson<T>(string filePath, Encoding? encoding = null, Type? type = null) where T : JToken 
         => FileUtils.ReadAsString(filePath, encoding, type).DeserializeJson<T>();
 
     #endregion
 
-    #region 创建 / 写入
+    #region Creating / writing
 
     /// <summary>
-    /// 创建文件，并将 <paramref name="text" /> 写入文件。
-    /// 若文件已存在，则会覆盖原文件。
+    /// Creates a file and writes <paramref name="text" /> to it.
+    /// Overwrites the file if it already exists.
     /// </summary>
     public static void Write(string filePath, string text, Encoding? encoding = null) 
         => FileUtils.Write(filePath, (encoding ?? new UTF8Encoding()).GetBytes(text));
     /// <summary>
-    /// 创建文件，并将 <paramref name="content" /> 写入文件。
-    /// 若文件已存在，则会覆盖原文件。
+    /// Creates a file and writes <paramref name="content" /> to it.
+    /// Overwrites the file if it already exists.
     /// </summary>
     public static void Write(string filePath, IEnumerable<byte> content) 
         => FileUtils.Write(filePath, [.. content]);
     /// <summary>
-    /// 创建文件，并将 <paramref name="content" /> 写入文件。
-    /// 若文件已存在，则会覆盖原文件。
+    /// Creates a file and writes <paramref name="content" /> to it.
+    /// Overwrites the file if it already exists.
     /// </summary>
     public static void Write(string filePath, byte[] content) {
         DirectoryUtils.Create(PathUtils.RemoveLastPart(filePath));
@@ -105,14 +105,14 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 原子写入文件。成功时目标文件完整切换为新内容，失败时已有目标文件保持不变。
-    /// 不提供并发写入合并保证。
+    /// Writes a file atomically. On success the target is fully replaced by the new content; on failure an existing target is left unchanged.
+    /// Does not guarantee merging of concurrent writes.
     /// </summary>
     public static void WriteAtomic(string filePath, string text, Encoding? encoding = null) =>
         FileUtils.WriteAtomic(filePath, (encoding ?? new UTF8Encoding()).GetBytes(text));
     /// <summary>
-    /// 原子写入文件。成功时目标文件完整切换为新内容，失败时已有目标文件保持不变。
-    /// 不提供并发写入合并保证。
+    /// Writes a file atomically. On success the target is fully replaced by the new content; on failure an existing target is left unchanged.
+    /// Does not guarantee merging of concurrent writes.
     /// </summary>
     public static void WriteAtomic(string filePath, byte[] content) {
         string tempPath = $"{filePath}.{Guid.NewGuid():N}.tmp";
@@ -129,9 +129,9 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 创建文件，并将 <paramref name="stream" /> 写入文件。
-    /// 会将流的位置主动重置到开头。
-    /// 若文件已存在，则会覆盖原文件。
+    /// Creates a file and writes <paramref name="stream" /> to it.
+    /// Resets the stream position to the beginning first.
+    /// Overwrites the file if it already exists.
     /// </summary>
     public static void Write(string filePath, Stream stream) {
         Retrier.Attempt(delay: _ => TimeSpan.FromMilliseconds(200), isRetryAllowed: ex => ex is IOException, action: _ => {
@@ -143,8 +143,8 @@ public static class FileUtils {
         });
     }
     /// <summary>
-    /// 创建文件，并打开 <see cref="FileMode.Create"/> 模式的 <see cref="FileStream"/>。
-    /// 若文件已存在，则会覆盖原文件。
+    /// Creates a file and opens a <see cref="FileStream"/> in <see cref="FileMode.Create"/> mode.
+    /// Overwrites the file if it already exists.
     /// </summary>
     public static FileStream CreateAsStream(string filePath) {
         DirectoryUtils.Create(PathUtils.RemoveLastPart(filePath));
@@ -156,15 +156,15 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 在临时文件夹下创建一个随机名称的文件，并返回其路径。
+    /// Creates a randomly named file in the temp folder and returns its path.
     /// </summary>
     public static string CreateRandom()
         => Retrier.Attempt(delay: _ => TimeSpan.FromMilliseconds(200), isRetryAllowed: ex => ex is IOException, func: _ 
             => Path.GetTempFileName());
 
     /// <summary>
-    /// 从 <paramref name="type"/> 的程序集中，读取指定 <paramref name="logicalName"/> 的嵌入的资源，写入到 <paramref name="localFilePath"/> 中。
-    /// <para/> 如果文件已存在且内容相同，则不会写入。
+    /// Reads the embedded resource named <paramref name="logicalName"/> from the assembly of <paramref name="type"/> and writes it to <paramref name="localFilePath"/>.
+    /// <para/> Skips writing if the file already exists with the same content.
     /// </summary>
     public static void ExtractResources(string logicalName, string localFilePath, Type type) {
         var content = ReadAsBytes(logicalName, type);
@@ -175,25 +175,25 @@ public static class FileUtils {
 
     #endregion
 
-    #region 复制 / 剪切
+    #region Copy / move
 
     /// <summary>
-    /// 复制文件。
-    /// 会创建对应文件夹、覆盖已有的文件。
-    /// 若复制自身到自身，则不执行操作；若仅大小写不同，则重命名此文件。
+    /// Copies a file.
+    /// Creates the target folder and overwrites any existing file.
+    /// Does nothing when copying onto itself; if only the case differs, renames the file.
     /// </summary>
     public static void Copy(string sourceFilePath, string destFilePath) {
         sourceFilePath = PathUtils.ForCompare(sourceFilePath);
         destFilePath = PathUtils.ForCompare(destFilePath);
         if (string.CompareOrdinal(sourceFilePath, destFilePath) == 0) {
-            // 复制自身到自身，则不执行操作
+            // Copying onto itself: do nothing
             Logger.Trace($"复制文件到自身，不执行操作：{sourceFilePath} → {destFilePath}");
         } else if (PathUtils.IsSame(sourceFilePath, destFilePath)) {
-            // 路径仅大小写不同，等效于重命名
+            // Paths differ only in case: equivalent to a rename
             Logger.Trace($"复制文件到自身，但大小写不同，等效于重命名文件：{sourceFilePath} → {destFilePath}");
             FileUtils.Move(sourceFilePath, destFilePath);
         } else {
-            // 实际的复制
+            // The actual copy
             DirectoryUtils.Create(PathUtils.RemoveLastPart(destFilePath));
             Logger.Trace($"复制文件：{sourceFilePath} → {destFilePath}");
             if (FileUtils.Exists(destFilePath)) FileUtils.SetReadOnly(destFilePath, false);
@@ -203,18 +203,18 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 剪切文件。
-    /// 会创建对应文件夹、覆盖已有的文件。
-    /// 若指定了 <paramref name="toRecycleBin"/>，则在覆盖前将老文件删除到回收站。
+    /// Moves a file.
+    /// Creates the target folder and overwrites any existing file.
+    /// If <paramref name="toRecycleBin"/> is set, the old file is moved to the recycle bin before being overwritten.
     /// </summary>
     public static void Move(string sourceFilePath, string destFilePath, bool toRecycleBin = false) {
         sourceFilePath = PathUtils.ForCompare(sourceFilePath);
         destFilePath = PathUtils.ForCompare(destFilePath);
         if (string.CompareOrdinal(sourceFilePath, destFilePath) == 0) {
-            // 剪切自身到自身，则不执行操作
+            // Moving onto itself: do nothing
             Logger.Trace($"剪切文件到自身，不执行操作：{sourceFilePath} → {destFilePath}");
         } else if (PathUtils.IsSame(sourceFilePath, destFilePath)) {
-            // 路径仅大小写不同
+            // Paths differ only in case
             Logger.Trace($"剪切文件到自身，但大小写不同：{sourceFilePath} → {destFilePath}");
             Retrier.Attempt(delay: _ => TimeSpan.FromMilliseconds(200), isRetryAllowed: ex => ex is IOException, action: _ => {
                 var temp = Path.Combine(PathUtils.RemoveLastPart(sourceFilePath), Path.GetRandomFileName());
@@ -224,7 +224,7 @@ public static class FileUtils {
                 File.Move(PathUtils.ForApi(temp), PathUtils.ForApi(destFilePath));
             });
         } else {
-            // 实际的剪切
+            // The actual move
             DirectoryUtils.Create(PathUtils.RemoveLastPart(destFilePath));
             FileUtils.Delete(destFilePath, toRecycleBin);
             Logger.Trace($"剪切文件：{sourceFilePath} → {destFilePath}");
@@ -238,21 +238,21 @@ public static class FileUtils {
 
     #endregion
 
-    #region 删除
+    #region Deletion
 
     /// <summary>
-    /// 删除文件。
-    /// <para/>若指定了 <paramref name="toRecycleBin"/>，则会尝试删除到回收站，但如果失败则会回退到永久删除。
+    /// Deletes a file.
+    /// <para/>If <paramref name="toRecycleBin"/> is set, tries to move it to the recycle bin, falling back to permanent deletion on failure.
     /// </summary>
     /// <returns>
-    /// 如果文件不存在，返回 <see langword="null"/>。
-    /// <para/>如果成功删除到回收站，返回 <see langword="true"/>。
-    /// <para/>如果永久删除，返回 <see langword="false"/>。
+    /// <see langword="null"/> if the file does not exist.
+    /// <para/><see langword="true"/> if it was moved to the recycle bin.
+    /// <para/><see langword="false"/> if it was permanently deleted.
     /// </returns>
     public static bool? Delete(string filePath, bool toRecycleBin = false) {
         if (!FileUtils.Exists(filePath)) return null;
         Logger.Trace($"{(toRecycleBin ? "将文件删除到回收站" : "删除文件")}：{filePath}");
-        // 删除到回收站
+        // Move to the recycle bin
         if (toRecycleBin) {
             try {
                 DeleteToRecycleBin(filePath);
@@ -261,7 +261,7 @@ public static class FileUtils {
                 Logger.Warn(ex, $"无法将文件删除到回收站，回退到永久删除：{filePath}");
             }
         }
-        // 永久删除
+        // Permanent deletion
         Retrier.Attempt(delay: _ => TimeSpan.FromMilliseconds(200), isRetryAllowed: ex => ex is IOException, action: _ => {
             FileUtils.SetReadOnly(filePath, false);
             File.Delete(PathUtils.ForApi(filePath));
@@ -270,10 +270,10 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 将文件或文件夹删除到回收站。
+    /// Moves a file or folder to the recycle bin.
     /// </summary>
     internal static void DeleteToRecycleBin(string target) {
-        // 实际的删除方法
+        // The actual deletion method
         void Run() {
             IShellItem? item = null;
             IFileOperation? op = null;
@@ -292,11 +292,11 @@ public static class FileUtils {
                 if (item != null && Marshal.IsComObject(item)) Marshal.FinalReleaseComObject(item);
             }
         }
-        // 在 STA 线程中执行删除方法
+        // Run the deletion on an STA thread
         if (Thread.CurrentThread.GetApartmentState() == ApartmentState.STA) {
             Retrier.Attempt(delay: _ => TimeSpan.FromMilliseconds(200), isRetryAllowed: ex => ex is IOException, action: _ => Run());
         } else {
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo? internalEx = null; // 捕获内部异常
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo? internalEx = null; // Captures the inner exception
             var thread = new Thread(() => { 
                 try { 
                     Retrier.Attempt(delay: _ => TimeSpan.FromMilliseconds(200), isRetryAllowed: ex => ex is IOException or COMException, action: _ => Run()); 
@@ -343,18 +343,18 @@ public static class FileUtils {
 
     #endregion
 
-    #region 压缩 / 解压
+    #region Compression / extraction
 
     /// <summary>
-    /// 以只读模式打开压缩文件。
-    /// 会先尝试 UTF8 编码，失败后换用 GB18030 编码。
+    /// Opens a zip file in read-only mode.
+    /// Tries UTF8 encoding first, then falls back to GB18030.
     /// </summary>
     public static ZipArchive OpenZip(string zipFilePath, CancellationToken c = default) {
         ZipArchive TryOpen(Encoding encoding) {
             Logger.Trace($"尝试以 {encoding.EncodingName} 编码打开压缩包：{zipFilePath}");
             var result = ZipFile.Open(PathUtils.ForApi(zipFilePath), ZipArchiveMode.Read, encoding);
             try {
-                _ = result.Entries; // 如果编码有误，会在这里抛出 DecoderFallbackException；如果文件异常，会在这里抛出 InvalidDataException
+                _ = result.Entries; // Throws DecoderFallbackException here if the encoding is wrong, or InvalidDataException if the file is corrupted
                 return result;
             } catch {
                 result.Dispose();
@@ -363,7 +363,7 @@ public static class FileUtils {
         }
         return Retrier.Attempt(delay: _ => TimeSpan.FromMilliseconds(200), maxAttempts:10, isRetryAllowed: ex => ex is IOException, cancellationToken: c, func: _ => {
             try {
-                try { // 尝试两种编码
+                try { // Try both encodings
                     return TryOpen(new UTF8Encoding(false, true));
                 } catch (DecoderFallbackException) {
                     return TryOpen(Encoding.GetEncoding("GB18030"));
@@ -376,14 +376,14 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 尝试根据后缀名判断文件种类并解压文件，支持 gz 与 zip，会尝试将 jar 以 zip 方式解压。
-    /// 会自动创建文件夹。会覆盖已有文件，但不会删除多余文件。
+    /// Detects the archive type by extension and extracts it; supports gz and zip, and tries to extract jar as zip.
+    /// Creates folders automatically. Overwrites existing files but does not delete extra files.
     /// </summary>
-    /// <param name="p">参数为已完成的总比例（0~1）。</param>
+    /// <param name="p">The argument is the completed fraction (0~1).</param>
     public static void ExtractToDirectory(string compressionFile, string outputDirectory, CancellationToken c = default, ProgressProvider? p = null) {
         compressionFile = PathUtils.ForApi(compressionFile);
         DirectoryUtils.Create(outputDirectory);
-        // 解压 gz（gz 不需要考虑编码）
+        // Extract gz (gz has no encoding concerns)
         if (PathUtils.GetExtension(compressionFile) == "gz") {
             string outFilePath = Path.Combine(outputDirectory, PathUtils.GetFileNameWithoutExtension(compressionFile));
             Logger.Trace($"解压 gz 文件：{compressionFile} → {outFilePath}");
@@ -393,9 +393,9 @@ public static class FileUtils {
             p?.Finish();
             return;
         }
-        // 解压 zip
+        // Extract zip
         using var archive = FileUtils.OpenZip(compressionFile, c);
-        var entries = archive.Entries.Where(e => !string.IsNullOrEmpty(e.Name)).ToList(); // 跳过文件夹条目（ZipArchive 会将文件夹也作为一个 entry，但它们的 Name 为空）
+        var entries = archive.Entries.Where(e => !string.IsNullOrEmpty(e.Name)).ToList(); // Skip folder entries (ZipArchive also lists folders as entries, but their Name is empty)
         int totalCount = entries.Count;
         int doneCount = 0;
         Logger.Trace($"解压 zip 文件：{compressionFile} → {outputDirectory}（共 {totalCount} 项）");
@@ -403,19 +403,19 @@ public static class FileUtils {
             c.ThrowIfCancellationRequested();
             doneCount++;
             if (totalCount > 0) p?.Set((double) doneCount / totalCount);
-            // ZipSlip 修复
+            // ZipSlip fix
             string outputFilePath = Path.Combine(outputDirectory, entry.FullName);
             if (!PathUtils.IsParentOf(outputDirectory, outputFilePath))
                 throw new InvalidDataException($"Zip 文件项 {entry.FullName} 的路径在压缩包之外，这可能导致安全问题");
-            // 实际的解压
+            // The actual extraction
             using var entryStream = entry.Open();
             FileUtils.Write(outputFilePath, entryStream);
         }
     }
 
     /// <summary>
-    /// 将指定文件夹的内容打包为 zip 文件。
-    /// 会自动创建文件夹。会覆盖已有文件。
+    /// Packs the contents of the specified folder into a zip file.
+    /// Creates folders automatically. Overwrites existing files.
     /// </summary>
     public static void CreateZipFromDirectory(string outputFullPath, string sourceDirectory) {
         DirectoryUtils.Create(PathUtils.RemoveLastPart(outputFullPath));
@@ -426,8 +426,8 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 将多个文件打包为 zip 文件，所有文件都会被放在压缩文件的根目录。
-    /// 会自动创建文件夹。会覆盖已有文件。
+    /// Packs multiple files into a zip file, all placed at the root of the archive.
+    /// Creates folders automatically. Overwrites existing files.
     /// </summary>
     public static void CreateZipFromFiles(string outputFullPath, params string[] sourceFiles) {
         var sources = new Dictionary<string, string>();
@@ -440,10 +440,10 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 将多个文件打包为 zip 文件。
-    /// 会自动创建文件夹。会覆盖已有文件。
+    /// Packs multiple files into a zip file.
+    /// Creates folders automatically. Overwrites existing files.
     /// </summary>
-    /// <param name="sources">键为 zip 文件下的路径，值为文件的本地路径。</param>
+    /// <param name="sources">Keys are paths inside the zip; values are local file paths.</param>
     public static void CreateZipFromFiles(string outputFullPath, IDictionary<string, string> sources) {
         DirectoryUtils.Create(PathUtils.RemoveLastPart(outputFullPath));
         FileUtils.Delete(outputFullPath);
@@ -456,14 +456,14 @@ public static class FileUtils {
     #endregion
 
     /// <summary>
-    /// 确定指定的文件是否存在。
+    /// Whether the specified file exists.
     /// </summary>
     public static bool Exists(string filePath) 
         => File.Exists(PathUtils.ForApi(filePath));
 
     /// <summary>
-    /// 检查文件是否未被其他进程占用
-    /// <para>被占用或无权读取时返回 <see langword="false"/>。</para>
+    /// Checks whether the file is not locked by another process
+    /// <para>Returns <see langword="false"/> if the file is locked or cannot be read.</para>
     /// </summary>
     public static bool IsAvailable(string filePath) {
         if (!Exists(filePath)) return true;
@@ -478,14 +478,14 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 获取 <see cref="FileInfo"/> 对象。
+    /// Gets a <see cref="FileInfo"/> object.
     /// </summary>
     public static FileInfo GetInfo(string path) 
         => new(PathUtils.ForApi(path));
 
     /// <summary>
-    /// 设置文件或文件夹的只读属性。
-    /// 对文件夹使用时，只会设置文件夹本身的属性，不会递归设置其中的文件或子文件夹。
+    /// Sets the read-only attribute of a file or folder.
+    /// For a folder, only the folder's own attribute is set; files and subfolders are not changed recursively.
     /// </summary>
     public static void SetReadOnly(string path, bool readOnly) {
         path = PathUtils.ForApi(path);
@@ -501,38 +501,38 @@ public static class FileUtils {
 }
 
 /// <summary>
-/// 检查文件是否符合校验规则，包括大小、Hash 值、是否为 JSON 文件。
+/// Checks whether a file meets the validation rules: size, hash, and whether it is a JSON file.
 /// </summary>
 public class FileChecker {
 
     /// <summary>
-    /// 文件的准确大小。
-    /// <para/>不检查则为 -1。
+    /// The exact size of the file.
+    /// <para/>-1 to skip the check.
     /// </summary>
     public long ActualSize = -1;
 
     /// <summary>
-    /// 文件的最小大小。
-    /// <para/>不检查则为 -1。
+    /// The minimum size of the file.
+    /// <para/>-1 to skip the check.
     /// </summary>
     public long MinSize = -1;
 
     /// <summary>
-    /// 文件的 MD5、SHA1、SHA256 或 SHA512。会根据输入字符串的长度自动判断种类。
-    /// <para/>不检查则为 <c>null</c>。
+    /// The MD5, SHA1, SHA256 or SHA512 of the file. The kind is detected from the length of the string.
+    /// <para/><c>null</c> to skip the check.
     /// </summary>
     public string? Hash = null;
 
     /// <summary>
-    /// 是否要求为 JSON 文件。
+    /// Whether the file must be a JSON file.
     /// </summary>
     public bool IsJson = false;
     
-    // TODO: 重构此函数，使它变成 void，并抛出异常
+    // TODO: refactor this into a void method that throws instead
     /// <summary>
-    /// 检查文件。
-    /// <para/>若成功则返回 <c>null</c>，失败则返回错误的描述文本（文本不以句号结尾）。
-    /// <para/>不会抛出异常。
+    /// Checks the file.
+    /// <para/>Returns <c>null</c> on success, or an error description (not ending with a period) on failure.
+    /// <para/>Never throws.
     /// </summary>
     public string? Check(string localPath) {
         try {

@@ -7,12 +7,12 @@ Public Class PageSetupLaunch
         RefreshRam(False)
         BtnSwitch.Visibility = If(McInstanceSelected Is Nothing, Visibility.Collapsed, Visibility.Visible)
 
-        'Java 可能在版本设置被修改，所以总是重新加载（反正其他的 Refresh 也不太吃性能）
+        'Java may have been changed in the version settings, so always reload (the other Refresh calls are cheap anyway)
         AniControlEnabled += 1
         Refresh()
         AniControlEnabled -= 1
 
-        '非重复加载部分
+        'Runs only once
         Static Reloaded As Boolean = False
         If Reloaded Then Return
         Reloaded = True
@@ -45,7 +45,7 @@ Public Class PageSetupLaunch
         Refresh()
     End Sub
 
-#Region "游戏内存"
+#Region "Game memory"
 
     Public Shared Sub UpdateRamType()
         If FrmSetupLaunch?.SliderRamCustom Is Nothing Then Return
@@ -53,18 +53,18 @@ Public Class PageSetupLaunch
     End Sub
 
     ''' <summary>
-    ''' 刷新 UI 上的 RAM 显示。
+    ''' Refresh the RAM display on the UI.
     ''' </summary>
     Public Sub RefreshRam(ShowAnim As Boolean)
         If LabRamGame Is Nothing OrElse LabRamUsed Is Nothing OrElse FrmMain.PageCurrent <> FormMain.PageType.Setup OrElse FrmSetupLeft.PageID <> FormMain.PageSubType.SetupLaunch Then Return
-        '获取内存情况
+        'Read memory usage
         Dim RamGame As Double = Math.Round(GetRam(McInstanceSelected, False), 5)
         Dim RamTotal As Double = Math.Round(My.Computer.Info.TotalPhysicalMemory / 1024 / 1024 / 1024, 1)
         Dim RamAvailable As Double = Math.Round(My.Computer.Info.AvailablePhysicalMemory / 1024 / 1024 / 1024, 1)
         Dim RamGameActual As Double = Math.Round(Math.Min(RamGame, RamAvailable), 5)
         Dim RamUsed As Double = Math.Round(RamTotal - RamAvailable, 5)
         Dim RamEmpty As Double = Math.Round((RamTotal - RamUsed - RamGame).Clamp(0, 1000), 1)
-        '设置最大可用内存
+        'Set the max available memory
         If RamTotal <= 1.5 Then
             SliderRamCustom.MaxValue = Math.Max(Math.Floor((RamTotal - 0.3) / 0.1), 1)
         ElseIf RamTotal <= 8 Then
@@ -74,20 +74,20 @@ Public Class PageSetupLaunch
         Else
             SliderRamCustom.MaxValue = Math.Floor((RamTotal - 16) / 2) + 33
         End If
-        '设置文本
+        'Set the text
         LabRamGame.Text = If(RamGame = Math.Floor(RamGame), RamGame & ".0", RamGame) & " GB" &
                           If(RamGame <> RamGameActual, " (可用 " & If(RamGameActual = Math.Floor(RamGameActual), RamGameActual & ".0", RamGameActual) & " GB)", "")
         LabRamUsed.Text = If(RamUsed = Math.Floor(RamUsed), RamUsed & ".0", RamUsed) & " GB"
         LabRamTotal.Text = " / " & If(RamTotal = Math.Floor(RamTotal), RamTotal & ".0", RamTotal) & " GB"
         If ShowAnim Then
-            '宽度动画
+            'Width animation
             AniStart({
                 AaGridLengthWidth(ColumnRamUsed, RamUsed - ColumnRamUsed.Width.Value, 800,, New AniEaseOutFluent(AniEasePower.Strong)),
                 AaGridLengthWidth(ColumnRamGame, RamGameActual - ColumnRamGame.Width.Value, 800,, New AniEaseOutFluent(AniEasePower.Strong)),
                 AaGridLengthWidth(ColumnRamEmpty, RamEmpty - ColumnRamEmpty.Width.Value, 800,, New AniEaseOutFluent(AniEasePower.Strong))
             }, "SetupLaunch Ram Grid")
         Else
-            '宽度设置
+            'Set the widths
             ColumnRamUsed.Width = New GridLength(RamUsed, GridUnitType.Star)
             ColumnRamGame.Width = New GridLength(RamGameActual, GridUnitType.Star)
             ColumnRamEmpty.Width = New GridLength(RamEmpty, GridUnitType.Star)
@@ -99,24 +99,24 @@ Public Class PageSetupLaunch
 
     Private RamTextLeft As Integer = 2, RamTextRight As Integer = 1
     ''' <summary>
-    ''' 刷新 UI 上的文本位置。
+    ''' Refresh text positions on the UI.
     ''' </summary>
     Private Sub RefreshRamText() Handles RectRamGame.SizeChanged, RectRamEmpty.SizeChanged, LabRamGame.SizeChanged
-        '获取宽度信息
+        'Read width info
         Dim RectUsedWidth = RectRamUsed.ActualWidth
         Dim TotalWidth = PanRamDisplay.ActualWidth
         Dim LabGameWidth = LabRamGame.ActualWidth, LabUsedWidth = LabRamUsed.ActualWidth, LabTotalWidth = LabRamTotal.ActualWidth
         Dim LabGameTitleWidth = LabRamGameTitle.ActualWidth, LabUsedTitleWidth = LabRamUsedTitle.ActualWidth
-        '左侧
+        'Left side
         Dim Left As Integer
         If RectUsedWidth - 30 < LabUsedWidth OrElse RectUsedWidth - 30 < LabUsedTitleWidth Then
-            '全写不下了
+            'Nothing fits
             Left = 0
         ElseIf RectUsedWidth - 25 < (LabUsedWidth + LabTotalWidth) Then
-            '显示不下完整数据
+            'The full figures do not fit
             Left = 1
         Else
-            '正常
+            'Normal
             Left = 2
         End If
         If RamTextLeft <> Left Then
@@ -142,37 +142,37 @@ Public Class PageSetupLaunch
                         }, "SetupLaunch Ram TextLeft")
             End Select
         End If
-        '右侧
+        'Right side
         Dim Right As Integer
         If TotalWidth < LabGameWidth + 2 + RectUsedWidth OrElse TotalWidth < LabGameTitleWidth + 2 + RectUsedWidth Then
-            '挤到最右边
+            'Pushed to the far right
             Right = 0
         Else
-            '正常情况
+            'Normal case
             Right = 1
         End If
         If Right = 0 Then
             If AniControlEnabled = 0 AndAlso (RamTextRight <> Right OrElse AniIsRun("SetupLaunch Ram TextRight")) Then
-                '需要动画
+                'Needs animation
                 AniStart({
                         AaX(LabRamGame, TotalWidth - LabGameWidth - LabRamGame.Margin.Left, 100,, New AniEaseOutFluent(AniEasePower.Weak)),
                         AaX(LabRamGameTitle, TotalWidth - LabGameTitleWidth - LabRamGameTitle.Margin.Left, 100,, New AniEaseOutFluent(AniEasePower.Weak))
                 }, "SetupLaunch Ram TextRight")
             Else
-                '不需要动画
+                'No animation needed
                 AniStop("SetupLaunch Ram TextRight")
                 LabRamGame.Margin = New Thickness(TotalWidth - LabGameWidth, 3, 0, 0)
                 LabRamGameTitle.Margin = New Thickness(TotalWidth - LabGameTitleWidth, 0, 0, 5)
             End If
         Else
             If AniControlEnabled = 0 AndAlso (RamTextRight <> Right OrElse AniIsRun("SetupLaunch Ram TextRight")) Then
-                '需要动画
+                'Needs animation
                 AniStart({
                         AaX(LabRamGame, 2 + RectUsedWidth - LabRamGame.Margin.Left, 100,, New AniEaseOutFluent(AniEasePower.Weak)),
                         AaX(LabRamGameTitle, 2 + RectUsedWidth - LabRamGameTitle.Margin.Left, 100,, New AniEaseOutFluent(AniEasePower.Weak))
                 }, "SetupLaunch Ram TextRight")
             Else
-                '不需要动画
+                'No animation needed
                 AniStop("SetupLaunch Ram TextRight")
                 LabRamGame.Margin = New Thickness(2 + RectUsedWidth, 3, 0, 0)
                 LabRamGameTitle.Margin = New Thickness(2 + RectUsedWidth, 0, 0, 5)
@@ -182,70 +182,70 @@ Public Class PageSetupLaunch
     End Sub
 
     ''' <summary>
-    ''' 获取当前设置的 RAM 值。单位为 GB。
+    ''' Get the configured RAM value, in GB.
     ''' </summary>
     Public Shared Function GetRam(Instance As McInstance, UseVersionJavaSetup As Boolean) As Double
 
         '------------------------------------------
-        ' 修改下方代码时需要一并修改 PageInstanceSetup
+        'When changing the code below, also update PageInstanceSetup
         '------------------------------------------
 
         Dim RamGive As Double
         If Settings.Get(Of Integer)("LaunchRamType") = 0 Then
-            '自动配置
+            'Automatic
             Dim RamAvailable As Double = Math.Round(My.Computer.Info.AvailablePhysicalMemory / 1024 / 1024 / 1024 * 10) / 10
-            '确定需求的内存值
-            Dim RamMininum As Double '无论如何也需要保证的最低限度内存
-            Dim RamTarget1 As Double '估计能勉强带动了的内存
-            Dim RamTarget2 As Double '估计没啥问题了的内存
-            Dim RamTarget3 As Double '放一百万个材质和 Mod 和光影需要的内存
+            'Decide how much memory is needed
+            Dim RamMininum As Double 'Minimum memory that must always be guaranteed
+            Dim RamTarget1 As Double 'Memory that should just about run it
+            Dim RamTarget2 As Double 'Memory that should be comfortable
+            Dim RamTarget3 As Double 'Memory for a huge pile of resource packs, mods, and shaders
             If Instance IsNot Nothing AndAlso Not Instance.IsLoaded Then Instance.Load()
             If Instance IsNot Nothing AndAlso Instance.Modable Then
-                '可安装 Mod 的版本
+                'Versions that can install mods
                 Dim ModCount = ModDirectoryCache.GetCount(Instance.PathIndie & "mods\", Not RunInUi())
                 RamMininum = 0.5 + ModCount / 150
                 RamTarget1 = 1.5 + ModCount / 90
                 RamTarget2 = 2.7 + ModCount / 50
                 RamTarget3 = 4.5 + ModCount / 25
             ElseIf Instance IsNot Nothing AndAlso Instance.Version.HasOptiFine Then
-                'OptiFine 版本
+                'OptiFine versions
                 RamMininum = 0.5
                 RamTarget1 = 1.5
                 RamTarget2 = 3
                 RamTarget3 = 5
             Else
-                '普通版本
+                'Vanilla versions
                 RamMininum = 0.5
                 RamTarget1 = 1.5
                 RamTarget2 = 2.5
                 RamTarget3 = 4
             End If
             Dim RamDelta As Double
-            '预分配内存，阶段一，0 ~ T1，100%
+            'Preallocate memory, stage 1, 0 to T1, 100%
             RamDelta = RamTarget1
             RamGive += Math.Min(RamAvailable, RamDelta)
             RamAvailable -= RamDelta
             If RamAvailable < 0.1 Then GoTo PreFin
-            '预分配内存，阶段二，T1 ~ T2，70%
+            'Preallocate memory, stage 2, T1 to T2, 70%
             RamDelta = RamTarget2 - RamTarget1
             RamGive += Math.Min(RamAvailable * 0.7, RamDelta)
             RamAvailable -= RamDelta / 0.7
             If RamAvailable < 0.1 Then GoTo PreFin
-            '预分配内存，阶段三，T2 ~ T3，40%
+            'Preallocate memory, stage 3, T2 to T3, 40%
             RamDelta = RamTarget3 - RamTarget2
             RamGive += Math.Min(RamAvailable * 0.4, RamDelta)
             RamAvailable -= RamDelta / 0.4
             If RamAvailable < 0.1 Then GoTo PreFin
-            '预分配内存，阶段四，T3 ~ T3 * 2，15%
+            'Preallocate memory, stage 4, T3 to T3 * 2, 15%
             RamDelta = RamTarget3
             RamGive += Math.Min(RamAvailable * 0.15, RamDelta)
             RamAvailable -= RamDelta / 0.15
             If RamAvailable < 0.1 Then GoTo PreFin
 PreFin:
-            '不低于最低值
+            'Do not go below the minimum
             RamGive = Math.Round(Math.Max(RamGive, RamMininum), 1)
         Else
-            '手动配置
+            'Manual
             Dim Value = Settings.Get(Of Integer)("LaunchRamCustom")
             If Value <= 12 Then
                 RamGive = Value * 0.1 + 0.3
@@ -262,27 +262,27 @@ PreFin:
 
 #End Region
 
-#Region "Java 选择"
-    '注意：修改此处代码时需要同时修改 PageInstanceSetup.xaml.vb
+#Region "Java selection"
+    'Note: when changing this code, also update PageInstanceSetup.xaml.vb
 
-    '刷新 Java 下拉框显示
+    'Refresh the Java dropdown
     Public Sub UpdateJavaList()
         If ComboAdvanceJava Is Nothing OrElse LabAdvanceJava Is Nothing OrElse Not ComboAdvanceJava.IsLoaded Then Return
         ComboAdvanceJava.Items.Clear()
-        '还需要等待搜索结束
+        'Still waiting for the search to finish
         If JavaListRefreshWorker.Running Then
             BtnAdvanceJavaSearch.IsEnabled = False
             ComboAdvanceJava.IsEnabled = False
             LabAdvanceJava.Text = "搜索中 …"
             Return
         End If
-        '========================================== 显示结果 ==========================================
+        '========================================== Show results ==========================================
         BtnAdvanceJavaSearch.IsEnabled = True
         ComboAdvanceJava.IsEnabled = True
-        '更新下拉框文本
+        'Update the dropdown text
         Dim Count = Configs.JavaList.Get().Count
         LabAdvanceJava.Text = If(Count > 0, $"共有 {Count} 个 Java …", "未找到 Java，点击以导入已有的 Java")
-        '更新列表
+        'Update the list
         Try
             Dim JavaEntries = Configs.JavaList.Get()
             For i = 0 To JavaEntries.Count - 1
@@ -294,21 +294,21 @@ PreFin:
                 AddHandler JavaItem.Click, Sub() Hint("点击选项右侧的箭头可以进行排序，以控制 PCL 优先选择哪个 Java！")
                 ComboAdvanceJava.Items.Add(JavaItem)
                 Dim Buttons As New List(Of MyIconButton)
-                '向上移动按钮
+                'Move-up button
                 Dim UpButton As New MyIconButton With {.Logo = Logo.IconButtonArrowUp, .LogoScale = 0.95, .Height = 24, .Width = 24}
                 UpButton.IsEnabled = i > 0
                 UpButton.ToolTip = "提高优先级"
                 ToolTipService.SetShowOnDisabled(UpButton, True)
                 AddHandler UpButton.Click, Sub() MoveJavaInList(JavaEntry, -1)
                 Buttons.Add(UpButton)
-                '向下移动按钮
+                'Move-down button
                 Dim DownButton As New MyIconButton With {.Logo = Logo.IconButtonArrowDown, .LogoScale = 0.95, .Height = 24, .Width = 24}
                 DownButton.IsEnabled = i < JavaEntries.Count - 1
                 DownButton.ToolTip = "降低优先级"
                 ToolTipService.SetShowOnDisabled(DownButton, True)
                 AddHandler DownButton.Click, Sub() MoveJavaInList(JavaEntry, 1)
                 Buttons.Add(DownButton)
-                '从列表中移除按钮
+                'Remove-from-list button
                 Dim IsOfficial As Boolean = PathUtils.IsParentOf($"{Paths.AppData}.minecraft\runtime\", JavaEntry.Folder)
                 Dim DeleteButton As New MyIconButton With {.Logo = Logo.IconButtonStop, .Height = 24, .Width = 24}
                 DeleteButton.IsEnabled = Not IsOfficial
@@ -316,7 +316,7 @@ PreFin:
                 AddHandler DeleteButton.Click, Sub() ManuallyRemoveJava(JavaEntry)
                 ToolTipService.SetShowOnDisabled(DeleteButton, True)
                 Buttons.Add(DeleteButton)
-                '打开文件夹按钮
+                'Open-folder button
                 Dim OpenButton As New MyIconButton With {.Logo = Logo.IconButtonOpen, .LogoScale = 1.1, .Height = 24, .Width = 24}
                 OpenButton.ToolTip = "打开文件夹"
                 AddHandler OpenButton.Click, Sub() OpenExplorer(JavaEntry.JavaExePath)
@@ -352,7 +352,7 @@ PreFin:
 
 #End Region
 
-#Region "其他选项"
+#Region "Other options"
 
     Private Sub WindowTypeUIRefresh() Handles ComboArgumentWindowType.SelectionChanged
         Dim IsVisibie = (ComboArgumentWindowType.SelectedIndex = 3).ToVisibility
@@ -361,7 +361,7 @@ PreFin:
         TextArgumentWindowWidth.Visibility = IsVisibie
     End Sub
 
-    '可见性选择直接关闭的警告
+    'Warning when visibility is set to close immediately
     Private Sub ComboArgumentVisibie_SizeChanged(sender As Object, e As SelectionChangedEventArgs) Handles ComboArgumentVisibie.SelectionChanged
         If AniControlEnabled <> 0 Then Return
         If ComboArgumentVisibie.SelectedIndex = 0 Then
@@ -373,7 +373,7 @@ PreFin:
     End Sub
 
 
-    '版本隔离提示
+    'Version isolation notice
     Private Sub ComboArgumentIndie_SelectionChanged(sender As Object, e As SelectionChangedEventArgs) Handles ComboArgumentIndieV2.SelectionChanged
         If AniControlEnabled <> 0 Then Return
         MyMsgBox("本设置仅会对之后新安装的版本生效。" & vbCrLf & "如果要修改已安装的版本的隔离方式，请在它的版本独立设置中调整。")
@@ -381,7 +381,7 @@ PreFin:
 
 #End Region
 
-    '切换到版本独立设置
+    'Switch to per-version settings
     Private Sub BtnSwitch_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnSwitch.Click
         McInstanceSelected.Load()
         PageInstanceLeft.Instance = McInstanceSelected

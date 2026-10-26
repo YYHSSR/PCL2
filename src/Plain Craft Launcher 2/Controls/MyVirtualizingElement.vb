@@ -9,7 +9,7 @@ Public Class MyVirtualizingElement(Of T As FrameworkElement)
     End Sub
 
     ''' <summary>
-    ''' 实例化此控件。
+    ''' Instantiates this control.
     ''' </summary>
     Public Function Init() As T
         If Realized Is Nothing Then
@@ -32,7 +32,7 @@ Public Class MyVirtualizingElement(Of T As FrameworkElement)
 
 End Class
 
-'非泛型形式
+'Non-generic version
 Public Class MyVirtualizingElement
     Inherits FrameworkElement
 
@@ -44,7 +44,7 @@ Public Class MyVirtualizingElement
     End Sub
 
     ''' <summary>
-    ''' 实例化此控件。
+    ''' Instantiates this control.
     ''' </summary>
     Public Function Init() As FrameworkElement
         If Realized Is Nothing Then
@@ -63,9 +63,9 @@ Public Class MyVirtualizingElement
     End Function
 
     ''' <summary>
-    ''' 获取实例化后的控件。
-    ''' 如果该控件没有实例化，则会立即实例化。
-    ''' 如果类型错误，则返回原值。
+    ''' Gets the instantiated control.
+    ''' If the control has not been instantiated, it is instantiated immediately.
+    ''' If the type does not match, the original value is returned.
     ''' </summary>
     Public Shared Function TryInit(Element As FrameworkElement) As FrameworkElement
         If GeneralUtils.IsGenericInstanceOf(Element, GetType(MyVirtualizingElement(Of ))) Then

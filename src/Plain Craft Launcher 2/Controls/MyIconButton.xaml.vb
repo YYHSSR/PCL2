@@ -2,10 +2,10 @@ Imports System.Windows.Shapes
 
 Public Class MyIconButton
 
-    '自定义事件
+    'Custom event
     Public Event Click(sender As Object, e As EventArgs)
 
-    '自定义属性
+    'Custom properties
 
     Public Uuid As Integer = GetUuid()
     Public Property Logo As String
@@ -50,23 +50,22 @@ Public Class MyIconButton
         End Set
     End Property
 
-    '鼠标点击判定（务必放在点击事件之后，以使得 Button_MouseUp 先于 Button_MouseLeave 执行）
+    'Mouse click detection (must be placed after the click event so that Button_MouseUp runs before Button_MouseLeave)
     Private IsMouseDown As Boolean = False
     Public Property CanClick As Boolean = True
     Private Sub Button_MouseUp(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseLeftButtonUp
         If Not CanClick Then Return
         If Not IsMouseDown Then Return
-        Logger.Info($"按下图标按钮{If(String.IsNullOrEmpty(Name), "", "：" & Name)}")
         RaiseEvent Click(sender, e)
         e.Handled = True
         Button_MouseUp()
-        RaiseCustomEvent() '自定义事件
+        RaiseCustomEvent()
     End Sub
     Private Sub Button_MouseDown(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseLeftButtonDown
         If Not CanClick Then Return
         IsMouseDown = True
         Focus()
-        '指向
+        'Hover
         AniStart(AaScaleTransform(PanBack, 0.8 - CType(PanBack.RenderTransform, ScaleTransform).ScaleX, 400,, New AniEaseOutFluent(AniEasePower.Strong)), "MyIconButton Scale " & Uuid)
     End Sub
     Private Sub Button_MouseUp() Handles Me.MouseLeftButtonUp
@@ -78,7 +77,7 @@ Public Class MyIconButton
                      AaScaleTransform(PanBack, -0.05, 250,, New AniEaseOutFluent(AniEasePower.Strong))
                  }, "MyIconButton Scale " & Uuid)
         End If
-        RefreshAnim() '直接刷新颜色以判断是否已触发 MouseLeave
+        RefreshAnim() 'Refresh the color directly to determine whether MouseLeave has been raised
     End Sub
     Private Sub Button_MouseLeave() Handles Me.MouseLeave
         If Not CanClick Then Return
@@ -86,15 +85,15 @@ Public Class MyIconButton
         AniStart({
                      AaScaleTransform(PanBack, 1 - CType(PanBack.RenderTransform, ScaleTransform).ScaleX, 250,, New AniEaseOutFluent)
                  }, "MyIconButton Scale " & Uuid)
-        RefreshAnim() '直接刷新颜色以判断是否已触发 MouseLeave
+        RefreshAnim() 'Refresh the color directly to determine whether MouseLeave has been raised
     End Sub
 
-    '务必放在 IsMouseDown 更新之后
+    'Must be placed after IsMouseDown is updated
     Private Const AnimationColorIn As Integer = 120
     Private Const AnimationColorOut As Integer = 150
     Public Sub RefreshAnim() Handles Me.MouseEnter, Me.MouseLeave, Me.Loaded, Me.IsEnabledChanged
         Try
-            If IsLoaded AndAlso AniControlEnabled = 0 Then '防止默认属性变更触发动画
+            If IsLoaded AndAlso AniControlEnabled = 0 Then 'Prevent default property changes from triggering animations
                 If PanBack.Background Is Nothing Then PanBack.Background = New MyColor(0, 255, 255, 255)
                 If Path.Fill Is Nothing Then
                     Select Case Theme
@@ -109,7 +108,7 @@ Public Class MyIconButton
                 Dim AnimList As New List(Of AniData)
                 If Not IsEnabled Then
                     AnimList.Add(AaColor(Path, Shape.FillProperty, "ColorBrushGray5", AnimationColorIn))
-                ElseIf IsMouseOver Then '指向
+                ElseIf IsMouseOver Then 'Hover
                     Select Case Theme
                         Case Themes.Color
                             AnimList.Add(AaColor(Path, Shape.FillProperty, "ColorBrush2", AnimationColorIn))
@@ -122,7 +121,7 @@ Public Class MyIconButton
                         Case Themes.Custom
                             AnimList.Add(AaColor(Path, Shape.FillProperty, New MyColor(255, Foreground) - Path.Fill, AnimationColorIn))
                     End Select
-                Else '普通
+                Else 'Normal
                     Select Case Theme
                         Case Themes.Color
                             AnimList.Add(AaColor(Path, Shape.FillProperty, "ColorBrush4", AnimationColorOut))

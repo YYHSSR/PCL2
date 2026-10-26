@@ -1,46 +1,46 @@
 namespace MeloongCore;
 
 public interface IWorker {
-    /// <summary>在工作线程运行工作负载。</summary>
+    /// <summary>Runs the workload on a worker thread.</summary>
     void Start(CancellationToken cancellationToken = default, ProgressProvider? progressOverride = null);
-    /// <summary>取消当前运行。</summary>
+    /// <summary>Cancels the current run.</summary>
     void Cancel();
-    /// <summary>若当前正在运行中，等待其完成。若未在运行中，则立即返回。</summary>
-    /// <returns>若未超时则返回 true。</returns>
+    /// <summary>If currently running, waits for it to finish; otherwise returns immediately.</summary>
+    /// <returns>True if it did not time out.</returns>
     bool WaitIfRunning(int millisecondsTimeout = -1, CancellationToken cancellationToken = default);
-    /// <summary>若当前正在运行中，异步等待其完成。若未在运行中，则立即返回。</summary>
-    /// <returns>若未超时则返回 true。</returns>
+    /// <summary>If currently running, asynchronously waits for it to finish; otherwise returns immediately.</summary>
+    /// <returns>True if it did not time out.</returns>
     Task<bool> WaitIfRunningAsync(int millisecondsTimeout = -1, CancellationToken cancellationToken = default);
 
-    /// <summary>从空闲状态进入运行状态时触发。</summary>
+    /// <summary>Raised when transitioning from idle to running.</summary>
     event Action? Started;
-    /// <summary>运行结束并进入空闲状态时触发。</summary>
+    /// <summary>Raised when a run ends and the worker becomes idle.</summary>
     event Action? Stopped;
-    /// <summary>工作负载成功完成时触发。</summary>
+    /// <summary>Raised when the workload completes successfully.</summary>
     public event Action? Succeeded;
-    /// <summary>工作负载执行失败时触发，参数为发生的异常。</summary>
+    /// <summary>Raised when the workload fails; the argument is the exception that occurred.</summary>
     public event Action<Exception>? Failed;
-    /// <summary>运行被取消时触发。</summary>
+    /// <summary>Raised when a run is canceled.</summary>
     event Action? Canceled;
 
-    /// <summary>当前是否正在运行。</summary>
+    /// <summary>Whether a run is currently in progress.</summary>
     bool Running { get; }
-    /// <summary>是否曾经有过未被取消且未失败的运行。</summary>
+    /// <summary>Whether there has ever been a run that was neither canceled nor failed.</summary>
     bool HasSucceeded { get; }
-    /// <summary>标识上次进入空闲时，并非因为取消或失败，而是正常运行到结束。</summary>
+    /// <summary>Indicates that the last transition to idle was a normal completion rather than a cancellation or failure.</summary>
     bool LastSucceeded { get; }
-    /// <summary>当前工作负载的执行进度。</summary>
+    /// <summary>Progress of the current workload.</summary>
     ProgressProvider Progress { get; }
 }
 
 /// <summary>
-/// 可合并和重启的工作器。
-/// <para/> 在工作负载运行期间多次调用 <see cref="Start(CancellationToken)"/> 会取消当前负载并使用最新令牌重新执行；多次调用也只重新执行一次。
+/// A worker whose runs can be merged and restarted.
+/// <para/> Calling <see cref="Start(CancellationToken)"/> while the workload is running cancels it and reruns it with the latest token; multiple calls still cause only one rerun.
 /// </summary>
 public abstract class RedoableWorkerBase<TOut>(Func<CancellationToken?, ProgressProvider?, TOut> workload, 
     ProgressProvider? progress = null, [CallerMemberName] string creatorMemberName = "") : IWorker {
 
-    // ============================================ 状态与事件 ============================================
+    // ============================================ State and events ============================================
 
     /// <inheritdoc/>
     public bool Running { get { lock (this) return running; } }
@@ -64,7 +64,7 @@ public abstract class RedoableWorkerBase<TOut>(Func<CancellationToken?, Progress
     public bool LastSucceeded { get { lock (this) return lastSucceeded; } }
     private bool lastSucceeded;
 
-    /// <summary>上次未被取消且未失败的运行中，工作负载的返回值。</summary>
+    /// <summary>Return value of the workload from the last run that was neither canceled nor failed.</summary>
     public TOut LastResult {
         get {
             lock (this) {
@@ -81,15 +81,15 @@ public abstract class RedoableWorkerBase<TOut>(Func<CancellationToken?, Progress
 
     private bool pendingRedo;
 
-    // =========================================== 运行与取消 ===========================================
+    // =========================================== Run and cancel ===========================================
 
     private CancellationTokenSource? realCts;
     private CancellationToken lastToken;
     private readonly ManualResetEventSlim idleEvent = new(initialState: true);
 
-    /// <summary>在工作线程运行工作负载。若当前已在运行，则取消当前负载并使用最新令牌重启。</summary>
+    /// <summary>Runs the workload on a worker thread. If already running, cancels the current workload and restarts it with the latest token.</summary>
     public void Start(CancellationToken cancellationToken = default, ProgressProvider? progressOverride = null) {
-        // 接取运行状态
+        // Take over the running state
         lock (this) {
             lastToken = cancellationToken;
             if (progressOverride != null) Progress = progressOverride;
@@ -112,11 +112,11 @@ public abstract class RedoableWorkerBase<TOut>(Func<CancellationToken?, Progress
             try {
                 realCts!.Token.ThrowIfCancellationRequested();
                 Progress?.Reset();
-                TOut result = workload(realCts.Token, Progress); // 实际的执行
+                TOut result = workload(realCts.Token, Progress); // The actual execution
                 realCts.Token.ThrowIfCancellationRequested();
                 lock (this) {
                     realCts?.Dispose();
-                    if (pendingRedo) { // 接取重启请求
+                    if (pendingRedo) { // Pick up the restart request
                         pendingRedo = false;
                         realCts = CancellationTokenSource.CreateLinkedTokenSource(lastToken);
                         continue;
@@ -136,7 +136,7 @@ public abstract class RedoableWorkerBase<TOut>(Func<CancellationToken?, Progress
                         pendingRedo ? LogLevel.Warn : LogLevel.Error, LogBehavior.ToastIfDebug);
                 lock (this) {
                     realCts?.Dispose();
-                    if (pendingRedo) { // 接取重启请求
+                    if (pendingRedo) { // Pick up the restart request
                         Logger.Info($"{creatorMemberName}：重启开始");
                         pendingRedo = false;
                         realCts = CancellationTokenSource.CreateLinkedTokenSource(lastToken);
@@ -207,5 +207,5 @@ public class RedoableWorker : RedoableWorkerBase<NoType?> {
         : base((_, _) => { workload(); return null; }, creatorMemberName: creatorMemberName) { }
 }
 
-/// <summary>指示没有该类型，用于泛型参数。</summary>
+/// <summary>Indicates the absence of a type, for use as a generic argument.</summary>
 public class NoType { }

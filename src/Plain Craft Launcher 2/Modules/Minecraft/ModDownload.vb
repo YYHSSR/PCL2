@@ -1,13 +1,13 @@
 Public Module ModDownload
 
-#Region "DlClient* | Minecraft 客户端"
+#Region "DlClient* | Minecraft client"
 
     ''' <summary>
-    ''' 返回某 Minecraft 版本对应的原版主 Jar 文件的下载信息，要求对应依赖版本已存在。
-    ''' 失败则抛出异常，不需要下载则返回 Nothing。
+    ''' Returns download info for the vanilla main jar of a Minecraft version. The required dependency versions must already exist.
+    ''' Throws on failure; returns Nothing if no download is needed.
     ''' </summary>
     Public Function DlClientJarGet(Instance As McInstance, ReturnNothingOnFileUseable As Boolean) As NetFile
-        '获取底层继承版本
+        'Get the base inherited version
         Try
             Do While Not String.IsNullOrEmpty(Instance.InheritName)
                 Instance = New McInstance(Instance.InheritName)
@@ -15,28 +15,28 @@ Public Module ModDownload
         Catch ex As Exception
             Logger.Warn(ex, "获取底层继承版本失败")
         End Try
-        '检查 Json 是否标准
+        'Check whether the JSON is standard
         If Instance.JsonObject("downloads") Is Nothing OrElse Instance.JsonObject("downloads")("client") Is Nothing OrElse Instance.JsonObject("downloads")("client")("url") Is Nothing Then
             Throw New Exception("底层版本 " & Instance.Name & " 中无 jar 文件下载信息")
         End If
-        '检查文件
+        'Check the file
         Dim Checker As New FileChecker With {.MinSize = 1024, .ActualSize = If(Instance.JsonObject("downloads")("client")("size"), -1), .Hash = Instance.JsonObject("downloads")("client")("sha1")}
-        If ReturnNothingOnFileUseable AndAlso Checker.Check(Instance.PathVersion & Instance.Name & ".jar") Is Nothing Then Return Nothing '通过校验
-        '返回下载信息
+        If ReturnNothingOnFileUseable AndAlso Checker.Check(Instance.PathVersion & Instance.Name & ".jar") Is Nothing Then Return Nothing 'Passed verification
+        'Return the download info
         Dim JarUrl As String = Instance.JsonObject("downloads")("client")("url")
         Return New NetFile(DlSourceLauncherOrMetaGet(JarUrl), Instance.PathVersion & Instance.Name & ".jar", Checker)
     End Function
 
     ''' <summary>
-    ''' 返回某 Minecraft 版本对应的原版主 AssetIndex 文件的下载信息，要求对应依赖版本已存在。
-    ''' 若未找到，则会返回 Legacy 资源文件或 Nothing。
+    ''' Returns download info for the vanilla main AssetIndex file of a Minecraft version. The required dependency versions must already exist.
+    ''' If not found, returns the Legacy asset index or Nothing.
     ''' </summary>
     Public Function DlClientAssetIndexGet(Instance As McInstance) As NetFile
-        '获取底层继承版本
+        'Get the base inherited version
         Do While Not String.IsNullOrEmpty(Instance.InheritName)
             Instance = New McInstance(Instance.InheritName)
         Loop
-        '获取信息
+        'Get the info
         Dim IndexInfo = McAssetsGetIndex(Instance, True, True)
         Dim IndexAddress As String = McFolderSelected & "assets\indexes\" & IndexInfo("id").ToString & ".json"
         Logger.Info($"版本 {Instance.Name} 对应的资源文件索引为 {IndexInfo("id")}")
@@ -49,26 +49,26 @@ Public Module ModDownload
     End Function
 
     ''' <summary>
-    ''' 构造补全某 Minecraft 版本的所有文件的加载器列表。失败会抛出异常。
+    ''' Builds the list of loaders that complete all files of a Minecraft version. Throws on failure.
     ''' </summary>
     Public Function DlClientFix(Instance As McInstance, CheckAssetsHash As Boolean, DownloadAssetIndexInBackground As Boolean) As List(Of LoaderBase)
         Dim Loaders As New List(Of LoaderBase)
 
-#Region "下载支持库文件"
+#Region "Download library files"
         Dim LoadersLib As New List(Of LoaderBase) From {
             New LoaderTask(Of String, List(Of NetFile))("分析缺失支持库文件", Sub(Task As LoaderTask(Of String, List(Of NetFile))) Task.Output = McLibNetFilesFromInstance(Instance)) With {.ProgressWeight = 1},
             New LoaderDownload("下载支持库文件", New List(Of NetFile)) With {.ProgressWeight = 15}
         }
-        '构造加载器
+        'Build the loader
         Loaders.Add(New LoaderCombo(Of String)("下载支持库文件（主加载器）", LoadersLib) With {.Block = False, .Show = False, .ProgressWeight = 16})
 #End Region
 
-#Region "下载资源文件"
+#Region "Download asset files"
         If ShouldIgnoreFileCheck(Instance) Then
             Logger.Warn("设置要求跳过所有 Assets 检查，文件可能不是最新的", LogBehavior.None)
         Else
             Dim LoadersAssets As New List(Of LoaderBase)
-            '获取资源文件索引地址
+            'Get the asset index URL
             Dim TempAddressMain As String = Nothing
             Dim RealAddressMain As String = Nothing
             LoadersAssets.Add(New LoaderTask(Of String, List(Of NetFile))("分析资源文件索引地址",
@@ -87,14 +87,14 @@ Public Module ModDownload
                         FileUtils.Move(IndexBackgroundFile, IndexFile.LocalPath)
                     End If
                     If DownloadAssetIndexInBackground Then
-                        '允许后台更新索引
+                        'Allow updating the index in the background
                         If IndexFile.Check.Check(IndexFile.LocalPath) Is Nothing Then
                             Task.Output = New List(Of NetFile)
                         Else
                             Task.Output = New List(Of NetFile) From {IndexFile}
                         End If
                     Else
-                        '强制要求重新下载
+                        'Force re-download
                         RealAddressMain = IndexFile.LocalPath
                         TempAddressMain = PathTemp & "Cache\" & IndexFile.LocalName
                         IndexFile.LocalPath = TempAddressMain
@@ -104,20 +104,20 @@ Public Module ModDownload
                     Throw New Exception("分析资源文件索引地址失败", ex)
                 End Try
             End Sub) With {.ProgressWeight = 0.5, .Show = False})
-            '下载资源文件索引
+            'Download the asset index
             LoadersAssets.Add(New LoaderDownload("下载资源文件索引", New List(Of NetFile)) With {.ProgressWeight = 2})
-            '获取资源文件地址
+            'Get the asset file URLs
             LoadersAssets.Add(New LoaderTask(Of String, List(Of NetFile))("获取资源文件列表",
             Sub(Task)
                 If TempAddressMain IsNot Nothing Then FileUtils.Move(TempAddressMain, RealAddressMain)
                 Task.Output = McAssetsFixList(Instance, CheckAssetsHash, Task)
             End Sub) With {.ProgressWeight = 0.01})
-            '下载资源文件
+            'Download asset files
             LoadersAssets.Add(New LoaderDownload("下载资源文件", New List(Of NetFile)) With {.ProgressWeight = 25})
-            '构造加载器
+            'Build the loader
             Loaders.Add(New LoaderCombo(Of String)("下载资源文件（主加载器）", LoadersAssets) With {.Block = False, .Show = False, .ProgressWeight = 27})
 
-            '后台独立更新索引
+            'Update the index independently in the background
             If DownloadAssetIndexInBackground Then
                 Dim RealAddressBg As String = Nothing
                 Dim TempAddressBg As String = Nothing
@@ -134,7 +134,7 @@ Public Module ModDownload
                     TempAddressBg = PathTemp & "Cache\" & IndexFile.LocalName & "_background"
                     IndexFile.LocalPath = TempAddressBg
                     Task.Output = New List(Of NetFile) From {IndexFile}
-                    '检查是否需要更新：每天只更新一次
+                    'Check whether an update is needed: at most once per day
                     Dim LastUpdate As Date = FileUtils.GetInfo(RealAddressBg).LastWriteTime.Date
                     If FileUtils.Exists(RealAddressBg) AndAlso Math.Abs((LastUpdate - Now.Date).TotalDays) < 1 Then
                         Logger.Info($"无需更新资源文件索引，上次更新于 {LastUpdate}")
@@ -154,11 +154,11 @@ Public Module ModDownload
 
 #End Region
 
-#Region "DlClientList | Minecraft 客户端 版本列表"
+#Region "DlClientList | Minecraft client version list"
 
     ''' <summary>
-    ''' 所有正式版的 Minecraft Drop 序数。
-    ''' 若从未完成过获取，返回 Nothing；否则必定存在元素，且从高到低排列。
+    ''' Drop ordinals of all Minecraft release versions.
+    ''' Returns Nothing if fetching has never completed; otherwise always non-empty and sorted from high to low.
     ''' </summary>
     Public Property AllDrops As List(Of Integer)
         Get
@@ -166,7 +166,7 @@ Public Module ModDownload
                 _AllDrops = Settings.Get(Of String)("CacheDrops").ToString.
                     Split(",", True).Select(Function(d) CInt(Val(d))).ToList()
             End If
-            Return If(_AllDrops.Any, _AllDrops, Nothing) '不要将 _AllDrops 再设为 Nothing，以防止反复获取设置尝试初始化
+            Return If(_AllDrops.Any, _AllDrops, Nothing) 'Never set _AllDrops back to Nothing, to avoid repeatedly triggering fetches from initialization
         End Get
         Set(value As List(Of Integer))
             _AllDrops = value
@@ -175,24 +175,24 @@ Public Module ModDownload
     End Property
     Private _AllDrops As List(Of Integer) = Nothing
 
-    '主加载器
+    'Main loader
     Public Structure DlClientListResult
         ''' <summary>
-        ''' 数据来源名称，如“Mojang”，“BMCLAPI”。
+        ''' Name of the data source, e.g. "Mojang", "BMCLAPI".
         ''' </summary>
         Public SourceName As String
         ''' <summary>
-        ''' 是否为官方的实时数据。
+        ''' Whether this is official real-time data.
         ''' </summary>
         Public IsOfficial As Boolean
         ''' <summary>
-        ''' 获取到的 Json 数据。
+        ''' The fetched JSON data.
         ''' </summary>
         Public Value As JObject
     End Structure
     ''' <summary>
-    ''' Minecraft 客户端 版本列表，主加载器。
-    ''' 若要求镜像源必须包含某个版本，则将该版本 ID 作为输入（#5195）。
+    ''' Minecraft client version list, main loader.
+    ''' If the mirror is required to contain a specific version, pass that version ID as the input (#5195).
     ''' </summary>
     Public DlClientListLoader As New LoaderTask(Of String, DlClientListResult)("DlClientList Main", AddressOf DlClientListMain)
     Private Sub DlClientListMain(Loader As LoaderTask(Of String, DlClientListResult))
@@ -213,7 +213,7 @@ Public Module ModDownload
                     New KeyValuePair(Of LoaderTask(Of String, DlClientListResult), Integer)(DlClientListBmclapiLoader, 60 + 60)
                 }, Loader.IsForceRestarting)
         End Select
-        '提取所有 Drop 序数
+        'Extract all Drop ordinals
         Dim Drops As New List(Of Integer)
         For Each Version As JObject In Loader.Output.Value("versions")
             Dim Id As String = Version("id").ToString
@@ -225,9 +225,9 @@ Public Module ModDownload
         AllDrops = Drops.Distinct.OrderByDescending(Function(d) d).ToList()
     End Sub
 
-    '各个下载源的分加载器
+    'Per-source sub-loaders
     ''' <summary>
-    ''' Minecraft 客户端 版本列表，Mojang 官方源加载器。
+    ''' Minecraft client version list, official Mojang source loader.
     ''' </summary>
     Public DlClientListMojangLoader As New LoaderTask(Of String, DlClientListResult)("DlClientList Mojang", AddressOf DlClientListMojangMain)
     Private Sub DlClientListMojangMain(Loader As LoaderTask(Of String, DlClientListResult))
@@ -236,20 +236,19 @@ Public Module ModDownload
         Try
             Dim Versions As JArray = Json("versions")
             If Versions.Count < 200 Then Throw New Exception("获取到的版本列表长度不足（" & Json.ToString & "）")
-            '确定官方源是否可用
+            'Determine whether the official source is usable
             If Not DlPreferMojang Then
                 Dim DeltaTime = GetTimeMs() - StartTime
                 DlPreferMojang = DeltaTime < 4000
                 Logger.Info($"Mojang 官方源加载耗时：{DeltaTime}ms，{If(DlPreferMojang, "可优先使用官方源", "不优先使用官方源")}")
             End If
-            '返回
             Loader.Output = New DlClientListResult With {.IsOfficial = True, .SourceName = "Mojang 官方源", .Value = Json}
         Catch ex As Exception
             Throw New Exception("Minecraft 官方源版本列表解析失败", ex)
         End Try
     End Sub
     ''' <summary>
-    ''' Minecraft 客户端 版本列表，BMCLAPI 源加载器。
+    ''' Minecraft client version list, BMCLAPI source loader.
     ''' </summary>
     Public DlClientListBmclapiLoader As New LoaderTask(Of String, DlClientListResult)("DlClientList Bmclapi", AddressOf DlClientListBmclapiMain)
     Private Sub DlClientListBmclapiMain(Loader As LoaderTask(Of String, DlClientListResult))
@@ -257,16 +256,15 @@ Public Module ModDownload
         Try
             Dim Versions As JArray = Json("versions")
             If Versions.Count < 200 Then Throw New Exception("获取到的版本列表长度不足（" & Json.ToString & "）")
-            '添加 PCL 特供项
+            'Add PCL-specific entries
             If FileUtils.Exists(PathTemp & "Cache\download.json") Then Versions.Merge(FileUtils.ReadAsJson(PathTemp & "Cache\download.json"))
-            '检查是否有要求的版本（#5195）
+            'Check whether the required version is present (#5195)
             If Not String.IsNullOrEmpty(Loader.Input) Then
                 Dim Id = Loader.Input
-                If DlClientListLoader.Output.Value IsNot Nothing AndAlso Not DlClientListLoader.Output.Value("versions").Any(Function(v) v("id") = Id) Then
+                If Not Versions.Any(Function(v) v("id")?.ToString = Id) Then
                     Throw New Exception("BMCLAPI 源未包含目标版本 " & Id)
                 End If
             End If
-            '返回
             Loader.Output = New DlClientListResult With {.IsOfficial = False, .SourceName = "BMCLAPI", .Value = Json}
         Catch ex As Exception
             Throw New Exception("Minecraft BMCLAPI 版本列表解析失败（" & Json.ToString & "）", ex)
@@ -274,28 +272,28 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' 获取某个版本的 Json 下载地址，若失败则返回 Nothing。必须在工作线程执行。
+    ''' Gets the JSON download URL of a version, or Nothing on failure. Must be run on a worker thread.
     ''' </summary>
     Public Function DlClientListGet(Id As String)
         Try
-            '确认版本格式标准
-            Id = Id.Replace("_", "-") '1.7.10_pre4 在版本列表中显示为 1.7.10-pre4
-            If Id <> "1.0" AndAlso Id.EndsWithF(".0") Then Id = Left(Id, Id.Length - 2) 'OptiFine 1.8 的下载会触发此问题，显示版本为 1.8.0
-            '获取 Minecraft 版本列表
+            'Normalize the version format
+            Id = Id.Replace("_", "-") '1.7.10_pre4 is shown as 1.7.10-pre4 in the version list
+            If Id <> "1.0" AndAlso Id.EndsWithF(".0") Then Id = Left(Id, Id.Length - 2) 'Triggered when downloading OptiFine 1.8, whose version is shown as 1.8.0
+            'Get the Minecraft version list
             Select Case DlClientListLoader.State
                 Case LoadState.Finished
-                    '从当前的结果获取目标版本…
+                    'Look up the target version in the current result...
                     For Each Version As JObject In DlClientListLoader.Output.Value("versions")
                         If Version("id") = Id Then Return Version("url").ToString
                     Next
-                    '…如果没有，则重新尝试获取（在版本刚更新时可能出现这种情况，#5195）
+                    '...if it's missing, fetch again (can happen right after a new version is released, #5195)
                     DlClientListLoader.WaitForExit(Id, IsForceRestart:=True)
                 Case LoadState.Loading
                     DlClientListLoader.WaitForExit(Id)
                 Case LoadState.Failed, LoadState.Canceled, LoadState.Waiting
                     DlClientListLoader.WaitForExit(Id, IsForceRestart:=True)
             End Select
-            '重新查找版本
+            'Look up the version again
             For Each Version As JObject In DlClientListLoader.Output.Value("versions")
                 If Version("id") = Id Then Return Version("url").ToString
             Next
@@ -309,42 +307,42 @@ Public Module ModDownload
 
 #End Region
 
-#Region "DlOptiFineList | OptiFine 版本列表"
+#Region "DlOptiFineList | OptiFine version list"
 
     Public Structure DlOptiFineListResult
         ''' <summary>
-        ''' 数据来源名称，如“Official”，“BMCLAPI”。
+        ''' Name of the data source, e.g. "Official", "BMCLAPI".
         ''' </summary>
         Public SourceName As String
         ''' <summary>
-        ''' 是否为官方的实时数据。
+        ''' Whether this is official real-time data.
         ''' </summary>
         Public IsOfficial As Boolean
         ''' <summary>
-        ''' 获取到的数据。
+        ''' The fetched data.
         ''' </summary>
         Public Value As List(Of DlOptiFineListEntry)
     End Structure
 
     Public Class DlOptiFineListEntry
         ''' <summary>
-        ''' 显示名称，已去除 HD_U 字样，如“1.12.2 C8”。
+        ''' Display name with "HD_U" removed, e.g. "1.12.2 C8".
         ''' </summary>
         Public DisplayName As String
         ''' <summary>
-        ''' 原始文件名称，如“preview_OptiFine_1.11_HD_U_E1_pre.jar”。
+        ''' Original file name, e.g. "preview_OptiFine_1.11_HD_U_E1_pre.jar".
         ''' </summary>
         Public FileName As String
         ''' <summary>
-        ''' 对应的版本名称，如“1.13.2-OptiFine_HD_U_E6”。
+        ''' Corresponding version name, e.g. "1.13.2-OptiFine_HD_U_E6".
         ''' </summary>
         Public InstanceName As String
         ''' <summary>
-        ''' 是否为测试版。
+        ''' Whether this is a preview version.
         ''' </summary>
         Public IsPreview As Boolean
         ''' <summary>
-        ''' 对应的 Minecraft 版本，如“1.12.2”。
+        ''' Corresponding Minecraft version, e.g. "1.12.2".
         ''' </summary>
         Public Property Inherit As String
             Get
@@ -357,17 +355,17 @@ Public Module ModDownload
         End Property
         Private _inherit As String
         ''' <summary>
-        ''' 发布时间，格式为“yyyy/mm/dd”。OptiFine 源无此数据。
+        ''' Release date in "yyyy/mm/dd" format. Not available from the official OptiFine source.
         ''' </summary>
         Public ReleaseTime As String
         ''' <summary>
-        ''' 需要的最低 Forge 版本。空字符串为无限制，Nothing 为不兼容，“28.1.56” 表示版本号，“1161” 表示版本号的最后一位。
+        ''' Minimum required Forge version. Empty string means no restriction, Nothing means incompatible; "28.1.56" is a full version number, "1161" is the last part of the version number.
         ''' </summary>
         Public RequiredForgeVersion As String
     End Class
 
     ''' <summary>
-    ''' OptiFine 版本列表，主加载器。
+    ''' OptiFine version list, main loader.
     ''' </summary>
     Public DlOptiFineListLoader As New LoaderTask(Of Integer, DlOptiFineListResult)("DlOptiFineList Main", AddressOf DlOptiFineListMain)
     Private Sub DlOptiFineListMain(Loader As LoaderTask(Of Integer, DlOptiFineListResult))
@@ -391,21 +389,21 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' OptiFine 版本列表，官方源。
+    ''' OptiFine version list, official source.
     ''' </summary>
     Public DlOptiFineListOfficialLoader As New LoaderTask(Of Integer, DlOptiFineListResult)("DlOptiFineList Official", AddressOf DlOptiFineListOfficialMain)
     Private Sub DlOptiFineListOfficialMain(Loader As LoaderTask(Of Integer, DlOptiFineListResult))
         Dim Result As String = NetRequestByClientRetry("https://optifine.net/downloads", Encoding:=Encoding.Default)
         If Result.Length < 200 Then Throw New Exception("获取到的版本列表长度不足（" & Result & "）")
         Try
-            '获取所有版本信息
+            'Get info for all versions
             Dim Forge As List(Of String) = Result.RegexSearch("(?<=colForge'>)[^<]*").ToList
             Dim ReleaseTime As List(Of String) = Result.RegexSearch("(?<=colDate'>)[^<]+").ToList
             Dim Name As List(Of String) = Result.RegexSearch("(?<=OptiFine_)[0-9A-Za-z_.]+(?=.jar"")").ToList
             If Not ReleaseTime.Count = Name.Count Then Throw New Exception("版本与发布时间数据无法对应")
             If Not Forge.Count = Name.Count Then Throw New Exception("版本与 Forge 兼容数据无法对应")
             If ReleaseTime.Count < 10 Then Throw New Exception("获取到的版本数量不足（" & Result & "）")
-            '转化为列表输出
+            'Convert to a list for output
             Dim Versions As New List(Of DlOptiFineListEntry)
             For i = 0 To ReleaseTime.Count - 1
                 Name(i) = Name(i).Replace("_", " ")
@@ -427,7 +425,7 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' OptiFine 版本列表，BMCLAPI。
+    ''' OptiFine version list, BMCLAPI.
     ''' </summary>
     Public DlOptiFineListBmclapiLoader As New LoaderTask(Of Integer, DlOptiFineListResult)("DlOptiFineList Bmclapi", AddressOf DlOptiFineListBmclapiMain)
     Private Sub DlOptiFineListBmclapiMain(Loader As LoaderTask(Of Integer, DlOptiFineListResult))
@@ -455,25 +453,25 @@ Public Module ModDownload
 
 #End Region
 
-#Region "DlForgeList | Forge Minecraft 版本列表"
+#Region "DlForgeList | Forge Minecraft version list"
 
     Public Structure DlForgeListResult
         ''' <summary>
-        ''' 数据来源名称，如“Official”，“BMCLAPI”。
+        ''' Name of the data source, e.g. "Official", "BMCLAPI".
         ''' </summary>
         Public SourceName As String
         ''' <summary>
-        ''' 是否为官方的实时数据。
+        ''' Whether this is official real-time data.
         ''' </summary>
         Public IsOfficial As Boolean
         ''' <summary>
-        ''' 获取到的数据。
+        ''' The fetched data.
         ''' </summary>
         Public Value As List(Of String)
     End Structure
 
     ''' <summary>
-    ''' Forge 版本列表，主加载器。
+    ''' Forge version list, main loader.
     ''' </summary>
     Public DlForgeListLoader As New LoaderTask(Of Integer, DlForgeListResult)("DlForgeList Main", AddressOf DlForgeListMain)
     Private Sub DlForgeListMain(Loader As LoaderTask(Of Integer, DlForgeListResult))
@@ -497,21 +495,21 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' Forge 版本列表，官方源。
+    ''' Forge version list, official source.
     ''' </summary>
     Public DlForgeListOfficialLoader As New LoaderTask(Of Integer, DlForgeListResult)("DlForgeList Official", AddressOf DlForgeListOfficialMain)
     Private Sub DlForgeListOfficialMain(Loader As LoaderTask(Of Integer, DlForgeListResult))
         Dim Result As String = NetRequestByClientRetry("https://files.minecraftforge.net/maven/net/minecraftforge/forge/index_1.2.4.html", Encoding:=Encoding.Default, Accept:="text/html", SimulateBrowserHeaders:=True)
         If Result.Length < 200 Then Throw New Exception("获取到的版本列表长度不足（" & Result & "）")
-        '获取所有版本信息
+        'Get info for all versions
         Dim Names As List(Of String) = Result.RegexSearch("(?<=a href=""index_)[0-9.]+((_pre|[_-]snapshot[_-]?)[0-9]?)?(?=.html)").ToList
-        Names.Add("1.2.4") '1.2.4 不会被匹配上
+        Names.Add("1.2.4") '1.2.4 won't be matched
         If Names.Count < 10 Then Throw New Exception("获取到的版本数量不足（" & Result & "）")
         Loader.Output = New DlForgeListResult With {.IsOfficial = True, .SourceName = "Forge 官方源", .Value = Names}
     End Sub
 
     ''' <summary>
-    ''' Forge 版本列表，BMCLAPI。
+    ''' Forge version list, BMCLAPI.
     ''' </summary>
     Public DlForgeListBmclapiLoader As New LoaderTask(Of Integer, DlForgeListResult)("DlForgeList Bmclapi", AddressOf DlForgeListBmclapiMain)
     Private Sub DlForgeListBmclapiMain(Loader As LoaderTask(Of Integer, DlForgeListResult))
@@ -524,35 +522,35 @@ Public Module ModDownload
 
 #End Region
 
-#Region "DlForgeVersion | Forge 版本列表"
+#Region "DlForgeVersion | Forge version list"
 
     Public MustInherit Class DlForgelikeEntry
         Implements IComparable(Of DlForgelikeEntry)
 
         Public IsNeoForge As Boolean
         ''' <summary>
-        ''' 加载器名称。Forge 或 NeoForge。
+        ''' Loader name: Forge or NeoForge.
         ''' </summary>
         Public MustOverride ReadOnly Property LoaderName As String
         ''' <summary>
-        ''' 文件扩展名。不以小数点开头。
+        ''' File extension, without a leading dot.
         ''' </summary>
         Public MustOverride ReadOnly Property FileExtension As String
         ''' <summary>
-        ''' 标准化后的版本号，仅可用于比较与排序，且 NeoForge 项不包含 alpha/beta 编号！
-        ''' 格式：Major.Minor.Build.Revision
-        ''' Forge：如 “50.1.9.0”（最后一位固定为 0）、“14.22.1.2478”（Legacy）。
-        ''' NeoForge：如 “20.4.30.0”（最后一位固定为 0）、“19.47.1.99”（Legacy：第一位固定为 19）。
+        ''' Normalized version number, only usable for comparison and sorting. NeoForge entries do NOT include the alpha/beta number!
+        ''' Format: Major.Minor.Build.Revision
+        ''' Forge: e.g. "50.1.9.0" (last part always 0), "14.22.1.2478" (Legacy).
+        ''' NeoForge: e.g. "20.4.30.0" (last part always 0), "19.47.1.99" (Legacy: first part always 19).
         ''' </summary>
         Public Version As Version
         ''' <summary>
-        ''' 可读的非格式化版本名。
-        ''' Forge：如 “50.1.9”、“14.22.1.2478”（Legacy）。
-        ''' NeoForge：如 “20.4.30-beta”、“47.1.99”（Legacy）。
+        ''' Human-readable, unnormalized version name.
+        ''' Forge: e.g. "50.1.9", "14.22.1.2478" (Legacy).
+        ''' NeoForge: e.g. "20.4.30-beta", "47.1.99" (Legacy).
         ''' </summary>
         Public VersionName As String
         ''' <summary>
-        ''' 对应的 Minecraft 版本，如 1.12.2、26.1-snapshot-1。
+        ''' Corresponding Minecraft version, e.g. 1.12.2, 26.1-snapshot-1.
         ''' </summary>
         Public Inherit As String
 
@@ -569,28 +567,28 @@ Public Module ModDownload
         Inherits DlForgelikeEntry
 
         ''' <summary>
-        ''' 发布时间，格式为“yyyy/MM/dd HH:mm”。
+        ''' Release time in "yyyy/MM/dd HH:mm" format.
         ''' </summary>
         Public ReleaseTime As String
         ''' <summary>
-        ''' 文件的 MD5 或 SHA1（BMCLAPI 的老版本是 MD5，新版本是 SHA1；官方源总是 MD5）。
+        ''' MD5 or SHA1 of the file (old BMCLAPI versions use MD5, newer ones SHA1; the official source always uses MD5).
         ''' </summary>
         Public Hash As String = Nothing
         ''' <summary>
-        ''' 是否为推荐版本。
+        ''' Whether this is a recommended version.
         ''' </summary>
         Public IsRecommended As Boolean
         ''' <summary>
-        ''' 安装类型。有 installer、client、universal 三种。
+        ''' Install type: installer, client or universal.
         ''' </summary>
         Public Category As String
         ''' <summary>
-        ''' 用于下载的文件版本名。可能在 Version 的基础上添加了分支。
+        ''' Version name used for downloading. May have a branch appended to Version.
         ''' </summary>
         Public FileVersion As String
 
         ''' <summary>
-        ''' 加载器名称。Forge 或 NeoForge。
+        ''' Loader name: Forge or NeoForge.
         ''' </summary>
         Public Overrides ReadOnly Property LoaderName As String
             Get
@@ -598,7 +596,7 @@ Public Module ModDownload
             End Get
         End Property
         ''' <summary>
-        ''' 文件扩展名。不以小数点开头。
+        ''' File extension, without a leading dot.
         ''' </summary>
         Public Overrides ReadOnly Property FileExtension As String
             Get
@@ -607,10 +605,10 @@ Public Module ModDownload
         End Property
 
         Public Sub New(Version As String, Branch As String, Inherit As String)
-            '司马版本的特殊处理
+            'Special handling for quirky versions
             If Version = "11.15.1.2318" OrElse Version = "11.15.1.1902" OrElse Version = "11.15.1.1890" Then Branch = "1.8.9"
             If Branch Is Nothing AndAlso Inherit = "1.7.10" AndAlso Version.Split(".")(3) >= 1300 Then Branch = "1.7.10"
-            '为 DlForgelikeEntry 提供所有信息
+            'Provide all info for DlForgelikeEntry
             IsNeoForge = False
             VersionName = Version
             Me.Version = New Version(Version)
@@ -621,7 +619,7 @@ Public Module ModDownload
     End Class
 
     ''' <summary>
-    ''' Forge 版本列表，主加载器。
+    ''' Forge version list, main loader.
     ''' </summary>
     Public Sub DlForgeVersionMain(Loader As LoaderTask(Of String, List(Of DlForgeVersionEntry)))
         Dim DlForgeVersionOfficialLoader As New LoaderTask(Of String, List(Of DlForgeVersionEntry))("DlForgeVersion Official", AddressOf DlForgeVersionOfficialMain)
@@ -646,13 +644,13 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' Forge 版本列表，官方源。
+    ''' Forge version list, official source.
     ''' </summary>
     Public Sub DlForgeVersionOfficialMain(Loader As LoaderTask(Of String, List(Of DlForgeVersionEntry)))
         Dim Result As String
         Try
             Result = NetRequestByLoader("https://files.minecraftforge.net/maven/net/minecraftforge/forge/index_" &
-                                          Loader.Input.Replace("-", "_") & '兼容 Forge 1.7.10-pre4，#4057
+                                          Loader.Input.Replace("-", "_") & 'Compatibility with Forge 1.7.10-pre4, #4057
                                           ".html", SimulateBrowserHeaders:=True)
         Catch ex As Exception
             If ex.GetDisplay(False).Contains("(404)") Then
@@ -664,48 +662,48 @@ Public Module ModDownload
         If Result.Length < 1000 Then Throw New Exception("获取到的版本列表长度不足（" & Result & "）")
         Dim Versions As New List(Of DlForgeVersionEntry)
         Try
-            '分割版本信息
+            'Split version info
             Dim VersionCodes = Result.Substring(0, Result.LastIndexOfF("</table>")).Split("<td class=""download-version")
-            '获取所有版本信息
+            'Get info for all versions
             For i = 1 To VersionCodes.Count - 1
                 Dim VersionCode = VersionCodes(i)
                 Try
-                    '基础信息获取
+                    'Basic info
                     Dim Name As String = VersionCode.RegexSeek("(?<=[^(0-9)]+)[0-9\.]+")
                     Dim IsRecommended As Boolean = VersionCode.Contains("fa promo-recommended")
                     Dim Inherit As String = Loader.Input
-                    '分支获取
+                    'Branch
                     Dim Branch As String = VersionCode.RegexSeek($"(?<=-{Name}-)[^-""]+(?=-[a-z]+.[a-z]{{3}})")
                     If String.IsNullOrWhiteSpace(Branch) Then Branch = Nothing
-                    '发布时间获取
+                    'Release time
                     Dim ReleaseTimeOriginal = VersionCode.RegexSeek("(?<=""download-time"" title="")[^""]+")
-                    Dim ReleaseTimeSplit = ReleaseTimeOriginal.Split(" -:".ToCharArray) '原格式："2021-02-15 03:24:02"
-                    Dim ReleaseDate As New Date(ReleaseTimeSplit(0), ReleaseTimeSplit(1), ReleaseTimeSplit(2), '年月日
-                                                ReleaseTimeSplit(3), ReleaseTimeSplit(4), ReleaseTimeSplit(5), '时分秒
-                                                0, DateTimeKind.Utc) '以 UTC 时间作为标准
-                    Dim ReleaseTime As String = ReleaseDate.ToLocalTime.ToString("yyyy'/'MM'/'dd HH':'mm") '时区与格式转换
-                    '分类与 MD5 获取
+                    Dim ReleaseTimeSplit = ReleaseTimeOriginal.Split(" -:".ToCharArray) 'Original format: "2021-02-15 03:24:02"
+                    Dim ReleaseDate As New Date(ReleaseTimeSplit(0), ReleaseTimeSplit(1), ReleaseTimeSplit(2), 'Date
+                                                ReleaseTimeSplit(3), ReleaseTimeSplit(4), ReleaseTimeSplit(5), 'Time
+                                                0, DateTimeKind.Utc) 'Use UTC as the reference
+                    Dim ReleaseTime As String = ReleaseDate.ToLocalTime.ToString("yyyy'/'MM'/'dd HH':'mm") 'Time zone and format conversion
+                    'Category and MD5
                     Dim MD5 As String, Category As String
                     If VersionCode.Contains("classifier-installer""") Then
-                        '类型为 installer.jar，支持范围 ~753 (~ 1.6.1 部分), 738~684 (1.5.2 全部)
+                        'Type installer.jar, supported range ~753 (part of ~1.6.1), 738~684 (all of 1.5.2)
                         VersionCode = VersionCode.Substring(VersionCode.IndexOfF("installer.jar"))
                         MD5 = VersionCode.RegexSeek("(?<=MD5:</strong> )[^<]+")
                         Category = "installer"
                     ElseIf VersionCode.Contains("classifier-universal""") Then
-                        '类型为 universal.zip，支持范围 751~449 (1.6.1 部分), 682~183 (1.5.1 ~ 1.3.2 部分)
+                        'Type universal.zip, supported range 751~449 (part of 1.6.1), 682~183 (part of 1.5.1 ~ 1.3.2)
                         VersionCode = VersionCode.Substring(VersionCode.IndexOfF("universal.zip"))
                         MD5 = VersionCode.RegexSeek("(?<=MD5:</strong> )[^<]+")
                         Category = "universal"
                     ElseIf VersionCode.Contains("client.zip") Then
-                        '类型为 client.zip，支持范围 182~ (1.3.2 部分 ~)
+                        'Type client.zip, supported range 182~ (part of 1.3.2 ~)
                         VersionCode = VersionCode.Substring(VersionCode.IndexOfF("client.zip"))
                         MD5 = VersionCode.RegexSeek("(?<=MD5:</strong> )[^<]+")
                         Category = "client"
                     Else
-                        '没有任何下载（1.6.4 有一部分这种情况）
+                        'No downloads at all (happens for some 1.6.4 versions)
                         Continue For
                     End If
-                    '添加进列表
+                    'Add to the list
                     Versions.Add(New DlForgeVersionEntry(Name, Branch, Inherit) With {.Category = Category, .IsRecommended = IsRecommended, .Hash = MD5.ReplaceLineEndings(""), .ReleaseTime = ReleaseTime})
                 Catch ex As Exception
                     Throw New Exception("Forge 官方源版本信息提取失败（" & VersionCode & "）", ex)
@@ -719,50 +717,50 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' Forge 版本列表，BMCLAPI。
+    ''' Forge version list, BMCLAPI.
     ''' </summary>
     Public Sub DlForgeVersionBmclapiMain(Loader As LoaderTask(Of String, List(Of DlForgeVersionEntry)))
         Dim Json As JArray = NetRequestByClientRetry("https://bmclapi2.bangbang93.com/forge/minecraft/" &
-            Loader.Input.Replace("-", "_"), RequireJson:=True).DeserializeJson() '兼容 Forge 1.7.10-pre4，#4057
+            Loader.Input.Replace("-", "_"), RequireJson:=True).DeserializeJson() 'Compatibility with Forge 1.7.10-pre4, #4057
         Dim Versions As New List(Of DlForgeVersionEntry)
         Try
             Dim Recommended As String = McDownloadForgeRecommendedGet(Loader.Input)
             For Each Token As JObject In Json
-                '分类与 Hash 获取
+                'Category and hash
                 Dim Hash As String = Nothing, Category As String = "unknown", Proi As Integer = -1
                 For Each File As JObject In Token("files")
                     Select Case File("category").ToString
                         Case "installer"
                             If File("format").ToString = "jar" Then
-                                '类型为 installer.jar，支持范围 ~753 (~ 1.6.1 部分), 738~684 (1.5.2 全部)
+                                'Type installer.jar, supported range ~753 (part of ~1.6.1), 738~684 (all of 1.5.2)
                                 Hash = File("hash")
                                 Category = "installer"
                                 Proi = 2
                             End If
                         Case "universal"
                             If Proi <= 1 AndAlso File("format").ToString = "zip" Then
-                                '类型为 universal.zip，支持范围 751~449 (1.6.1 部分), 682~183 (1.5.1 ~ 1.3.2 部分)
+                                'Type universal.zip, supported range 751~449 (part of 1.6.1), 682~183 (part of 1.5.1 ~ 1.3.2)
                                 Hash = File("hash")
                                 Category = "universal"
                                 Proi = 1
                             End If
                         Case "client"
                             If Proi <= 0 AndAlso File("format").ToString = "zip" Then
-                                '类型为 client.zip，支持范围 182~ (1.3.2 部分 ~)
+                                'Type client.zip, supported range 182~ (part of 1.3.2 ~)
                                 Hash = File("hash")
                                 Category = "client"
                                 Proi = 0
                             End If
                     End Select
                 Next
-                '获取 Entry
+                'Get the entry
                 Dim Branch As String = Token("branch")
                 Dim Name As String = Token("version")
-                '基础信息获取
+                'Basic info
                 Dim Entry = New DlForgeVersionEntry(Name, Branch, Loader.Input) With {.Hash = Hash, .Category = Category, .IsRecommended = Recommended = Name}
                 Dim TimeSplit = Token("modified").ToString.Split("-"c, "T"c, ":"c, "."c, " "c, "/"c)
                 Entry.ReleaseTime = Token("modified").ToObject(Of Date).ToLocalTime.ToString("yyyy'/'MM'/'dd HH':'mm")
-                '添加项
+                'Add the entry
                 Versions.Add(Entry)
             Next
         Catch ex As Exception
@@ -774,19 +772,19 @@ Public Module ModDownload
 
 #End Region
 
-#Region "DlNeoForgeList | NeoForge 版本列表"
+#Region "DlNeoForgeList | NeoForge version list"
 
     Public Structure DlNeoForgeListResult
         ''' <summary>
-        ''' 数据来源名称，如“Official”，“BMCLAPI”。
+        ''' Name of the data source, e.g. "Official", "BMCLAPI".
         ''' </summary>
         Public SourceName As String
         ''' <summary>
-        ''' 是否为官方的实时数据。
+        ''' Whether this is official real-time data.
         ''' </summary>
         Public IsOfficial As Boolean
         ''' <summary>
-        ''' 所有版本的列表。已经按从新到老排序。
+        ''' List of all versions, sorted from newest to oldest.
         ''' </summary>
         Public Value As List(Of DlNeoForgeListEntry)
     End Structure
@@ -795,15 +793,15 @@ Public Module ModDownload
         Inherits DlForgelikeEntry
 
         ''' <summary>
-        ''' 是否是 Beta 版。
+        ''' Whether this is a beta version.
         ''' </summary>
         Public IsBeta As Boolean
         ''' <summary>
-        ''' API 使用的原始版本字符串，如 “20.4.30-beta”、“1.20.1-47.1.99”（Legacy）。
+        ''' Raw version string used by the API, e.g. "20.4.30-beta", "1.20.1-47.1.99" (Legacy).
         ''' </summary>
         Public ApiName As String
         ''' <summary>
-        ''' 文件在官网的基础地址，不包含后缀。
+        ''' Base URL of the file on the official site, without the suffix.
         ''' </summary>
         Public ReadOnly Property UrlBase As String
             Get
@@ -813,7 +811,7 @@ Public Module ModDownload
         End Property
 
         ''' <summary>
-        ''' 加载器名称。Forge 或 NeoForge。
+        ''' Loader name: Forge or NeoForge.
         ''' </summary>
         Public Overrides ReadOnly Property LoaderName As String
             Get
@@ -821,7 +819,7 @@ Public Module ModDownload
             End Get
         End Property
         ''' <summary>
-        ''' 文件扩展名。不以小数点开头。
+        ''' File extension, without a leading dot.
         ''' </summary>
         Public Overrides ReadOnly Property FileExtension As String
             Get
@@ -842,7 +840,7 @@ Public Module ModDownload
                 Dim Segments = ApiName.BeforeFirst("-").Split("."c)
                 Version = New Version(0, 0, Segments.Last)
                 Inherit = Segments(1)
-            Else '20.4.30-beta；26.1.0.0-alpha.1+snapshot-1
+            Else '20.4.30-beta; 26.1.0.0-alpha.1+snapshot-1
                 VersionName = ApiName
                 Version = New Version(ApiName.BeforeFirst("-"))
                 If Version.Major >= 24 Then
@@ -857,7 +855,7 @@ Public Module ModDownload
     End Class
 
     ''' <summary>
-    ''' NeoForge 版本列表，主加载器。
+    ''' NeoForge version list, main loader.
     ''' </summary>
     Public DlNeoForgeListLoader As New LoaderTask(Of Integer, DlNeoForgeListResult)("DlNeoForgeList Main", AddressOf DlNeoForgeListMain)
     Private Sub DlNeoForgeListMain(Loader As LoaderTask(Of Integer, DlNeoForgeListResult))
@@ -881,15 +879,15 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' NeoForge 版本列表，官方源。
+    ''' NeoForge version list, official source.
     ''' </summary>
     Public DlNeoForgeListOfficialLoader As New LoaderTask(Of Integer, DlNeoForgeListResult)("DlNeoForgeList Official", AddressOf DlNeoForgeListOfficialMain)
     Private Sub DlNeoForgeListOfficialMain(Loader As LoaderTask(Of Integer, DlNeoForgeListResult))
-        '获取版本列表 JSON
+        'Get the version list JSON
         Dim ResultLatest As String = NetRequestByClientRetry("https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/neoforge", RequireJson:=True)
         Dim ResultLegacy As String = NetRequestByClientRetry("https://maven.neoforged.net/api/maven/versions/releases/net/neoforged/forge", RequireJson:=True)
         If ResultLatest.Length < 100 OrElse ResultLegacy.Length < 100 Then Throw New Exception("获取到的版本列表长度不足（" & ResultLatest & "）")
-        '解析
+        'Parse
         Try
             Loader.Output = New DlNeoForgeListResult With {.IsOfficial = True, .SourceName = "NeoForge 官方源",
                 .Value = GetNeoForgeEntries(ResultLatest, ResultLegacy)}
@@ -899,15 +897,15 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' NeoForge 版本列表，BMCLAPI。
+    ''' NeoForge version list, BMCLAPI.
     ''' </summary>
     Public DlNeoForgeListBmclapiLoader As New LoaderTask(Of Integer, DlNeoForgeListResult)("DlNeoForgeList Bmclapi", AddressOf DlNeoForgeListBmclapiMain)
     Public Sub DlNeoForgeListBmclapiMain(Loader As LoaderTask(Of Integer, DlNeoForgeListResult))
-        '获取版本列表 JSON
+        'Get the version list JSON
         Dim ResultLatest As String = NetRequestByClientRetry("https://bmclapi2.bangbang93.com/neoforge/meta/api/maven/details/releases/net/neoforged/neoforge", RequireJson:=True)
         Dim ResultLegacy As String = NetRequestByClientRetry("https://bmclapi2.bangbang93.com/neoforge/meta/api/maven/details/releases/net/neoforged/forge", RequireJson:=True)
         If ResultLatest.Length < 100 OrElse ResultLegacy.Length < 100 Then Throw New Exception("获取到的版本列表长度不足（" & ResultLatest & "）")
-        '解析
+        'Parse
         Try
             Loader.Output = New DlNeoForgeListResult With {.IsOfficial = True, .SourceName = "BMCLAPI",
                 .Value = GetNeoForgeEntries(ResultLatest, ResultLegacy)}
@@ -920,7 +918,7 @@ Public Module ModDownload
         Dim VersionNames = (LatestLegacyJson & LatestJson).RegexSearch(
             "(?<="")(1\.20\.1-)?\d+\.[^\.]+\.\d+(\.\d+)?(-(beta|alpha)(\.\d+)?)?(\+snapshot-\d+)?(?="")")
         Dim Versions = VersionNames.
-            Where(Function(name) name <> "47.1.82"). '这个版本虽然在版本列表中，但不能下载
+            Where(Function(name) name <> "47.1.82"). 'This version is in the version list but can't be downloaded
             Select(Function(name) New DlNeoForgeListEntry(name)).
             OrderByDescending(Function(a) a).ToList
         If Not Versions.Any() Then Throw New Exception("无")
@@ -929,60 +927,60 @@ Public Module ModDownload
 
 #End Region
 
-#Region "DlLiteLoaderList | LiteLoader 版本列表"
+#Region "DlLiteLoaderList | LiteLoader version list"
 
     Public Structure DlLiteLoaderListResult
         ''' <summary>
-        ''' 数据来源名称，如“Official”，“BMCLAPI”。
+        ''' Name of the data source, e.g. "Official", "BMCLAPI".
         ''' </summary>
         Public SourceName As String
         ''' <summary>
-        ''' 是否为官方的实时数据。
+        ''' Whether this is official real-time data.
         ''' </summary>
         Public IsOfficial As Boolean
         ''' <summary>
-        ''' 获取到的数据。
+        ''' The fetched data.
         ''' </summary>
         Public Value As List(Of DlLiteLoaderListEntry)
         ''' <summary>
-        ''' 官方源的失败原因。若没有则为 Nothing。
+        ''' Failure reason of the official source, or Nothing if none.
         ''' </summary>
         Public OfficialError As Exception
     End Structure
 
     Public Class DlLiteLoaderListEntry
         ''' <summary>
-        ''' 实际的文件名，如“liteloader-installer-1.12-00-SNAPSHOT.jar”。
+        ''' Actual file name, e.g. "liteloader-installer-1.12-00-SNAPSHOT.jar".
         ''' </summary>
         Public FileName As String
         ''' <summary>
-        ''' 是否为测试版。
+        ''' Whether this is a preview version.
         ''' </summary>
         Public IsPreview As Boolean
         ''' <summary>
-        ''' 对应的 Minecraft 版本，如“1.12.2”。
+        ''' Corresponding Minecraft version, e.g. "1.12.2".
         ''' </summary>
         Public Inherit As String
         ''' <summary>
-        ''' 是否为 1.7 及更早的远古版。
+        ''' Whether this is an ancient version (1.7 or earlier).
         ''' </summary>
         Public IsLegacy As Boolean
         ''' <summary>
-        ''' 发布时间，格式为“yyyy/mm/dd HH:mm”。
+        ''' Release time in "yyyy/mm/dd HH:mm" format.
         ''' </summary>
         Public ReleaseTime As String
         ''' <summary>
-        ''' 文件的 MD5。
+        ''' MD5 of the file.
         ''' </summary>
         Public MD5 As String
         ''' <summary>
-        ''' 对应的 Json 项。
+        ''' The corresponding JSON entry.
         ''' </summary>
         Public JsonToken As JToken
     End Class
 
     ''' <summary>
-    ''' LiteLoader 版本列表，主加载器。
+    ''' LiteLoader version list, main loader.
     ''' </summary>
     Public DlLiteLoaderListLoader As New LoaderTask(Of Integer, DlLiteLoaderListResult)("DlLiteLoaderList Main", AddressOf DlLiteLoaderListMain)
     Private Sub DlLiteLoaderListMain(Loader As LoaderTask(Of Integer, DlLiteLoaderListResult))
@@ -1006,7 +1004,7 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' LiteLoader 版本列表，官方源。
+    ''' LiteLoader version list, official source.
     ''' </summary>
     Public DlLiteLoaderListOfficialLoader As New LoaderTask(Of Integer, DlLiteLoaderListResult)("DlLiteLoaderList Official", AddressOf DlLiteLoaderListOfficialMain)
     Private Sub DlLiteLoaderListOfficialMain(Loader As LoaderTask(Of Integer, DlLiteLoaderListResult))
@@ -1034,7 +1032,7 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' LiteLoader 版本列表，BMCLAPI。
+    ''' LiteLoader version list, BMCLAPI.
     ''' </summary>
     Public DlLiteLoaderListBmclapiLoader As New LoaderTask(Of Integer, DlLiteLoaderListResult)("DlLiteLoaderList Bmclapi", AddressOf DlLiteLoaderListBmclapiMain)
     Private Sub DlLiteLoaderListBmclapiMain(Loader As LoaderTask(Of Integer, DlLiteLoaderListResult))
@@ -1063,25 +1061,25 @@ Public Module ModDownload
 
 #End Region
 
-#Region "DlFabricList | Fabric 列表"
+#Region "DlFabricList | Fabric list"
 
     Public Structure DlFabricListResult
         ''' <summary>
-        ''' 数据来源名称，如“Official”，“BMCLAPI”。
+        ''' Name of the data source, e.g. "Official", "BMCLAPI".
         ''' </summary>
         Public SourceName As String
         ''' <summary>
-        ''' 是否为官方的实时数据。
+        ''' Whether this is official real-time data.
         ''' </summary>
         Public IsOfficial As Boolean
         ''' <summary>
-        ''' 获取到的数据。
+        ''' The fetched data.
         ''' </summary>
         Public Value As JObject
     End Structure
 
     ''' <summary>
-    ''' Fabric 列表，主加载器。
+    ''' Fabric list, main loader.
     ''' </summary>
     Public DlFabricListLoader As New LoaderTask(Of Integer, DlFabricListResult)("DlFabricList Main", AddressOf DlFabricListMain)
     Private Sub DlFabricListMain(Loader As LoaderTask(Of Integer, DlFabricListResult))
@@ -1105,7 +1103,7 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' Fabric 列表，官方源。
+    ''' Fabric list, official source.
     ''' </summary>
     Public DlFabricListOfficialLoader As New LoaderTask(Of Integer, DlFabricListResult)("DlFabricList Official", AddressOf DlFabricListOfficialMain)
     Private Sub DlFabricListOfficialMain(Loader As LoaderTask(Of Integer, DlFabricListResult))
@@ -1120,7 +1118,7 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' Fabric 列表，BMCLAPI。
+    ''' Fabric list, BMCLAPI.
     ''' </summary>
     Public DlFabricListBmclapiLoader As New LoaderTask(Of Integer, DlFabricListResult)("DlFabricList Bmclapi", AddressOf DlFabricListBmclapiMain)
     Private Sub DlFabricListBmclapiMain(Loader As LoaderTask(Of Integer, DlFabricListResult))
@@ -1135,24 +1133,24 @@ Public Module ModDownload
     End Sub
 
     ''' <summary>
-    ''' Fabric API 列表，官方源。
+    ''' Fabric API list, official source.
     ''' </summary>
     Public DlFabricApiLoader As New LoaderTask(Of Integer, List(Of ResourceVersion))("Fabric API List Loader",
         Sub(Task As LoaderTask(Of Integer, List(Of ResourceVersion))) Task.Output = ResourceVersion.FromProjectId("fabric-api", ResourcePlatforms.Modrinth, LoadDependencies:=False))
 
     ''' <summary>
-    ''' OptiFabric 列表，官方源。
+    ''' OptiFabric list, official source.
     ''' </summary>
     Public DlOptiFabricLoader As New LoaderTask(Of Integer, List(Of ResourceVersion))("OptiFabric List Loader",
         Sub(Task As LoaderTask(Of Integer, List(Of ResourceVersion))) Task.Output = ResourceVersion.FromProjectId("322385", ResourcePlatforms.CurseForge, LoadDependencies:=False))
 
 #End Region
 
-#Region "DlMod | Mod 镜像源请求"
+#Region "DlMod | Mod mirror requests"
 
     ''' <summary>
-    ''' 对可能涉及 Mod 镜像源的请求进行处理，返回 JToken。
-    ''' 调用 NetRequest，会进行重试。
+    ''' Handles requests that may involve a mod mirror source and returns a JToken.
+    ''' Calls NetRequest, with retries.
     ''' </summary>
     Public Function DlModRequest(Url As String, Optional Method As HttpMethod = Nothing,
                                  Optional Content As String = Nothing, Optional ContentType As String = Nothing) As JToken
@@ -1165,7 +1163,7 @@ Public Module ModDownload
                     Urls.Add((McimUrl, 10))
                     Urls.Add((Url, 30))
                 Case 1
-                    Urls.Add((Url, If(Url.Contains("modrinth"), 20, 10))) '至少 20s，要不然 Modrinth 返回不过来
+                    Urls.Add((Url, If(Url.Contains("modrinth"), 20, 10))) 'At least 20s, otherwise Modrinth can't respond in time
                     Urls.Add((McimUrl, 10))
                     Urls.Add((Url, 30))
                     Urls.Add((McimUrl, 30))
@@ -1191,11 +1189,11 @@ Public Module ModDownload
 
 #End Region
 
-#Region "DlSource | 镜像下载源"
+#Region "DlSource | Mirror download sources"
 
     Private DlPreferMojang As Boolean = False
     ''' <summary>
-    ''' 下载文件（而非获取版本列表）的时候，是否优先使用官方源。
+    ''' Whether to prefer the official source when downloading files (as opposed to fetching version lists).
     ''' </summary>
     Public ReadOnly Property DlSourcePreferMojang As Boolean
         Get
@@ -1203,13 +1201,13 @@ Public Module ModDownload
         End Get
     End Property
     ''' <summary>
-    ''' 下载文件（而非获取版本列表）的时候，根据是否优先使用官方源决定使用 Url 的顺序。
+    ''' When downloading files (as opposed to fetching version lists), orders the URLs depending on whether the official source is preferred.
     ''' </summary>
     Public Function DlSourceOrder(OfficialUrls As IEnumerable(Of String), MirrorUrls As IEnumerable(Of String)) As IEnumerable(Of String)
         Return If(DlSourcePreferMojang, OfficialUrls.Union(MirrorUrls), MirrorUrls.Union(OfficialUrls))
     End Function
     ''' <summary>
-    ''' 获取版本列表（而非下载文件）的时候，是否优先使用官方源。
+    ''' Whether to prefer the official source when fetching version lists (as opposed to downloading files).
     ''' </summary>
     Public ReadOnly Property DlVersionListPreferMojang As Boolean
         Get
@@ -1217,7 +1215,7 @@ Public Module ModDownload
         End Get
     End Property
     ''' <summary>
-    ''' 获取版本列表（而非下载文件）的时候，根据是否优先使用官方源决定使用 Url 的顺序。
+    ''' When fetching version lists (as opposed to downloading files), orders the URLs depending on whether the official source is preferred.
     ''' </summary>
     Public Function DlVersionListOrder(OfficialUrls As IEnumerable(Of String), MirrorUrls As IEnumerable(Of String)) As IEnumerable(Of String)
         Return If(DlVersionListPreferMojang, OfficialUrls.Union(MirrorUrls), MirrorUrls.Union(OfficialUrls))
@@ -1225,7 +1223,7 @@ Public Module ModDownload
 
 
     ''' <summary>
-    ''' 下载 Assets 文件。
+    ''' Download Assets files.
     ''' </summary>
     Public Function DlSourceAssetsGet(Original As String) As IEnumerable(Of String)
         Original = Original.Replace("http://resources.download.minecraft.net", "https://resources.download.minecraft.net")
@@ -1238,10 +1236,10 @@ Public Module ModDownload
             })
     End Function
     ''' <summary>
-    ''' 下载 Libraries 文件。
+    ''' Download Libraries files.
     ''' </summary>
     Public Function DlSourceLibraryGet(Original As String) As IEnumerable(Of String)
-        If {"minecraftforge", "fabricmc", "neoforged"}.Any(Function(k) Original.Contains(k)) Then '不添加原版源
+        If {"minecraftforge", "fabricmc", "neoforged"}.Any(Function(k) Original.Contains(k)) Then 'Don't add the vanilla source
             Return {
                 Original.
                     Replace("https://piston-data.mojang.com", "https://bmclapi2.bangbang93.com/maven").
@@ -1267,8 +1265,8 @@ Public Module ModDownload
         End If
     End Function
     ''' <summary>
-    ''' 下载 Launcher 或 Meta 文件。
-    ''' 不应使用它来获取版本列表（因为它只使用文件下载源设置来决定源顺序）。
+    ''' Download Launcher or Meta files.
+    ''' Should not be used for fetching version lists (it only uses the file download source setting to decide the source order).
     ''' </summary>
     Public Function DlSourceLauncherOrMetaGet(Original As String) As IEnumerable(Of String)
         If Original Is Nothing Then Throw New Exception("无对应的 json 下载地址")
@@ -1282,7 +1280,7 @@ Public Module ModDownload
             })
     End Function
 
-    'Mod 下载源
+    'Mod download sources
     Public Function DlSourceModGet(Original As String) As String
         Return Original.
             Replace("api.modrinth.com", "mod.mcimirror.top/modrinth").
@@ -1294,49 +1292,49 @@ Public Module ModDownload
             Replace("media.forgecdn.net", "mod.mcimirror.top")
     End Function
 
-    'Loader 自动切换
+    'Automatic loader switching
     Private Sub DlSourceLoader(Of InputType, OutputType)(MainLoader As LoaderTask(Of InputType, OutputType),
                                                          LoaderList As List(Of KeyValuePair(Of LoaderTask(Of InputType, OutputType), Integer)),
                                                          Optional IsForceRestart As Boolean = False)
         Dim WaitCycle As Integer = 0
         Do While True
-            '检查状态
+            'Check state
             Dim BeforeLoadersAllFailed As Boolean = True
             For Each SubLoader In LoaderList
-                If WaitCycle = 0 Then '判断是否可以不加载，直接使用已经加载好的结果
-                    If IsForceRestart Then Continue For '强制刷新，不行
+                If WaitCycle = 0 Then 'Check whether loading can be skipped and the already-loaded result used directly
+                    If IsForceRestart Then Continue For 'Not if a forced refresh was requested
                     If (SubLoader.Key.Input Is Nothing Xor MainLoader.Input Is Nothing) OrElse
-                       (SubLoader.Key.Input IsNot Nothing AndAlso Not SubLoader.Key.Input.Equals(MainLoader.Input)) Then Continue For '父子加载器的输入不一样，也不行
+                       (SubLoader.Key.Input IsNot Nothing AndAlso Not SubLoader.Key.Input.Equals(MainLoader.Input)) Then Continue For 'Nor if the parent and child loaders have different inputs
                 End If
                 If SubLoader.Key.State <> LoadState.Failed Then BeforeLoadersAllFailed = False
                 If SubLoader.Key.State = LoadState.Finished Then
-                    '检查加载器成功
+                    'Check for loader success
                     MainLoader.Output = SubLoader.Key.Output
                     DlSourceLoaderCancel(LoaderList)
                     Return
                 ElseIf BeforeLoadersAllFailed Then
-                    '此前的加载器全部失败，直接启动后续加载器
+                    'All previous loaders failed, start the next loaders directly
                     If WaitCycle < SubLoader.Value * 100 Then WaitCycle = SubLoader.Value * 100
                 End If
             Next
-            '第一轮时：既然不直接使用已经加载好的结果，那就启动第一个加载器
+            'First round: since the loaded result isn't used directly, start the first loader
             If WaitCycle = 0 Then
                 LoaderList.First.Key.Start(MainLoader.Input, IsForceRestart)
                 For Each Loader In LoaderList.Skip(1)
-                    Loader.Key.State = LoadState.Waiting '将其他源标记为未启动，以确保可以切换下载源（#184）
+                    Loader.Key.State = LoadState.Waiting 'Mark the other sources as not started so the download source can be switched (#184)
                 Next
             End If
-            '检查加载器失败或超时
+            'Check for loader failure or timeout
             For i = 0 To LoaderList.Count - 1
                 If WaitCycle <> LoaderList(i).Value * 100 Then Continue For
                 If i < LoaderList.Count - 1 AndAlso Not LoaderList.All(Function(l) l.Key.State = LoadState.Failed) Then
-                    '若还有下一个源，则启动下一个源
+                    'If there's another source, start it
                     LoaderList(i + 1).Key.Start(MainLoader.Input, IsForceRestart)
                 Else
-                    '若没有，则失败
+                    'Otherwise, fail
                     Dim ErrorInfo As Exception = Nothing
                     For ii = 0 To LoaderList.Count - 1
-                        LoaderList(ii).Key.Input = Nothing '重置输入，以免以同样的输入“重试加载”时直接失败
+                        LoaderList(ii).Key.Input = Nothing 'Reset the input so a "retry" with the same input doesn't fail immediately
                         If LoaderList(ii).Key.Error IsNot Nothing Then
                             If ErrorInfo Is Nothing OrElse LoaderList(ii).Key.Error.Message = "无" Then
                                 ErrorInfo = LoaderList(ii).Key.Error
@@ -1349,10 +1347,10 @@ Public Module ModDownload
                 End If
                 Exit For
             Next
-            '计时
+            'Timing
             Thread.Sleep(10)
             WaitCycle += 1
-            '检查父加载器中断
+            'Check for parent loader interruption
             If MainLoader.IsCanceled Then
                 DlSourceLoaderCancel(LoaderList)
                 Return

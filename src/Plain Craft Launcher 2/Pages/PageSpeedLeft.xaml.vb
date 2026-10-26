@@ -1,25 +1,25 @@
 Public Class PageSpeedLeft
     Private Const WatcherInterval As Integer = 300
 
-    '初始化
+    'Initialization
     Private IsLoad As Boolean = False
     Private Sub Page_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
 
-        '进入时就刷新一次显示
+        'Refresh the display as soon as the page opens
         Watcher()
 
-        '如果在页面切换动画的 “上一页消失” 部分已经完成了下载，就直接尝试返回
+        'If the download finished during the previous-page exit animation, try to go back immediately
         TryReturnToHome()
 
         If IsLoad Then Return
         IsLoad = True
 
-        '监控定时器
+        'Watcher timer
         Dim timer As New Threading.DispatcherTimer With {.Interval = New TimeSpan(0, 0, 0, 0, WatcherInterval)}
         AddHandler timer.Tick, AddressOf Watcher
         timer.Start()
 
-        '非调试模式隐藏线程数
+        'Hide the thread-count rows outside debug mode
         If Not ModeDebug Then
             RowDefinitions(12).Height = New GridLength(0)
             RowDefinitions(13).Height = New GridLength(0)
@@ -29,22 +29,22 @@ Public Class PageSpeedLeft
 
     End Sub
 
-    '定时器任务
+    'Timer work
     Private ReadOnly RightCards As New Dictionary(Of String, MyCard)
     Private Sub Watcher()
         If Not FrmMain.PageCurrent = FormMain.PageType.TaskManager Then Return
         Try
 
-#Region "更新左边栏"
+#Region "Update the left bar"
             If Not LoaderTaskbar.Any() Then
-                '无任务
+                'No tasks
                 LabProgress.Text = "100 %"
                 LabSpeed.Text = "0 B/s"
                 LabFile.Text = "0"
                 LabThread.Text = "0 / " & NetTaskThreadLimit
             Else
-                '有任务，输出基本信息
-                Dim Tasks = LoaderTaskbar.Where(Function(l) l.Show).ToList() '筛选掉启动 MC 的任务（#6270）
+                'Tasks are running; show the summary
+                Dim Tasks = LoaderTaskbar.Where(Function(l) l.Show).ToList() 'Exclude Minecraft launch tasks (#6270)
                 Dim RawPercent As Double = If(Tasks.Any, Tasks.Select(Function(l) l.Progress).Average().Clamp(0, 1), 1)
                 Dim PredictText As String = Math.Floor(RawPercent * 100) & "." & Math.Floor((RawPercent * 100 - Math.Floor(RawPercent * 100)) * 100).ToString.EnsureLength("0", 2) & " %"
                 LabProgress.Text = If(RawPercent > 0.999999, "100 %", PredictText)
@@ -69,10 +69,10 @@ Public Class PageSpeedLeft
     Public Sub TaskRefresh(Loader As LoaderBase)
         If Loader Is Nothing OrElse Not Loader.Show Then Return
         Try
-            '获取实际加载器列表
+            'Get the loaders that should be shown
             Dim LoaderList As List(Of LoaderBase) = CType(Loader, Object).GetLoaderList()
             If RightCards.ContainsKey(Loader.Name) Then
-                '已有此卡片
+                'This card already exists
                 Dim Card As Grid = RightCards(Loader.Name)
                 Dim NewValue As Double = Loader.Progress + Loader.State
                 If Val(Card.Tag) = NewValue Then Return
@@ -85,7 +85,7 @@ Public Class PageSpeedLeft
                 Try
                     Select Case Loader.State
                         Case LoadState.Failed
-#Region "失败，更新卡片"
+#Region "Failed: update the card"
                             Card.RowDefinitions.Clear()
                             Card.Children.Clear()
                             Card.Children.Add(GetObjectFromXML("<Path xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" Stretch=""Uniform"" Tag=""Failed"" Data=""F1 M2.5,0 L0,2.5 7.5,10 0,17.5 2.5,20 10,12.5 17.5,20 20,17.5 12.5,10 20,2.5 17.5,0 10,7.5 2.5,0Z"" Height=""15"" Width=""15"" HorizontalAlignment=""Center"" Grid.Column=""0"" Grid.Row=""0"" Fill=""{DynamicResource ColorBrush3}"" Margin=""0,1,0,0"" VerticalAlignment=""Top""/>"))
@@ -99,11 +99,11 @@ Public Class PageSpeedLeft
                             Card.Children.Add(Tb)
 #End Region
                         Case LoadState.Finished, LoadState.Canceled
-#Region "完成或中断，销毁卡片并返回"
+#Region "Finished or canceled: remove the card and go back"
                             AniDispose(CType(Card.Parent, MyCard), True, AddressOf TryReturnToHome)
 #End Region
                         Case LoadState.Loading, LoadState.Waiting
-#Region "进度不同，更新卡片"
+#Region "Progress changed: update the card"
                             Try
                                 If Card.Children.Count < LoaderList.Count * 2 Then
                                     Logger.Warn($"刷新任务管理卡片 {Loader.Name} 失败：卡片中仅有 {Card.Children.Count} 个子项，要求至少有 {LoaderList.Count * 2} 个子项")
@@ -142,7 +142,7 @@ Public Class PageSpeedLeft
                 End Try
             ElseIf Not (Loader.State = LoadState.Canceled OrElse Loader.State = LoadState.Finished) Then
                 Try
-#Region "没有卡片且未中断或完成，添加新的卡片"
+#Region "No card yet, and still running: add one"
                     Dim CardXAML As String = "
                         <local:MyCard xmlns=""http://schemas.microsoft.com/winfx/2006/xaml/presentation"" xmlns:x=""http://schemas.microsoft.com/winfx/2006/xaml"" xmlns:local=""clr-namespace:PCL;assembly=Plain Craft Launcher 2""
                             Tag=""" & (Loader.Progress + Loader.State) & """ Title=""" & StringUtils.XmlEscape(Loader.Name) & """ Margin=""0,0,0,15"">
@@ -172,7 +172,7 @@ Public Class PageSpeedLeft
                         Row += 1
                     Next
                     CardXAML += "</Grid></local:MyCard>"
-                    '实例化控件
+                    'Create the control
                     Dim Card As MyCard
                     Try
                         Card = GetObjectFromXML(CardXAML)
@@ -184,7 +184,7 @@ Public Class PageSpeedLeft
                     FrmSpeedRight.PanMain.Children.Insert(0, Card)
                     RightCards.Add(Loader.Name, Card)
                     Logger.Info($"新建任务管理卡片：{Loader.Name}")
-                    '添加取消按钮
+                    'Add the cancel button
                     Dim Cancel As New MyIconButton With {.Name = "BtnCancel", .Logo = "F1 M2,0 L0,2 8,10 0,18 2,20 10,12 18,20 20,18 12,10 20,2 18,0 10,8 2,0Z", .Height = 20, .Margin = New Thickness(0, 10, 10, 0), .LogoScale = 1.1, .HorizontalAlignment = HorizontalAlignment.Right, .VerticalAlignment = VerticalAlignment.Top}
                     Card.Children.Add(Cancel)
                     AddHandler Cancel.Click,
@@ -196,9 +196,9 @@ Public Class PageSpeedLeft
                         Logger.Info($"关闭任务管理卡片：{Loader.Name}，且移出任务列表")
                         RunInThread(Sub() Loader.Cancel())
                     End Sub
-                    '如果已经失败，再刷新一次，修改成失败的控件
+                    'If it has already failed, refresh once more so the card shows the failure
                     If Loader.State = LoadState.Failed Then
-                        Card.Tag = Nothing '避免重复导致刷新无效
+                        Card.Tag = Nothing 'Clear the tag so the refresh is not treated as a duplicate
                         TaskRefresh(Loader)
                     End If
 #End Region
@@ -214,7 +214,7 @@ Public Class PageSpeedLeft
         If RightCards.ContainsKey(Loader.Name) Then
             RunInUiWait(
             Sub()
-                '移除已有的卡片
+                'Remove the existing card
                 Dim Card As Grid = RightCards(Loader.Name)
                 FrmSpeedRight.PanMain.Children.Remove(Card)
                 RightCards.Remove(Loader.Name)
@@ -224,7 +224,7 @@ Public Class PageSpeedLeft
     End Sub
 
     ''' <summary>
-    ''' 若没有任务，尝试返回主页。
+    ''' If there are no tasks, try to return to the home page.
     ''' </summary>
     Private Sub TryReturnToHome()
         If FrmSpeedRight.PanMain.Children.Count = 0 AndAlso FrmMain.PageCurrent = FormMain.PageType.TaskManager Then

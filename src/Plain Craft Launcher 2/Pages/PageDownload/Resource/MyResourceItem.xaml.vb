@@ -69,7 +69,6 @@ Public Class MyResourceItem
         If IsMouseDown Then
             RaiseEvent Click(sender, e)
             If e.Handled Then Return
-            Logger.Info($"按下资源工程列表项：{LabTitle.Text}")
         End If
     End Sub
     Private Sub MyResourceItem_Click(sender As MyResourceItem, e As EventArgs) Handles Me.Click
@@ -79,7 +78,6 @@ Public Class MyResourceItem
             For Each Card As MyCard In FrmDownloadResourceDetail.PanResults.Children
                 If Card.Title <> "" AndAlso Not Card.IsSwapped Then Titles.Add(Card.Title)
             Next
-            Logger.Info($"记录当前已展开的卡片：{String.Join("、", Titles)}")
         End If
         '打开详情页
         Dim TargetType As ResourceTypes
@@ -148,9 +146,6 @@ Public Class MyResourceItem
                 SetRowSpan(Rect, 999)
                 Children.Insert(0, Rect)
                 _RectBack = Rect
-                '<!--<Border x:Name = "RectBack" CornerRadius="3" RenderTransformOrigin="0.5,0.5" SnapsToDevicePixels="True" 
-                'IsHitTestVisible = "False" Opacity="0" BorderThickness="1" 
-                'Grid.ColumnSpan = "4" Background="{DynamicResource ColorBrush7}" BorderBrush="{DynamicResource ColorBrush6}"/>-->
             End If
             Return _RectBack
         End Get

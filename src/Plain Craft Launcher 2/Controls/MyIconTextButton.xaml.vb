@@ -3,13 +3,13 @@ Imports System.Windows.Markup
 <ContentProperty("Inlines")>
 Public Class MyIconTextButton
 
-    '基础
+    'Basics
 
     Public Uuid As Integer = GetUuid()
     Public Event Check(sender As Object, raiseByMouse As Boolean)
     Public Event Change(sender As Object, raiseByMouse As Boolean)
 
-    '自定义属性
+    'Custom properties
 
     Public Property Logo As String
         Get
@@ -42,7 +42,7 @@ Public Class MyIconTextButton
         Set(value As String)
             SetValue(TextProperty, value)
         End Set
-    End Property '内容
+    End Property 'Content
     Public Shared ReadOnly TextProperty As DependencyProperty = DependencyProperty.Register("Text", GetType(String), GetType(MyIconTextButton), New PropertyMetadata(New PropertyChangedCallback(
     Sub(sender As DependencyObject, e As DependencyPropertyChangedEventArgs)
         If Not IsNothing(sender) Then CType(sender, MyIconTextButton).LabText.Text = e.NewValue
@@ -60,20 +60,19 @@ Public Class MyIconTextButton
             SetValue(ColorTypeProperty, value)
             RefreshColor()
         End Set
-    End Property '颜色类别
+    End Property 'Color type
     Public Shared ReadOnly ColorTypeProperty As DependencyProperty =
         DependencyProperty.Register("ColorType", GetType(ColorState), GetType(MyIconTextButton), New PropertyMetadata(ColorState.Black))
 
-    '点击事件
+    'Click event
 
     Public Event Click(sender As Object, e As RouteEventArgs)
     Private IsMouseDown As Boolean = False
     Private Sub MyIconTextButton_MouseUp() Handles Me.MouseLeftButtonUp
         If Not IsMouseDown Then Return
-        Logger.Info($"按下带图标按钮：{Text}")
         IsMouseDown = False
         RaiseEvent Click(Me, New RouteEventArgs(True))
-        RaiseCustomEvent() '自定义事件
+        RaiseCustomEvent()
         RefreshColor()
     End Sub
     Private Sub MyIconTextButton_MouseDown() Handles Me.MouseLeftButtonDown
@@ -85,35 +84,35 @@ Public Class MyIconTextButton
         RefreshColor()
     End Sub
 
-    '动画
+    'Animation
 
-    Private Const AnimationTimeOfMouseIn As Integer = 100 '鼠标指向动画长度
-    Private Const AnimationTimeOfMouseOut As Integer = 150 '鼠标移出动画长度
+    Private Const AnimationTimeOfMouseIn As Integer = 100 'Mouse hover animation duration
+    Private Const AnimationTimeOfMouseOut As Integer = 150 'Mouse leave animation duration
     Private Sub RefreshColor(Optional obj = Nothing, Optional e = Nothing) Handles Me.MouseEnter, Me.Loaded, Me.IsEnabledChanged
         Try
-            If IsLoaded AndAlso AniControlEnabled = 0 AndAlso Not False.Equals(e) Then '防止默认属性变更触发动画，若强制不执行动画，则 e 为 False
+            If IsLoaded AndAlso AniControlEnabled = 0 AndAlso Not False.Equals(e) Then 'Prevent default property changes from triggering animations; e is False when animation is forcibly skipped
 
                 Select Case ColorType
                     Case ColorState.Black
                         If IsMouseDown Then
-                            '按下
+                            'Pressed
                             AniStart(AaColor(Me, BackgroundProperty, "ColorBrush6", 70), "MyIconTextButton Color " & Uuid)
                         ElseIf IsMouseOver Then
-                            '指向
+                            'Hover
                             AniStart({
                                 AaColor(ShapeLogo, Shapes.Path.FillProperty, "ColorBrush3", AnimationTimeOfMouseIn),
                                 AaColor(LabText, TextBlock.ForegroundProperty, "ColorBrush3", AnimationTimeOfMouseIn)
                             }, "MyIconTextButton Checked " & Uuid)
                             AniStart(AaColor(Me, BackgroundProperty, "ColorBrushBg1", AnimationTimeOfMouseIn), "MyIconTextButton Color " & Uuid)
                         ElseIf IsEnabled Then
-                            '正常
+                            'Normal
                             AniStart({
                                 AaColor(ShapeLogo, Shapes.Path.FillProperty, "ColorBrush1", AnimationTimeOfMouseOut),
                                 AaColor(LabText, TextBlock.ForegroundProperty, "ColorBrush1", AnimationTimeOfMouseOut)
                             }, "MyIconTextButton Checked " & Uuid)
                             AniStart(AaColor(Me, BackgroundProperty, ColorSemiTransparent - Background, AnimationTimeOfMouseOut), "MyIconTextButton Color " & Uuid)
                         Else
-                            '禁用
+                            'Disabled
                             AniStart({
                                 AaColor(ShapeLogo, Shapes.Path.FillProperty, "ColorBrushGray5", 100),
                                 AaColor(LabText, TextBlock.ForegroundProperty, "ColorBrushGray5", 100)
@@ -122,24 +121,24 @@ Public Class MyIconTextButton
                         End If
                     Case ColorState.Highlight
                         If IsMouseDown Then
-                            '按下
+                            'Pressed
                             AniStart(AaColor(Me, BackgroundProperty, "ColorBrush6", 70), "MyIconTextButton Color " & Uuid)
                         ElseIf IsMouseOver Then
-                            '指向
+                            'Hover
                             AniStart({
                                 AaColor(ShapeLogo, Shapes.Path.FillProperty, "ColorBrush3", AnimationTimeOfMouseIn),
                                 AaColor(LabText, TextBlock.ForegroundProperty, "ColorBrush3", AnimationTimeOfMouseIn)
                             }, "MyIconTextButton Checked " & Uuid)
                             AniStart(AaColor(Me, BackgroundProperty, "ColorBrushBg1", AnimationTimeOfMouseIn), "MyIconTextButton Color " & Uuid)
                         ElseIf IsEnabled Then
-                            '正常
+                            'Normal
                             AniStart({
                                 AaColor(ShapeLogo, Shapes.Path.FillProperty, "ColorBrush3", AnimationTimeOfMouseOut),
                                 AaColor(LabText, TextBlock.ForegroundProperty, "ColorBrush3", AnimationTimeOfMouseOut)
                             }, "MyIconTextButton Checked " & Uuid)
                             AniStart(AaColor(Me, BackgroundProperty, ColorSemiTransparent - Background, AnimationTimeOfMouseOut), "MyIconTextButton Color " & Uuid)
                         Else
-                            '禁用
+                            'Disabled
                             AniStart({
                                 AaColor(ShapeLogo, Shapes.Path.FillProperty, "ColorBrushGray5", 100),
                                 AaColor(LabText, TextBlock.ForegroundProperty, "ColorBrushGray5", 100)
@@ -150,7 +149,7 @@ Public Class MyIconTextButton
 
             Else
 
-                '不使用动画
+                'Without animation
                 AniStop("MyIconTextButton Checked " & Uuid)
                 AniStop("MyIconTextButton Color " & Uuid)
                 Select Case ColorType

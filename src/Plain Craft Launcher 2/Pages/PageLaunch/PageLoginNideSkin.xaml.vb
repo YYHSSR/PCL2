@@ -9,16 +9,16 @@ Public Class PageLoginNideSkin
     End Sub
 
     ''' <summary>
-    ''' 刷新页面显示的所有信息。
+    ''' Refresh everything shown on this page.
     ''' </summary>
     Public Sub Reload(KeepInput As Boolean)
         TextName.Text = Settings.Get(Of String)("CacheNideName")
         TextEmail.Text = Settings.Get(Of String)("CacheNideUsername")
         TextEmail.Visibility = (Not False).ToVisibility
-        '皮肤在 Loaded 加载
+        'The skin loads in Loaded
     End Sub
     ''' <summary>
-    ''' 获取当前页面的登录信息。
+    ''' Get this page's login info.
     ''' </summary>
     Public Shared Function GetLoginData() As McLoginServer
         Dim Server As String = If(IsNothing(McInstanceSelected), Settings.Get(Of String)("CacheNideServer"), Settings.Get(Of String)("VersionServerNide", Instance:=McInstanceSelected))
@@ -46,7 +46,7 @@ Public Class PageLoginNideSkin
 
     Public Shared Sub ExitLogin() Handles BtnExit.Click
         Settings.Set("CacheNideAccess", "")
-        McLoginNideLoader.Input = Nothing '防止因为输入的用户名密码相同，直接使用了上次登录的加载器结果
+        McLoginNideLoader.Input = Nothing 'Avoid reusing the last login result when the username and password are unchanged
         FrmLaunchLeft.RefreshPage(False, True)
     End Sub
 

@@ -301,7 +301,7 @@ Public Class MyResizer
     End Sub
 
     Private Sub updateMouseDown()
-        Dim flag = (GetAsyncKeyState(&H1) And &H8000) = 0 '调用原生API判断鼠标是否抬起，如果使用WPF的API的话鼠标不在窗口上时不会更新状态 (#5655)
+        Dim flag = (GetAsyncKeyState(&H1) And &H8000) = 0 'Use the native API to check whether the mouse button is released; the WPF API does not update the state while the mouse is outside the window (#5655)
         If flag Then
             resizeRight = False
             resizeLeft = False

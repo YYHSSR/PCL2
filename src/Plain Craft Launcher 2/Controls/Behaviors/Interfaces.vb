@@ -1,21 +1,21 @@
 Imports System.Windows.Threading
 
 ''' <summary>
-''' 指示页面可以通过按下 F5 或以其他方式刷新。
+''' Indicates that the page can be refreshed by pressing F5 or by other means.
 ''' </summary>
 Public Interface IRefreshable
     Sub Refresh()
 End Interface
 
 ''' <summary>
-''' 指示页面可以处理未捕获的异常。
+''' Indicates that the page can handle uncaught exceptions.
 ''' </summary>
 Public Interface IDispatcherUnhandledException
     Sub DispatcherUnhandledException(sender As Object, e As DispatcherUnhandledExceptionEventArgs)
 End Interface
 
 ''' <summary>
-''' 指示该控件是可勾选的。
+''' Indicates that the control is checkable.
 ''' </summary>
 Public Interface IMyRadio
     Event Check(sender As Object, e As RouteEventArgs)

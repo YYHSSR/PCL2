@@ -9,14 +9,14 @@ Public Class PageLoginMsSkin
     End Sub
 
     ''' <summary>
-    ''' 刷新页面显示的所有信息。
+    ''' Refresh everything shown on this page.
     ''' </summary>
     Public Sub Reload(KeepInput As Boolean)
         TextName.Text = Settings.Get(Of String)("CacheMsV2Name")
-        '皮肤在 Loaded 加载
+        'The skin loads in Loaded
     End Sub
     ''' <summary>
-    ''' 获取当前页面的登录信息。
+    ''' Get this page's login info.
     ''' </summary>
     Public Shared Function GetLoginData() As McLoginMs
         If McLoginMsLoader.State = LoadState.Finished Then
@@ -26,9 +26,9 @@ Public Class PageLoginMsSkin
         End If
     End Function
 
-#Region "下边栏其他内容"
+#Region "Bottom bar extras"
 
-    '显示/隐藏控制
+    'Show and hide controls
     Private Sub ShowPanel(sender As Object, e As MouseEventArgs) Handles PanData.MouseEnter
         AniStart(AaOpacity(PanButtons, 1 - PanButtons.Opacity, 120), "PageLoginMsSkin Button")
     End Sub
@@ -37,12 +37,12 @@ Public Class PageLoginMsSkin
         AniStart(AaOpacity(PanButtons, -PanButtons.Opacity, 120), "PageLoginMsSkin Button")
     End Sub
 
-    '修改账号信息
+    'Edit account info
     Private Sub BtnEdit_Click(sender As Object, e As EventArgs) Handles BtnEdit.Click
         BtnEdit.ContextMenu.IsOpen = True
     End Sub
 
-    '退出登录
+    'Sign out
     Private Sub BtnExit_Click() Handles BtnExit.Click
         Settings.Set("CacheMsV2OAuthRefresh", "")
         Settings.Set("CacheMsV2Access", "")
@@ -56,17 +56,17 @@ Public Class PageLoginMsSkin
 
 #End Region
 
-#Region "皮肤/披风"
+#Region "Skin and cape"
 
-    '展开
+    'Expand
     Private Sub BtnSkin_Click(sender As Object, e As RoutedEventArgs) Handles BtnSkin.Click
         BtnSkin.ContextMenu.IsOpen = True
     End Sub
 
-    '修改皮肤
+    'Change skin
     Private IsChanging As Boolean = False
     Public Sub BtnSkinEdit_Click(sender As Object, e As RoutedEventArgs)
-        '检查条件，获取新皮肤
+        'Check conditions and get the new skin
         If IsChanging Then
             Hint("正在更改皮肤中，请稍候！")
             Return
@@ -79,13 +79,13 @@ Public Class PageLoginMsSkin
         If Not SkinInfo.IsVaild Then Return
         Hint("正在更改皮肤……")
         IsChanging = True
-        '开始实际获取
+        'Start the actual fetch
         RunInNewThread(Sub() EditSkin(SkinInfo), "Ms Skin Upload")
     End Sub
     Private Sub EditSkin(SkinInfo As McSkinInfo)
 Retry:
         Try
-            Do While McLoginMsLoader.State = LoadState.Loading '等待登录结束
+            Do While McLoginMsLoader.State = LoadState.Loading 'Wait for login to finish
                 Thread.Sleep(10)
             Loop
             If McLoginMsLoader.State = LoadState.Failed Then Throw New Exception("登录失败", McLoginMsLoader.Error)
@@ -102,7 +102,7 @@ Retry:
                 McLoginMsLoader.Start(GetLoginData(), IsForceRestart:=True)
                 GoTo Retry
             End If
-            '获取新皮肤地址
+            'Get the new skin URL
             Logger.Info($"皮肤修改返回值：{vbCrLf}{Result}")
             Dim ResultJson As JObject = Result.DeserializeJson()
             If ResultJson.ContainsKey("errorMessage") Then Throw New Exception(ResultJson("errorMessage").ToString) '#5309
@@ -142,22 +142,22 @@ Retry:
         End Try
     End Sub
 
-    '保存皮肤
+    'Save skin
     Public Sub BtnSkinSave_Click(sender As Object, e As RoutedEventArgs)
         Skin.BtnSkinSave_Click()
     End Sub
 
-    '刷新头像
+    'Refresh the avatar
     Public Sub BtnSkinRefresh_Click(sender As Object, e As RoutedEventArgs)
         Skin.RefreshClick()
     End Sub
 
-    '修改披风
+    'Change cape
     Public Sub BtnSkinCape_Click(sender As Object, e As RoutedEventArgs)
         Skin.BtnSkinCape_Click()
     End Sub
 
-    '刷新披风
+    'Refresh the cape
     Public Sub BtnSkinCapeRefresh_Click(sender As Object, e As RoutedEventArgs)
         RunInThread(
         Sub()

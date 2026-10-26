@@ -1,21 +1,21 @@
 Public Module ModJava
 
     ''' <summary>
-    ''' 初始化 Java 列表。
-    ''' 若没有任何可用的 Java，则触发搜索。
+    ''' Initializes the Java list.
+    ''' Triggers a search if no Java is available.
     ''' </summary>
     Public Sub JavaInit()
         Try
-            '从老版本迁移
+            'Migrate from older versions
             If Configs.JavaConfigVersion.Get() = 0 Then
                 Try
-                    'Java 列表
+                    'Java list
                     Logger.Warn("正在从老版本迁移 Java 列表")
                     Dim OldJavaList = Settings.Get(Of String)("LaunchArgumentJavaAll").DeserializeJson(Of JArray).
                                       Select(Function(JavaObject) New Java(JavaObject("Path").ToString)).ToList()
                     OldJavaList = JavaUtils.SortAsync(OldJavaList).Run()
                     Logger.Info($"已从老版本设置中发现 {OldJavaList.Count} 个 Java")
-                    '强制选择的 Java
+                    'Forced Java selection
                     Dim SelectedJavaSetting = Settings.Get(Of String)("LaunchArgumentJavaSelect")
                     Dim SelectedJava = If(SelectedJavaSetting.StartsWithF("{"), SelectedJavaSetting.DeserializeJson(Of JObject)()("Path").ToString, "")
                     Dim Match = OldJavaList.FirstOrDefault(Function(j) PathUtils.IsSame(j.Folder, SelectedJava))
@@ -25,19 +25,19 @@ Public Module ModJava
                         Logger.Info($"已将老版本设置中强制选择的 Java 置顶：{Match}")
                     End If
                     Configs.JavaList.Set(New ConcurrentList(Of Java)(OldJavaList))
-                    '完成迁移
+                    'Migration finished
                     Configs.JavaConfigVersion.Set(Versions.JavaConfigVersion)
                 Catch ex As Exception
                     Logger.Error(ex, "从老版本 PCL 迁移 Java 列表失败")
                 End Try
             End If
-            '读取缓存
+            'Load cache
             Dim List = Configs.JavaList.Get()
             If List.Any Then
                 Logger.Info($"共有 {List.Count} 个可用的 Java：{vbCrLf}- {List.Select(Function(j) j.ToString).Join(vbCrLf + "- ")}")
                 Return
             End If
-            '如果没有 Java，则触发搜索
+            'Trigger a search if there is no Java
             Logger.Warn("初始化未找到可用的 Java，将自动触发搜索")
             JavaListRefreshWorker.Start()
         Catch ex As Exception
@@ -47,14 +47,14 @@ Public Module ModJava
     End Sub
 
     ''' <summary>
-    ''' 搜索并获取所有可用的 Java，检查所有 Java 的可用性，写入设置，并在结束后更新设置页面显示。
+    ''' Searches for all available Java installations, checks them, saves the settings, and refreshes the settings page when done.
     ''' </summary>
     Public WithEvents JavaListRefreshWorker As New RedoableWorker(Sub(c, p) JavaUtils.RefreshListAsync(c, p).Run())
 
-#Region "UI 事件"
+#Region "UI Events"
 
     ''' <summary>
-    ''' 更新设置页面的 Java 列表显示。
+    ''' Refreshes the Java list shown on the settings page.
     ''' </summary>
     Public Sub UpdateJavaLists() Handles JavaListRefreshWorker.Started, JavaListRefreshWorker.Stopped
         RunInUi(
@@ -65,21 +65,21 @@ Public Module ModJava
     End Sub
 
     ''' <summary>
-    ''' 手动触发导入 Java。
+    ''' Manually imports a Java installation.
     ''' </summary>
     Public Sub ManuallyImportJava()
-        '选择
+        'Select
         Dim NewJavaPath As String = Dialogs.SelectFile("选择 java.exe（可能在 bin 文件夹中）", False, filter:="java.exe|java.exe").FirstOrDefault()
         If String.IsNullOrEmpty(NewJavaPath) Then Return
-        '验证 Java 可用
+        'Verify the Java is usable
         Dim NewJava As New Java(PathUtils.RemoveLastPart(NewJavaPath))
         If Not NewJava.CheckAsync().Run() Then
             Hint("该 Java 存在异常，无法使用", HintType.Red)
             Return
         End If
-        '不再移除它
+        'Stop treating it as removed
         Configs.JavaRemovedList.Edit(Sub(ByRef List) List.RemoveIf(Function(f) PathUtils.IsSame(f, NewJava.Folder)))
-        '加入列表顶部
+        'Insert at the top of the list
         Configs.JavaList.Edit(
         Sub(ByRef List)
             List.Remove(NewJava)
@@ -90,25 +90,25 @@ Public Module ModJava
     End Sub
 
     ''' <summary>
-    ''' 手动从 Java 列表中移除指定的 Java，并记录到已移除列表中。
+    ''' Manually removes the given Java from the Java list and records it in the removed list.
     ''' </summary>
     Public Sub ManuallyRemoveJava(JavaEntry As Java)
-        Configs.JavaList.Edit(Sub(ByRef List) List.Remove(JavaEntry)) '从 Java 列表中移除
-        Configs.JavaRemovedList.Edit(Function(List) List.Append(JavaEntry.Folder).DistinctBy(Function(s) s.Lower()).ToList()) '记录已移除
+        Configs.JavaList.Edit(Sub(ByRef List) List.Remove(JavaEntry)) 'Remove from the Java list
+        Configs.JavaRemovedList.Edit(Function(List) List.Append(JavaEntry.Folder).DistinctBy(Function(s) s.Lower()).ToList()) 'Record as removed
         Hint($"已将 Java 移除出列表：{JavaEntry}", HintType.Green)
         UpdateJavaLists()
-        PageInstanceLeft.ReloadCurrentJava() '如果强制指定了该 Java，这会把它自动重置掉
+        PageInstanceLeft.ReloadCurrentJava() 'If this Java was forced for the instance, this resets it automatically
     End Sub
 
     ''' <summary>
-    ''' 手动触发搜索 Java，强制检查所有 Java。
+    ''' Manually triggers a Java search, forcing a check of every Java.
     ''' </summary>
     Public Sub ManuallySearchJava(Optional CancellationToken As CancellationToken = Nothing)
         RunInThread(
         Sub()
-            Configs.JavaList.Get().ForAll(Sub(java) java.InvalidateChecked()) '重置已检查的状态
+            Configs.JavaList.Get().ForAll(Sub(java) java.InvalidateChecked()) 'Reset the checked state
             JavaListRefreshWorker.Start(cancellationToken:=CancellationToken)
-            JavaListRefreshWorker.WaitIfRunningAsync(cancellationToken:=CancellationToken).Run() 'worker 开始/结束时会自动重载 UI
+            JavaListRefreshWorker.WaitIfRunningAsync(cancellationToken:=CancellationToken).Run() 'The worker reloads the UI automatically on start/finish
             If Configs.JavaList.Get().Any Then
                 Hint("已找到 " & Configs.JavaList.Get().Count & " 个 Java！", HintType.Green)
             Else
@@ -119,15 +119,15 @@ Public Module ModJava
 
 #End Region
 
-#Region "选取"
+#Region "Selection"
 
     ''' <summary>
-    ''' 分析指定 Minecraft 版本的基础 Java 版本要求。不受设置影响。
-    ''' 如果由于 Java 版本要求冲突而导致没有可用的 Java，则返回 null。
+    ''' Determines the base Java version requirement for the given Minecraft version. Not affected by settings.
+    ''' Returns null if no Java can satisfy it because of conflicting requirements.
     ''' </summary>
     Public Function GetJavaRequirement(Instance As McInstance) As (Range As ValueRange(Of Version), RecommendedComponent As String)
 
-        '版本设置已经强制指定了 Java 版本要求
+        'The instance settings already force a Java version requirement
         If Settings.Get(Of Integer)("VersionArgumentJavaV2", Instance) = 1 Then
             Try
                 Dim Range = ValueRange(Of Version).FromString(Settings.Get(Of String)("VersionArgumentJavaRange", Instance), Function(s) StringUtils.ParseVersionWithDefaults(s))
@@ -137,7 +137,7 @@ Public Module ModJava
             End Try
         End If
 
-        '----------------------------------- 从 Minecraft 版本信息获取需求 -----------------------------------
+        '----------------------------------- Requirements from the Minecraft version info -----------------------------------
 
         Dim JavaRange = ValueRange(Of Version).All()
         Dim AddConstraint =
@@ -149,28 +149,28 @@ Public Module ModJava
             End If
         End Sub
 
-        '原版 26-：通过版本号判断
+        'Vanilla 26-: decide by version number
         If (Not Instance.Version.Valid AndAlso Instance.ReleaseTime >= New Date(2024, 4, 2)) OrElse
            (Instance.Version.Valid AndAlso Instance.Version.Vanilla >= New Version(20, 0, 5)) Then
-            '1.20.5+（24w14a+）：至少 Java 21
+            '1.20.5+ (24w14a+): at least Java 21
             AddConstraint(ValueRange(Of Version).AtLeast(New Version(21, 0)))
         ElseIf (Not Instance.Version.Valid AndAlso Instance.ReleaseTime >= New Date(2021, 11, 16)) OrElse
                (Instance.Version.Valid AndAlso Instance.Version.Vanilla.Major >= 18) Then
-            '1.18 pre2+：至少 Java 17
+            '1.18 pre2+: at least Java 17
             AddConstraint(ValueRange(Of Version).AtLeast(New Version(17, 0)))
         ElseIf (Not Instance.Version.Valid AndAlso Instance.ReleaseTime >= New Date(2021, 5, 11)) OrElse
                (Instance.Version.Valid AndAlso Instance.Version.Vanilla.Major >= 17) Then
-            '1.17+ (21w19a+)：至少 Java 16
+            '1.17+ (21w19a+): at least Java 16
             AddConstraint(ValueRange(Of Version).AtLeast(New Version(16, 0)))
-        ElseIf Instance.ReleaseTime.Year >= 2017 Then 'Minecraft 1.12 与 1.11 的分界线正好是 2017 年，太棒了
-            '1.12+：至少 Java 8
+        ElseIf Instance.ReleaseTime.Year >= 2017 Then 'The boundary between Minecraft 1.12 and 1.11 happens to be exactly 2017, nice
+            '1.12+: at least Java 8
             AddConstraint(ValueRange(Of Version).AtLeast(New Version(8, 0)))
-        ElseIf Instance.ReleaseTime <= New Date(2013, 5, 1) AndAlso Instance.ReleaseTime.Year >= 2001 Then '避免某些版本写个 1960 年
-            '1.5.2-：最高 Java 8
+        ElseIf Instance.ReleaseTime <= New Date(2013, 5, 1) AndAlso Instance.ReleaseTime.Year >= 2001 Then 'Guard against versions that claim a year like 1960
+            '1.5.2-: at most Java 8
             AddConstraint(ValueRange(Of Version).LessThan(New Version(9, 0)))
         End If
 
-        '原版 26+：获取 Mojang 要求的 Java 版本
+        'Vanilla 26+: use the Java version required by Mojang
         Dim RecommendedComponent As String = Nothing
         Dim RecommendedCode As Integer =
             If(Instance.JsonObject?("javaVersion")?("majorVersion")?.ToObject(Of Integer),
@@ -184,27 +184,27 @@ Public Module ModJava
             If RecommendedComponent = "" Then RecommendedComponent = Nothing
         End If
 
-        'OptiFine 检测
-        If Instance.Version.HasOptiFine AndAlso Instance.Version.Valid Then '不管非标准版本
+        'OptiFine check
+        If Instance.Version.HasOptiFine AndAlso Instance.Version.Valid Then 'Ignore non-standard versions
             If Instance.Version.Vanilla.Major < 7 Then
-                '<1.7：至多 Java 8
+                '<1.7: at most Java 8
                 AddConstraint(ValueRange(Of Version).LessThan(New Version(9, 0)))
             ElseIf Instance.Version.Vanilla.Major >= 8 AndAlso Instance.Version.Vanilla.Major < 12 Then
-                '1.8 - 1.11：必须恰好 Java 8
+                '1.8 - 1.11: exactly Java 8
                 AddConstraint(ValueRange(Of Version).ClosedOpen(New Version(8, 0), New Version(9, 0)))
             ElseIf Instance.Version.Vanilla.Major = 12 Then
-                '1.12：最高 Java 8
+                '1.12: at most Java 8
                 AddConstraint(ValueRange(Of Version).LessThan(New Version(9, 0)))
             End If
         End If
 
-        'Forge 检测（部分测试结果见 #8432）
+        'Forge check (some test results in #8432)
         If Instance.Version.ModLoaders.HasFlagF(ModLoaders.Forge) Then
             If Instance.Version.Vanilla >= New Version(6, 0, 1) AndAlso Instance.Version.Vanilla <= New Version(7, 0, 2) Then
-                '1.6.1 - 1.7.2：必须 Java 7
+                '1.6.1 - 1.7.2: exactly Java 7
                 AddConstraint(ValueRange(Of Version).ClosedOpen(New Version(7, 0), New Version(8, 0)))
-            ElseIf Instance.Version.Vanilla.Major <= 12 OrElse Not Instance.Version.Valid Then '非标准版本
-                '<=1.12：Java 8
+            ElseIf Instance.Version.Vanilla.Major <= 12 OrElse Not Instance.Version.Valid Then 'Non-standard version
+                '<=1.12: Java 8
                 AddConstraint(ValueRange(Of Version).LessThan(New Version(9, 0)))
             ElseIf Instance.Version.Vanilla.Major <= 14 Then
                 '1.13 - 1.14：Java 8 - 10
@@ -213,37 +213,37 @@ Public Module ModJava
                 '1.15：Java 8 - 15
                 AddConstraint(ValueRange(Of Version).ClosedOpen(New Version(8, 0), New Version(16, 0)))
             ElseIf McUtils.CompareVersionGE(Instance.Version.ModLoaderVersions(ModLoaders.Forge), "34.0.0") AndAlso McUtils.CompareVersionGE("36.2.25", Instance.Version.ModLoaderVersions(ModLoaders.Forge)) Then
-                '1.16.3~5，Forge 34.0.0 ~ 36.2.25：最高 Java 8u320
+                '1.16.3~5, Forge 34.0.0 ~ 36.2.25: at most Java 8u320
                 AddConstraint(ValueRange(Of Version).AtMost(New Version(8, 0, 320)))
             ElseIf McUtils.CompareVersionGE(Instance.Version.ModLoaderVersions(ModLoaders.Forge), "36.2.26") AndAlso McUtils.CompareVersionGE("36.999999.999999", Instance.Version.ModLoaderVersions(ModLoaders.Forge)) Then
-                '1.16.5，Forge 36.2.26+，<37.0.0：最高 Java 23
+                '1.16.5, Forge 36.2.26+, <37.0.0: at most Java 23
                 AddConstraint(ValueRange(Of Version).LessThan(New Version(24, 0)))
             ElseIf McUtils.CompareVersionGE(Instance.Version.ModLoaderVersions(ModLoaders.Forge), "37.0.0") AndAlso McUtils.CompareVersionGE("37.0.79", Instance.Version.ModLoaderVersions(ModLoaders.Forge)) Then
-                '1.17.1，Forge 37.0.0 ~ 37.0.79：最高 Java 16
+                '1.17.1, Forge 37.0.0 ~ 37.0.79: at most Java 16
                 AddConstraint(ValueRange(Of Version).LessThan(New Version(17, 0)))
             ElseIf Instance.Version.Vanilla.Major = 18 AndAlso Instance.Version.HasOptiFine Then '#305
-                '1.18：若安装了 OptiFine，最高 Java 18
+                '1.18: at most Java 18 if OptiFine is installed
                 AddConstraint(ValueRange(Of Version).LessThan(New Version(19, 0)))
             ElseIf McUtils.CompareVersionGE(Instance.Version.ModLoaderVersions(ModLoaders.Forge), "45.0.21") AndAlso McUtils.CompareVersionGE("45.0.65", Instance.Version.ModLoaderVersions(ModLoaders.Forge)) Then
-                '1.19.4，Forge 45.0.21 ~ 45.0.65：最高 Java 19
+                '1.19.4, Forge 45.0.21 ~ 45.0.65: at most Java 19
                 AddConstraint(ValueRange(Of Version).LessThan(New Version(20, 0)))
             ElseIf McUtils.CompareVersionGE(Instance.Version.ModLoaderVersions(ModLoaders.Forge), "45.0.66") AndAlso McUtils.CompareVersionGE("47.4.8", Instance.Version.ModLoaderVersions(ModLoaders.Forge)) Then
-                '1.19.4~1.20.1，Forge 45.0.66 ~ 47.4.8：最高 Java 21
+                '1.19.4~1.20.1, Forge 45.0.66 ~ 47.4.8: at most Java 21
                 AddConstraint(ValueRange(Of Version).LessThan(New Version(22, 0)))
             End If
         End If
 
-        'NeoForge 检测
+        'NeoForge check
         If Instance.Version.ModLoaders.HasFlagF(ModLoaders.NeoForge) Then
             If Instance.Version.Vanilla = New Version(20, 0, 1) OrElse
                (McUtils.CompareVersionGE("20.2.62-beta", Instance.Version.ModLoaderVersions(ModLoaders.NeoForge)) AndAlso Not Instance.Version.ModLoaderVersions(ModLoaders.NeoForge).Contains("25w14craftmine")) Then
-                '1.20.1，以及 1.20.2 的 20.2.62-beta 之前：最高 Java 21
+                '1.20.1, and 1.20.2 before 20.2.62-beta: at most Java 21
                 AddConstraint(ValueRange(Of Version).LessThan(New Version(22, 0)))
             End If
         End If
 
-        'Fabric 检测
-        If Instance.Version.ModLoaders.HasFlagF(ModLoaders.Fabric) AndAlso Instance.Version.Valid Then '不管非标准版本
+        'Fabric check
+        If Instance.Version.ModLoaders.HasFlagF(ModLoaders.Fabric) AndAlso Instance.Version.Valid Then 'Ignore non-standard versions
             If Instance.Version.Vanilla.Major >= 15 AndAlso Instance.Version.Vanilla.Major <= 16 Then
                 '1.15 - 1.16：Java 8+
                 AddConstraint(ValueRange(Of Version).AtLeast(New Version(8, 0)))
@@ -252,20 +252,20 @@ Public Module ModJava
                 AddConstraint(ValueRange(Of Version).AtLeast(New Version(17, 0)))
             End If
             If Instance.Version.ModLoaderVersions(ModLoaders.Fabric) <> "未知版本" AndAlso McUtils.CompareVersion(Instance.Version.ModLoaderVersions(ModLoaders.Fabric), "0.17.0") < 0 Then
-                'Fabric Loader 0.16.x 及更早版本的 Mixin/ASM 不兼容 Java 25
+                'Mixin/ASM in Fabric Loader 0.16.x and earlier is incompatible with Java 25
                 AddConstraint(ValueRange(Of Version).LessThan(New Version(25, 0)))
             End If
         End If
 
-        'LiteLoader 检测
-        If Instance.Version.ModLoaders.HasFlagF(ModLoaders.LiteLoader) AndAlso Instance.Version.Valid Then '不管非标准版本
-            '最高 Java 8
+        'LiteLoader check
+        If Instance.Version.ModLoaders.HasFlagF(ModLoaders.LiteLoader) AndAlso Instance.Version.Valid Then 'Ignore non-standard versions
+            'At most Java 8
             AddConstraint(ValueRange(Of Version).LessThan(New Version(9, 0)))
         End If
 
-        '统一通行证检测
+        'Nide8 auth check
         If Settings.Get(Of McLoginType)("LoginType") = McLoginType.Nide Then
-            '至少 Java 8u101
+            'At least Java 8u101
             AddConstraint(ValueRange(Of Version).AtLeast(New Version(8, 0, 141)))
         End If
 
@@ -273,26 +273,26 @@ Public Module ModJava
     End Function
 
     ''' <summary>
-    ''' 根据版本或 Java 范围要求寻找适合的 Java。
-    ''' 若指定了 <paramref name="TryFixOrHint"/>，则会在找不到时会尝试下载 Java 或提示用户下载，否则只会静默运行。
+    ''' Finds a suitable Java according to the version or Java range requirement.
+    ''' If <paramref name="TryFixOrHint"/> is set, tries to download Java or asks the user to download it when none is found; otherwise runs silently.
     ''' </summary>
-    ''' <returns>最适合的 Java。若找不到或失败则返回 null，除非取消否则不会抛出异常。</returns>
+    ''' <returns>The most suitable Java, or null if none is found or it fails. Does not throw unless cancelled.</returns>
     Public Function SelectOrDownloadJava(Target As OneOf(Of ValueRange(Of Version), McInstance), TryFixOrHint As Boolean, Optional c As CancellationToken = Nothing, Optional p As ProgressProvider = Nothing) As Java
         Try
-            If Target.Is(Of McInstance) Then MigrateInstanceJavaSettings(Target.As(Of McInstance), c, p?.SplitTo(0.2)) '迁移
+            If Target.Is(Of McInstance) Then MigrateInstanceJavaSettings(Target.As(Of McInstance), c, p?.SplitTo(0.2)) 'Migrate
             Dim Instance As McInstance = If(Target.Is(Of McInstance), Target.As(Of McInstance), Nothing)
             Select Case If(Instance Is Nothing, 0, Settings.Get(Of Integer)("VersionArgumentJavaV2", Instance))
 
-                Case 2 '============================= 使用版本文件夹中的 Java =============================
+                Case 2 '============================= Use the Java in the instance folder =============================
 
-                    '查找版本文件夹下的 Java
+                    'Look for Java in the instance folder
                     Logger.Info($"版本设置要求使用版本文件夹中的 Java：{Instance.PathVersion}")
                     Dim JavaFound = JavaUtils.SearchFoldersAsync(True, {Instance.PathVersion}, c, p?.SplitTo(1)).Run().FirstOrDefault()
                     If JavaFound IsNot Nothing Then
                         Logger.Info($"已发现版本文件夹中的 Java：{JavaFound}")
                         Return JavaFound
                     End If
-                    '未能找到
+                    'Not found
                     If TryFixOrHint Then
                         SwitchToInstanceSetup(Instance)
                         MyMsgBox($"该版本的版本设置选择了 {vbLQ}使用版本文件夹中的 Java{vbRQ}，但版本文件夹里没能找到 Java。{vbCrLf}请先修改启动选项中的 Java 设置，或在版本文件夹中放一个 Java，然后再试。",
@@ -300,7 +300,7 @@ Public Module ModJava
                     End If
                     Return Nothing
 
-                Case 3 '=============================== 强制指定特定 Java ===============================
+                Case 3 '=============================== Force a specific Java ===============================
 
                     Dim ChosenJava = Configs.JavaForced.Get(Instance.Config)
                     Logger.Info($"版本设置中强制指定的 Java：{Instance.PathVersion} → {ChosenJava}")
@@ -310,7 +310,7 @@ Public Module ModJava
                             MyMsgBox($"该版本的版本设置选择了 {vbLQ}使用指定的 Java{vbRQ}，但还没有指定任何 Java。{vbCrLf}请先选择你想使用的 Java，然后再试。",
                                 "未选择 Java", IsWarn:=True, ForceWait:=True)
                         End If
-                        p?.Skip() : Return Nothing '<==== 设置中未指定 Java
+                        p?.Skip() : Return Nothing '<==== No Java specified in settings
                     End If
                     If Not Configs.JavaList.Get().Contains(ChosenJava) Then
                         Configs.JavaForced.Reset(Instance.Config)
@@ -319,7 +319,7 @@ Public Module ModJava
                             SwitchToInstanceSetup(Instance)
                             Logger.Error("版本设置中指定的 Java 不在 Java 列表中，请重新选择一个 Java！", LogBehavior.Alert)
                         End If
-                        p?.Skip() : Return Nothing '<==== 设置中指定的 Java 不在列表中
+                        p?.Skip() : Return Nothing '<==== The Java specified in settings is not in the list
                     End If
                     If Not ChosenJava.CheckAsync(c).Run() Then
                         Configs.JavaForced.Reset(Instance.Config)
@@ -330,13 +330,13 @@ Public Module ModJava
                         Else
                             Logger.Error("版本设置中指定的 Java 已无法使用，请重新选择一个 Java！", LogBehavior.Toast)
                         End If
-                        p?.Finish() : Return Nothing '<==== 指定的 Java 存在异常
+                        p?.Finish() : Return Nothing '<==== The specified Java is broken
                     End If
-                    p?.Finish() : Return ChosenJava '<==== 成功找到并检查通过
+                    p?.Finish() : Return ChosenJava '<==== Found and passed the check
 
-                Case Else '======================== 根据版本范围自动选择 JavaList 中的 Java ========================
+                Case Else '======================== Auto-select a Java from JavaList by version range ========================
 
-                    '获取范围
+                    'Get the range
                     Dim Range As ValueRange(Of Version) =
                         If(Target.Is(Of McInstance), GetJavaRequirement(Instance).Range, Target.As(Of ValueRange(Of Version)))
                     Dim RecommendedComponent As String =
@@ -344,16 +344,16 @@ Public Module ModJava
                     Logger.Info($"自动选择以下范围的 Java：{Range} {RecommendedComponent}")
                     If Range.IsEmpty Then Throw New Exception("Java 版本需求存在冲突，导致没有任何可能适配的 Java，请查看 PCL 的日志了解详细信息！")
 
-                    '搜索 Java
+                    'Search for Java
                     Dim SelectJavaFromJavaList =
                     Function() As Java
-                        JavaListRefreshWorker.WaitIfRunning() '等待进行中的搜索结束
+                        JavaListRefreshWorker.WaitIfRunning() 'Wait for any running search to finish
                         For Each ChosenJava In Configs.JavaList.Get()
-                            If Not ChosenJava.CheckAsync(c).Run() Then '检查
+                            If Not ChosenJava.CheckAsync(c).Run() Then 'Check
                                 Logger.Warn($"Java 检查失败，将尝试列表中的下一个 Java：{ChosenJava}")
                                 Continue For
                             End If
-                            If ChosenJava.Version Is Nothing OrElse Not Range.Contains(ChosenJava.Version) Then Continue For '版本范围
+                            If ChosenJava.Version Is Nothing OrElse Not Range.Contains(ChosenJava.Version) Then Continue For 'Version range
                             Logger.Info($"已选定 Java：{ChosenJava}")
                             Return ChosenJava
                         Next
@@ -364,32 +364,32 @@ Public Module ModJava
                     If Result IsNot Nothing Then p?.Skip() : Return Result
 
                     SyncLock JavaLock '#3797
-                        '既有列表中没有合适的 Java，重新触发搜索
+                        'No suitable Java in the existing list; search again
                         Logger.Warn($"既有列表中没有合适的 Java，重新触发搜索")
                         JavaListRefreshWorker.Start(c, p?.SplitTo(0.3))
                         Result = SelectJavaFromJavaList()
                         If Result IsNot Nothing Then p?.Skip() : Return Result
                         If Not TryFixOrHint Then Return Nothing
 
-                        '电脑中没有合适的 Java，获取 Mojang 提供的 Java 下载列表
+                        'No suitable Java on this computer; fetch the Java download list provided by Mojang
                         Logger.Warn($"电脑中没有合适的 Java，开始获取 Mojang 提供的 Java 下载列表")
                         Static DownloadListWorker As New RedoableWorker(Of List(Of JavaDownloadInfo))(
                         Function(cancellationToken)
-                            '下载 Mojang 提供的 Java 列表
+                            'Download the Java list provided by Mojang
                             Dim IndexFileStr As String = NetRequestByLoader(DlVersionListOrder(
                                 {"https://piston-meta.mojang.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"},
                                 {"https://bmclapi2.bangbang93.com/v1/products/java-runtime/2ec0cc96c44e5a76b9c8b7c39df7210883d12871/all.json"}
                             ), IsJson:=True)
                             cancellationToken?.ThrowIfCancellationRequested()
-                            '解析 Java 列表
+                            'Parse the Java list
                             Dim Results = New List(Of JavaDownloadInfo)
                             For Each Prop As JProperty In IndexFileStr.DeserializeJson(Of JObject)()("windows-x64")
                                 cancellationToken?.ThrowIfCancellationRequested()
-                                If Prop.Name = "minecraft-java-exe" Then Continue For '不是完整 Java
+                                If Prop.Name = "minecraft-java-exe" Then Continue For 'Not a full Java
                                 Try
                                     Dim Entry = Prop.Value.FirstOrDefault
                                     If Entry Is Nothing Then Continue For
-                                    Dim JavaName = Entry("version")("name").ToString '可能的名称格式："12"、"8u51-cacert462b08"、"17.0.8.1"、"17.0.1.12.1"、"21.0.7"
+                                    Dim JavaName = Entry("version")("name").ToString 'Possible name formats: "12", "8u51-cacert462b08", "17.0.8.1", "17.0.1.12.1", "21.0.7"
                                     If JavaName.Contains(".") Then
                                         Dim Parts As String() = JavaName.Split(".")
                                         Results.Add(New JavaDownloadInfo With {.ComponentName = Prop.Name, .Java = Entry, .JavaVersion = New Version(Val(Parts(0)), Val(Parts(1)), If(Parts.Length >= 3, Val(Parts(2)), 0), If(Parts.Length >= 4, Val(Parts(3)), 0))})
@@ -407,21 +407,21 @@ Public Module ModJava
                         If Not DownloadListWorker.HasSucceeded Then DownloadListWorker.Start(c, p?.SplitTo(0.4))
                         DownloadListWorker.WaitIfRunning(cancellationToken:=c)
                         p?.Set(0.4, skiped:=True)
-                        Dim Components = DownloadListWorker.LastResult
+                        Dim Components = If(DownloadListWorker.LastResult, New List(Of JavaDownloadInfo))
 
-                        '确定要下载的目标 Java
+                        'Determine which Java to download
                         Dim JavaToDownload As JavaDownloadInfo = Components.FirstOrDefault(
-                            Function(Comp) Comp.Java("version")("name").ToString = RecommendedComponent, '优先选择指定的 Component
+                            Function(Comp) Comp.ComponentName = RecommendedComponent AndAlso Range.Contains(Comp.JavaVersion), 'Prefer the specified component
                             Function(Comp) Range.Contains(Comp.JavaVersion))
                         If JavaToDownload Is Nothing Then
                             Logger.Warn($"Mojang 提供的 Java 列表中没有合适的 Java，无法自动下载")
-                            '提示需要手动下载 Java
+                            'Ask the user to download Java manually
                             Dim Description As String
                             Dim HasPureLower As Boolean = Range.HasLower AndAlso Range.IsLowerInclusive AndAlso
                             Range.Lower.Minor <= 0 AndAlso Range.Lower.Build <= 0 AndAlso Range.Lower.Revision <= 0
                             Dim HasPureUpper As Boolean = Range.HasUpper AndAlso Not Range.IsUpperInclusive AndAlso
                             Range.Upper.Minor <= 0 AndAlso Range.Upper.Build <= 0 AndAlso Range.Upper.Revision <= 0
-                            If Range.HasLower AndAlso Range.HasUpper Then '有上下界
+                            If Range.HasLower AndAlso Range.HasUpper Then 'Has both lower and upper bounds
                                 If HasPureLower AndAlso HasPureUpper Then
                                     If Range.Lower.Major = Range.Upper.Major - 1 Then
                                         Description = $" Java {Range.Lower.Major}"
@@ -429,9 +429,9 @@ Public Module ModJava
                                         Description = $" Java {Range.Lower.Major} ~ {Range.Upper.Major - 1}"
                                     End If
                                 Else
-                                    Description = $" Java {Range}" '摆烂
+                                    Description = $" Java {Range}" 'Give up on a nicer description
                                 End If
-                            ElseIf Range.HasLower Then '只有下界
+                            ElseIf Range.HasLower Then 'Lower bound only
                                 If HasPureLower Then
                                     Description = $" Java {Range.Lower.Major} 或更高版本的 Java"
                                 ElseIf Range.IsLowerInclusive Then
@@ -439,7 +439,7 @@ Public Module ModJava
                                 Else
                                     Description = $"版本高于 {Range.Lower} 的 Java"
                                 End If
-                            Else '只有上界
+                            Else 'Upper bound only
                                 If HasPureUpper Then
                                     Description = $" Java {Range.Upper.Major - 1} 或更低版本的 Java"
                                 ElseIf Range.IsUpperInclusive Then
@@ -452,12 +452,12 @@ Public Module ModJava
                             Return Nothing
                         End If
 
-                        '自动下载 Java
+                        'Download Java automatically
                         Dim JavaLoader = CreateJavaDownloadLoader(JavaToDownload)
                         Try
                             JavaLoader.WaitForExit(IsForceRestart:=True, c:=c, p:=p?.SplitTo(0.95))
                         Finally
-                            JavaLoader.Cancel() '确保取消时中止 Java 下载
+                            JavaLoader.Cancel() 'Make sure cancelling also aborts the Java download
                         End Try
                         Result = SelectJavaFromJavaList()
                         If Result IsNot Nothing Then p?.Finish() : Return Result
@@ -480,14 +480,14 @@ Public Module ModJava
     Private ReadOnly JavaLock As New Object
 
     ''' <summary>
-    ''' 从老版本 PCL 迁移版本独立的 Java 设置。
+    ''' Migrates per-instance Java settings from older PCL versions.
     ''' </summary>
     Private Sub MigrateInstanceJavaSettings(Instance As McInstance, Optional c As CancellationToken = Nothing, Optional p As ProgressProvider = Nothing)
         If Configs.JavaMigrated.Get(Instance.Config) Then p?.Skip() : Return
         If FrmInstanceSetup IsNot Nothing Then RunInUiWait(Sub() FrmInstanceSetup.ComboArgumentJava.IsEnabled = False)
         Try
             Logger.Info($"正在尝试迁移版本独立的 Java 设置（{Instance.Name}）")
-            '强制使用指定 Java
+            'Forced Java
             Dim ForcedJavaSetting = Settings.Get(Of String)("VersionArgumentJavaSelect", Instance)
             If Not ForcedJavaSetting.StartsWithF("{") Then
                 p?.Set(0.4, True) : GoTo NoForcedJava
@@ -499,26 +499,26 @@ Public Module ModJava
             End If
             Logger.Info($"将版本独立设置改为老版本中强制指定的 Java：{ForcedJava}")
             If Not Configs.JavaList.Get().Contains(ForcedJava) Then
-                Configs.JavaList.Edit(Sub(ByRef List) List.Add(ForcedJava)) '加入列表底部
+                Configs.JavaList.Edit(Sub(ByRef List) List.Add(ForcedJava)) 'Append to the bottom of the list
                 Logger.Info($"已将强制指定的 Java 加入 Java 列表底部：{ForcedJava}")
             End If
             Configs.JavaForced.Set(ForcedJava, Instance.Config)
             Settings.Set("VersionArgumentJavaV2", 3, Instance)
             UpdateJavaLists()
-            Configs.JavaMigrated.Set(True, Instance.Config) '完成
+            Configs.JavaMigrated.Set(True, Instance.Config) 'Done
             p?.Finish() : Return
 NoForcedJava:
             Dim JavaFound = JavaUtils.SearchFoldersAsync(True, {Instance.PathVersion}, c, p?.SplitTo(1)).Run()
             If JavaFound.Any() Then
-                '从版本文件夹中发现了 Java
+                'Found Java in the instance folder
                 Logger.Info($"在版本文件夹中发现了 Java，将版本独立设置改为优先使用版本文件夹的 Java：{JavaFound}")
                 Settings.Set("VersionArgumentJavaV2", 2, Instance)
             Else
-                '自动选择
+                'Auto select
                 Logger.Info("没有需要迁移的内容，自动选择 Java")
                 Settings.Set("VersionArgumentJavaV2", 0, Instance)
             End If
-            Configs.JavaMigrated.Set(True, Instance.Config) '完成
+            Configs.JavaMigrated.Set(True, Instance.Config) 'Done
         Finally
             If FrmInstanceSetup IsNot Nothing Then RunInUiWait(
             Sub()
@@ -531,7 +531,7 @@ NoForcedJava:
 
 #End Region
 
-#Region "下载（均为内部工具方法，无外部调用）"
+#Region "Download (internal helpers only, no external callers)"
 
     Private Class JavaDownloadInfo
         Public Property ComponentName As String
@@ -540,11 +540,11 @@ NoForcedJava:
     End Class
 
     ''' <summary>
-    ''' 构建下载指定 Java 的加载器。
+    ''' Builds a loader that downloads the specified Java.
     ''' </summary>
     Private Function CreateJavaDownloadLoader(Target As JavaDownloadInfo) As LoaderCombo(Of Integer)
 
-        '分析需要下载的 Java 文件列表
+        'Work out the list of Java files to download
         Dim Address As String = Target.Java("manifest")("url")
         Logger.Info($"准备下载 Java {Target.Java("version")("name")}（{Target.ComponentName}）：{Address}")
         Dim ListFileStr As String = NetRequestByLoader(DlSourceOrder({Address}, {Address.Replace("piston-meta.mojang.com", "bmclapi2.bangbang93.com")}), IsJson:=True)
@@ -555,7 +555,7 @@ NoForcedJava:
             Dim Info As JObject = CType(File.Value, JObject)("downloads")("raw")
             Dim Checker As New FileChecker With {.ActualSize = Info("size"), .Hash = Info("sha1")}
             If Checker.Hash = "12976a6c2b227cbac58969c1455444596c894656" OrElse Checker.Hash = "c80e4bab46e34d02826eab226a4441d0970f2aba" OrElse Checker.Hash = "84d2102ad171863db04e7ee22a259d1f6c5de4a5" Then
-                Continue For '跳过 3 个无意义大量重复文件（#3827）
+                Continue For 'Skip 3 pointless, heavily duplicated files (#3827)
             End If
             Dim Url As String = Info("url")
             FilesToDownload.Add(New NetFile(
@@ -564,7 +564,7 @@ NoForcedJava:
         Next
         Logger.Info($"该 Java 需要下载 {FilesToDownload.Count} 个文件，目标文件夹：{BaseDir}")
 
-        '构建加载器
+        'Build the loader
         Dim Loader = New LoaderCombo(Of Integer)("下载 Java", {
             New LoaderDownload("下载 Java 文件", FilesToDownload) With {.ProgressWeight = 10},
             New LoaderWorker("刷新 Java 列表", JavaListRefreshWorker)

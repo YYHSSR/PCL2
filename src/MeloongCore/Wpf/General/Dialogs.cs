@@ -5,8 +5,8 @@ namespace MeloongCore.Wpf;
 public static class Dialogs {
 
     /// <summary>
-    /// 弹出 “保存” 弹窗，返回用户指定的路径，若取消则返回 <c>null</c>。
-    /// <para/> <paramref name="filter"/> 中的扩展名不加 <c>.</c>。
+    /// Shows a "Save" dialog and returns the path chosen by the user, or <c>null</c> if canceled.
+    /// <para/> Extensions in <paramref name="filter"/> do not include the <c>.</c>.
     /// </summary>
     public static string? SaveFile(string title, string defaultFileName = "", string? defaultDirectory = null, IEnumerable<(string Extension, string Display)>? filter = null) {
         var filters = filter?.ToList();
@@ -26,7 +26,7 @@ public static class Dialogs {
         var result = dialog.FileName;
         Logger.Info($"保存弹窗返回：{result}");
         if (!result.Contains(Path.DirectorySeparatorChar)) return null;
-        // AddExtension 可能失效，需要手动补全（#8214）
+        // AddExtension may not work, so the extension is added manually (#8214)
         if (filters != null && !string.IsNullOrEmpty(result) && !filters.Any(f => result.EndsWithF("." + f.Extension, true))) {
             result += "." + filters[dialog.FilterIndex - 1].Extension;
             Logger.Warn($"选择文件的返回无扩展名，将会手动添加，修改后为：{result}");
@@ -35,8 +35,8 @@ public static class Dialogs {
     }
 
     /// <summary>
-    /// 弹出 “选择文件” 弹窗，返回用户选择的文件路径，若取消则返回空数组。
-    /// <para/> 若使用扩展名 <paramref name="filter"/>，则扩展名不加 <c>.</c>。
+    /// Shows a "Select file" dialog and returns the file paths chosen by the user, or an empty array if canceled.
+    /// <para/> When using <paramref name="filter"/>, extensions do not include the <c>.</c>.
     /// </summary>
     public static List<string> SelectFile(string title, bool multiselect, string? defaultDirectory = null, OneOf<IEnumerable<(string[] Extensions, string Display)>, string>? filter = null) {
         var dialog = new OpenFileDialog {
@@ -67,7 +67,7 @@ public static class Dialogs {
     }
 
     /// <summary>
-    /// 弹出 “选择文件夹” 弹窗，返回用户选择的文件夹路径（以分隔符结尾），若取消则返回空数组。
+    /// Shows a "Select folder" dialog and returns the folder paths chosen by the user (ending with a separator), or an empty array if canceled.
     /// </summary>
     public static List<string> SelectFolder(string title, bool multiselect, string? defaultDirectory = null) {
         var dialog = new Ookii.Dialogs.Wpf.VistaFolderBrowserDialog {

@@ -287,19 +287,46 @@ internal static class Program {
                 var fallback = (System.Windows.Threading.DispatcherTimer)typeof(PCL.ModAnimation).GetField("RenderFallback", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
                 Check(!fallback.IsEnabled, "Empty animation engine fallback is still running");
             });
+            Run("Argument replacement uses the escape handler of each call", () => {
+                string escaped = PCL.ModMain.ArgumentReplace("{pcl_version_code}", s => "[" + s + "]");
+                string plain = PCL.ModMain.ArgumentReplace("{pcl_version_code}");
+                Check(escaped.StartsWith("[") && escaped.EndsWith("]") && !plain.StartsWith("["), $"Escape handler leaked between calls: {escaped} / {plain}");
+            });
+            Run("Task temp cleanup runs once under concurrency", () => {
+                var tasks = Enumerable.Range(0, 8).Select(_ => Task.Run(() => PCL.ModMain.TryClearTaskTemp())).ToArray();
+                Check(Task.WaitAll(tasks, 10000), "Concurrent cleanup did not finish");
+                string folder = PCL.ModMain.RequestTaskTempFolder();
+                PCL.ModMain.TryClearTaskTemp();
+                Check(Directory.Exists(folder), "Task temp folder was deleted after the first cleanup");
+            });
+            Run("Mutually inheriting versions do not overflow the stack", () => {
+                string folder = Path.Combine(temp, "inherit-mc") + "\\";
+                foreach (var (name, parent) in new[] { ("A", "B"), ("B", "A") }) {
+                    Directory.CreateDirectory(Path.Combine(folder, "versions", name));
+                    File.WriteAllText(Path.Combine(folder, "versions", name, name + ".json"), $"{{\"id\":\"{name}\",\"inheritsFrom\":\"{parent}\",\"libraries\":[]}}");
+                }
+                string saved = PCL.ModMinecraft.McFolderSelected;
+                try {
+                    PCL.ModMinecraft.McFolderSelected = folder;
+                    var json = OnWorker(() => new PCL.ModMinecraft.McInstance("A").JsonObject);
+                    Check(json != null, "Instance JSON was not loaded");
+                } finally { PCL.ModMinecraft.McFolderSelected = saved; }
+            });
             Run("Removed pages, routes, events and settings are absent", () => {
                 var assembly = typeof(PCL.Application).Assembly;
-                Check(Array.TrueForAll(assembly.GetTypes(), t => !t.Name.StartsWith("PageOther") && t.Name != "HelpEntry" && t.Name != "PageSetupUI"), "Removed page is still compiled");
-                Check(!Enum.IsDefined(typeof(PCL.FormMain.PageType), 4) && !Enum.IsDefined(typeof(PCL.FormMain.PageType), 9), "Removed route is still available");
+                Check(Array.TrueForAll(assembly.GetTypes(), t => !t.Name.StartsWith("PageOther") && !t.Name.StartsWith("PageLink") && t.Name != "PageSetupLink" && t.Name != "HelpEntry" && t.Name != "PageSetupUI"), "Removed page is still compiled");
+                Check(!Enum.IsDefined(typeof(PCL.FormMain.PageType), 2) && !Enum.IsDefined(typeof(PCL.FormMain.PageType), 4) && !Enum.IsDefined(typeof(PCL.FormMain.PageType), 9), "Removed route is still available");
+                Check(!Enum.IsDefined(typeof(PCL.CustomEvent.EventType), 23), "Removed multiplayer event is still available");
                 Check((int)PCL.FormMain.PageType.Setup == 3 && (int)PCL.FormMain.PageType.InstanceSelect == 5, "Existing route IDs changed");
                 Check((int)PCL.CustomEvent.EventType.执行命令 == 4, "Existing event IDs changed");
                 foreach (string key in PCL.Settings.Entries.Keys)
-                    Check(!key.StartsWith("SystemDebug") && !key.StartsWith("UiHiddenOther") && !key.StartsWith("ToolUpdate") && key != "ToolHelpChinese" && key != "SystemSystemCache" && key != "UiHiddenPageOther", "Removed setting remains: " + key);
+                    Check(!key.StartsWith("SystemDebug") && !key.StartsWith("UiHiddenOther") && !key.StartsWith("ToolUpdate") && !key.StartsWith("Link") && key != "ToolHelpChinese" && key != "SystemSystemCache" && key != "UiHiddenPageOther", "Removed setting remains: " + key);
                 Check(new System.Resources.ResourceManager("PCL.Resources", assembly).GetObject("Help") == null, "Help archive remains embedded");
-                Check(typeof(PCL.FormMain).GetField("BtnTitleSelect4", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) == null, "Removed navigation control remains");
+                foreach (string control in new[] { "BtnTitleSelect2", "BtnTitleSelect4" })
+                    Check(typeof(PCL.FormMain).GetField(control, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) == null, "Removed navigation control remains: " + control);
                 using var baml = new System.Resources.ResourceReader(assembly.GetManifestResourceStream("Plain Craft Launcher 2.g.resources")!);
                 foreach (System.Collections.DictionaryEntry entry in baml)
-                    Check(!((string)entry.Key).Contains("pageother"), "Removed XAML remains embedded");
+                    Check(!((string)entry.Key).Contains("pageother") && !((string)entry.Key).Contains("pagelink") && !((string)entry.Key).Contains("pagesetuplink"), "Removed XAML remains embedded");
             });
             Run("Chinese-only settings XAML loads with exactly two cards", () => {
                 Check(System.Globalization.CultureInfo.CurrentCulture.Name == "zh-CN" && System.Globalization.CultureInfo.CurrentUICulture.Name == "zh-CN", "Launcher is not fixed to Chinese");

@@ -2,12 +2,12 @@ using Microsoft.Win32;
 namespace MeloongCore;
 
 public static class RegistryUtils {
-    /// <summary>在注册表中表示 <c>null</c> 的标记字符串。</summary>
+    /// <summary>Marker string representing <c>null</c> in the registry.</summary>
     public const string NULL_STRING = "__NULL__";
 
     /// <summary>
-    /// 读取注册表值。
-    /// <para/>若键值为 <see cref="NULL_STRING"/>，则返回 <c>null</c>。
+    /// Reads a registry value.
+    /// <para/>Returns <c>null</c> if the value is <see cref="NULL_STRING"/>.
     /// </summary>
     public static (object? result, bool exists) Read(string folder, string entry) {
         using RegistryKey? folderKey = GetRegistryKey(folder);
@@ -16,8 +16,8 @@ public static class RegistryUtils {
         return (result is string str && str == NULL_STRING ? null : result, true);
     }
     /// <summary>
-    /// 读取注册表值，若该值不存在或发生异常则返回 <paramref name="defaultValue"/>。
-    /// <para/>若键值为 <see cref="NULL_STRING"/>，则返回 <c>null</c>。
+    /// Reads a registry value, returning <paramref name="defaultValue"/> if it does not exist or an exception occurs.
+    /// <para/>Returns <c>null</c> if the value is <see cref="NULL_STRING"/>.
     /// </summary>
     public static object? TryRead(string folder, string entry, object? defaultValue = null) {
         try {
@@ -30,9 +30,9 @@ public static class RegistryUtils {
     }
 
     /// <summary>
-    /// 写入注册表值。
-    /// <para/>会自动创建对应的子键。
-    /// <para/>若 <paramref name="value"/> 为 <c>null</c>，则写入 <see cref="NULL_STRING"/>。
+    /// Writes a registry value.
+    /// <para/>Creates the subkey automatically.
+    /// <para/>Writes <see cref="NULL_STRING"/> if <paramref name="value"/> is <c>null</c>.
     /// </summary>
     public static void Write(string folder, string entry, object? value) {
         using RegistryKey folderKey = GetRegistryKey(folder, create: true)!;
@@ -40,7 +40,7 @@ public static class RegistryUtils {
     }
 
     /// <summary>
-    /// 判断对应的注册表值是否存在。
+    /// Whether the registry value exists.
     /// </summary>
     public static bool Has(string folder, string entry) {
         using RegistryKey? folderKey = GetRegistryKey(folder);
@@ -50,7 +50,7 @@ public static class RegistryUtils {
     }
 
     /// <summary>
-    /// 删除注册表值。若不存在则不执行操作。
+    /// Deletes a registry value. Does nothing if it does not exist.
     /// </summary>
     public static void Delete(string folder, string entry) {
         using RegistryKey? folderKey = GetRegistryKey(folder, writable: true);

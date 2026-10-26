@@ -1,6 +1,6 @@
 Public Class MyCard
 
-    '控件
+    'Controls
     Inherits Grid
     Private ReadOnly MainGrid As Grid
     Public ReadOnly Property MainChrome As MyDropShadow
@@ -16,7 +16,7 @@ Public Class MyCard
     Private _MainTextBlock As TextBlock
     Public Property MainTextBlock As TextBlock
         Get
-            Init() '当父级触发 Loaded 时，本卡片可能尚未触发 Loaded（该事件从父级向子级调用），因此这会是 null。手动触发以确保控件已加载。
+            Init() 'When the parent raises Loaded, this card may not have raised Loaded yet (the event goes from parent to child), so this would be null. Trigger it manually to make sure the control is loaded.
             Return _MainTextBlock
         End Get
         Set(value As TextBlock)
@@ -34,7 +34,7 @@ Public Class MyCard
         End Set
     End Property
 
-    '属性
+    'Properties
     Public Uuid As Integer = GetUuid()
     Public ReadOnly Property Inlines As InlineCollection
         Get
@@ -61,7 +61,7 @@ Public Class MyCard
     End Property
     Public Shared ReadOnly TitleProperty As DependencyProperty = DependencyProperty.Register("Title", GetType(String), GetType(MyCard), New PropertyMetadata(""))
 
-    'UI 建立
+    'UI construction
     Public Sub New()
         MainChrome = New MyDropShadow With {
             .Margin = New Thickness(-3, -3, -3, -3 - GetWPFSize(1)), .ShadowRadius = 3, .Opacity = DropShadowIdleOpacity, .CornerRadius = New CornerRadius(5)}
@@ -76,7 +76,7 @@ Public Class MyCard
     Private Sub Init() Handles Me.Loaded
         If IsLoad Then Return
         IsLoad = True
-        '初次加载限定
+        'First load only
         If MainTextBlock Is Nothing Then
             MainTextBlock = New TextBlock With {.HorizontalAlignment = HorizontalAlignment.Left, .VerticalAlignment = VerticalAlignment.Top, .Margin = New Thickness(15, 12, 0, 0), .FontWeight = FontWeights.Bold, .FontSize = 13, .IsHitTestVisible = False}
             MainTextBlock.SetResourceReference(TextBlock.ForegroundProperty, "ColorBrush1")
@@ -89,11 +89,11 @@ Public Class MyCard
             MainSwap.SetResourceReference(Shapes.Path.FillProperty, "ColorBrush1")
             MainGrid.Children.Add(MainSwap)
         End If
-        '改变默认的折叠
+        'Change the default collapsed state
         If IsSwapped AndAlso SwapControl IsNot Nothing Then
             MainSwap.RenderTransform = New RotateTransform(If(SwapLogoRight, 270, 0))
             SwapControl.Visibility = Visibility.Collapsed
-            '取消由于高度变化被迫触发的高度动画
+            'Cancel the height animation forced by the height change
             Dim RawUseAnimation As Boolean = UseAnimation
             UseAnimation = False
             Height = SwapedHeight
@@ -103,7 +103,7 @@ Public Class MyCard
         End If
     End Sub
 
-    '填充
+    'Content filling
     Private ContentBuilder As Action(Of Panel)
     Public Sub SetContentBuilder(Builder As Action(Of Panel))
         ContentBuilder = Builder
@@ -118,7 +118,7 @@ Public Class MyCard
         End Sub)
     End Sub
     ''' <summary>
-    ''' 使用 ContentBuilder 生成卡片内容。
+    ''' Generates the card content using ContentBuilder.
     ''' </summary>
     Public Sub BuildContent()
         If ContentBuilder Is Nothing Then Return
@@ -134,7 +134,7 @@ Public Class MyCard
         TriggerForceResize()
     End Sub
 
-    '动画
+    'Animation
     Private Const DropShadowIdleOpacity As Double = 0.07
     Private Const DropShadowHoverOpacity As Double = 0.4
     Public Property HasMouseAnimation As Boolean = True
@@ -161,53 +161,53 @@ Public Class MyCard
         AniStart(AniList, "MyCard Mouse " & Uuid)
     End Sub
 
-#Region "高度改变动画"
+#Region "Height change animation"
 
     ''' <summary>
-    ''' 是否启用高度改变动画。
+    ''' Whether the height change animation is enabled.
     ''' </summary>
     Public Property UseAnimation As Boolean = True
     Private IsHeightAnimating As Boolean = False
-    Private ActualUsedHeight As Double '回滚实际高度（例如 NaN）
+    Private ActualUsedHeight As Double 'Rollback value for the actual height (e.g. NaN)
     Private Sub MySizeChanged(sender As Object, e As SizeChangedEventArgs) Handles Me.SizeChanged
         If Not UseAnimation Then Return
         Dim DeltaHeight As Double = If(IsSwapped, SwapedHeight, e.NewSize.Height) - e.PreviousSize.Height
-        '卡片的进入时动画已被页面通用切换动画替代
+        'The card's enter animation has been replaced by the common page transition animation
         If e.PreviousSize.Height = 0 OrElse IsHeightAnimating OrElse Math.Abs(DeltaHeight) < 1 OrElse ActualHeight = 0 Then Return
         StartHeightAnimation(DeltaHeight, e.PreviousSize.Height, False)
     End Sub
     Private Sub StartHeightAnimation(Delta As Double, PreviousHeight As Double, IsLoadAnimation As Boolean)
-        If IsHeightAnimating OrElse FrmMain Is Nothing Then Return '避免 XAML 设计器出错
+        If IsHeightAnimating OrElse FrmMain Is Nothing Then Return 'Avoid errors in the XAML designer
 
         Dim AnimList As New List(Of AniData)
         Dim AbsDelta = Math.Abs(Delta)
 
         If AbsDelta <= 800 Then
-            '短距离，直接使用 150ms 的缓动动画
+            'Short distance: just use a 150 ms easing animation
             AnimList.Add(AaHeight(Me, Delta, 150,, New AniEaseOutFluent(AniEasePower.ExtraStrong)))
         Else
             Dim EaseLength As Integer, EaseTime As Integer
-            Dim InitSpeed As Integer '到达缓动区前的初速度
+            Dim InitSpeed As Integer 'Initial speed before reaching the easing segment
             If Delta < 0 AndAlso AbsDelta - EaseLength > 5000 * 0.1 Then
-                '收回距离过长 (>0.1s)，强制以 100ms 完成匀速段，然后让减速段更长
+                'Collapse distance is too long (>0.1s): force the linear segment to finish in 100 ms and make the deceleration segment longer
                 EaseLength = 200
                 EaseTime = 150
                 InitSpeed = (AbsDelta - EaseLength) / 0.1
             ElseIf Delta > 0 AndAlso AbsDelta - EaseLength > 5000 * 0.6 Then
-                '展开距离过长 (>0.6s)，以 5000 速度展示 300ms 匀速段，剩下的距离全部归入减速段
+                'Expand distance is too long (>0.6s): show a 300 ms linear segment at speed 5000 and put all remaining distance into the deceleration segment
                 InitSpeed = 5000
                 EaseLength = AbsDelta - InitSpeed * 0.3
                 EaseTime = 400
             Else
-                '中程，匀速地快速展开（或收回）
+                'Medium distance: expand (or collapse) quickly at a constant speed
                 EaseLength = 150
                 EaseTime = 200
                 InitSpeed = 4000
             End If
-            '匀速段
+            'Linear segment
             AnimList.Add(AaHeight(Me, (AbsDelta - EaseLength) * Math.Sign(Delta),
                 (AbsDelta - EaseLength) / InitSpeed * 1000))
-            '减速段
+            'Deceleration segment
             AnimList.Add(AaHeight(Me, EaseLength * Math.Sign(Delta),
                 EaseTime,, New AniEaseOutFluentWithInitial(InitSpeed, EaseTime / 1000, EaseLength), True))
         End If
@@ -224,7 +224,7 @@ Public Class MyCard
         Height = PreviousHeight
     End Sub
     ''' <summary>
-    ''' 通知 MyCard，控件内容已改变，需要中断动画并瞬间更新高度。
+    ''' Notifies MyCard that the content has changed, so the animation must be interrupted and the height updated instantly.
     ''' </summary>
     Public Sub TriggerForceResize()
         Height = If(IsSwapped, SwapedHeight, Double.NaN)
@@ -234,14 +234,14 @@ Public Class MyCard
 
 #End Region
 
-#Region "折叠"
+#Region "Collapsing"
 
-    '若设置了 CanSwap，或 SwapControl 不为空，则判定为会进行折叠
-    '这是因为不能直接在 XAML 中设置 SwapControl
+    'The card is considered collapsible if CanSwap is set or SwapControl is not null
+    'This is because SwapControl cannot be set directly in XAML
     Public SwapControl As FrameworkElement
     Public Property CanSwap As Boolean = False
     ''' <summary>
-    ''' 是否已被折叠。
+    ''' Whether the card is collapsed.
     ''' </summary>
     Public Property IsSwapped As Boolean
         Get
@@ -251,15 +251,15 @@ Public Class MyCard
             If _IsSwapped = value Then Return
             _IsSwapped = value
             If SwapControl Is Nothing Then Return
-            '展开
+            'Expand
             If Not IsSwapped Then BuildContent()
-            '若尚未加载，会在 Loaded 事件中触发无动画的折叠，不需要在这里进行
+            'If not loaded yet, a collapse without animation will be triggered in the Loaded event, so there is no need to do it here
             If Not IsLoaded Then Return
-            '更新样式
+            'Update the style
             SwapControl.Visibility = Visibility.Visible
             TriggerForceResize()
             UpdateCursorStyle()
-            '改变箭头
+            'Change the arrow
             AniStart(AaRotateTransform(MainSwap, If(_IsSwapped, If(SwapLogoRight, 270, 0), 180) - CType(MainSwap.RenderTransform, RotateTransform).Angle, 250,, New AniEaseOutFluent(AniEasePower.ExtraStrong)), "MyCard Swap " & Uuid, True)
         End Set
     End Property
@@ -277,8 +277,8 @@ Public Class MyCard
     Sub(sender, e) If sender IsNot Nothing AndAlso TypeOf sender Is MyCard Then CType(sender, MyCard).IsSwapped = CType(e.NewValue, Boolean)))
 
     Public Property SwapLogoRight As Boolean = False
-    Private IsSwapMouseDown As Boolean = False '用于触发卡片展开/折叠的 MouseDown
-    Private IsCustomMouseDown As Boolean = False '用于触发自定义事件的 MouseDown
+    Private IsSwapMouseDown As Boolean = False 'MouseDown used to expand/collapse the card
+    Private IsCustomMouseDown As Boolean = False 'MouseDown used to raise the custom event
     Public Event PreviewSwap(sender As Object, e As RouteEventArgs)
     Public Event Swap(sender As Object, e As RouteEventArgs)
     Public Const SwapedHeight As Integer = 40
@@ -288,20 +288,20 @@ Public Class MyCard
             (Pos > If(IsSwapped, SwapedHeight, SwapedHeight - 6) OrElse (Pos = 0 AndAlso Not IsMouseDirectlyOver)) Then Return
         IsCustomMouseDown = True
         If Not IsSwapped AndAlso
-            (SwapControl Is Nothing OrElse Pos > If(IsSwapped, SwapedHeight, SwapedHeight - 6) OrElse (Pos = 0 AndAlso Not IsMouseDirectlyOver)) Then Return '检测点击位置；或已经不在可视树上的误判
+            (SwapControl Is Nothing OrElse Pos > If(IsSwapped, SwapedHeight, SwapedHeight - 6) OrElse (Pos = 0 AndAlso Not IsMouseDirectlyOver)) Then Return 'Check the click position; also guards against false positives when no longer in the visual tree
         IsSwapMouseDown = True
     End Sub
     Private Sub MyCard_MouseLeftButtonUp() Handles Me.MouseLeftButtonUp
         If Not IsCustomMouseDown Then Return
         IsCustomMouseDown = False
-        RaiseCustomEvent() '触发自定义事件
+        RaiseCustomEvent()
 
         If Not IsSwapMouseDown Then Return
         IsSwapMouseDown = False
 
         Dim Pos As Double = Mouse.GetPosition(Me).Y
         If Not IsSwapped AndAlso
-            (SwapControl Is Nothing OrElse Pos > If(IsSwapped, SwapedHeight, SwapedHeight - 6) OrElse (Pos = 0 AndAlso Not IsMouseDirectlyOver)) Then Return '检测点击位置；或已经不在可视树上的误判
+            (SwapControl Is Nothing OrElse Pos > If(IsSwapped, SwapedHeight, SwapedHeight - 6) OrElse (Pos = 0 AndAlso Not IsMouseDirectlyOver)) Then Return 'Check the click position; also guards against false positives when no longer in the visual tree
 
         Dim e = New RouteEventArgs(True)
         RaiseEvent PreviewSwap(Me, e)
@@ -311,7 +311,6 @@ Public Class MyCard
         End If
 
         IsSwapped = Not IsSwapped
-        Logger.Info($"{If(IsSwapped, "折叠卡片", "展开卡片")}{If(Title Is Nothing, "", "：" & Title)}")
         RaiseEvent Swap(Me, e)
     End Sub
     Private Sub MyCard_MouseLeave_Swap(sender As Object, e As MouseEventArgs) Handles Me.MouseLeave
