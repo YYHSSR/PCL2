@@ -1,5 +1,5 @@
-// 此文件主体由 AI 生成，应作为独立模块，尽量减少与其他内容的耦合。
-// 使用 ModernTooltipService 接管后，TooltipService 仅有 IsEnabled、ShowOnDisabled、InitialShowDelay 仍然有效，其他属性不再生效。
+// Most of this file is AI-generated; it should remain a standalone module with minimal coupling to other code.
+// Once ModernTooltipService takes over, only IsEnabled, ShowOnDisabled and InitialShowDelay of TooltipService still take effect; other properties are ignored.
 
 using System.ComponentModel;
 using System.Windows;
@@ -15,16 +15,16 @@ using System.Windows.Threading;
 namespace MeloongCore.Wpf;
 public static class ModernTooltipService {
 
-    // 控制是否使用现代化 Tooltip 渲染；默认为 true。是否允许显示 Tooltip 仍由 ToolTipService.IsEnabled 控制。
+    // Controls whether the modern Tooltip rendering is used; defaults to true. Whether a Tooltip may be shown is still controlled by ToolTipService.IsEnabled.
     public static void SetUseModernTooltip(DependencyObject element, bool value) => element.SetValue(UseModernTooltipProperty, value);
     public static bool GetUseModernTooltip(DependencyObject element) => (bool) element.GetValue(UseModernTooltipProperty);
 
-    // 控制 Tooltip 是否跟随鼠标移动；默认为 true。
+    // Controls whether the Tooltip follows the mouse; defaults to true.
     public static void SetFollowMouse(DependencyObject element, bool value) => element.SetValue(FollowMouseProperty, value);
     public static bool GetFollowMouse(DependencyObject element) => (bool) element.GetValue(FollowMouseProperty);
 
     /// <summary>
-    /// 全局启用现代 Tooltip。启用后会接管所有 <see cref="FrameworkElement.ToolTip"/>。
+    /// Enables the modern Tooltip globally. Once enabled, it takes over all <see cref="FrameworkElement.ToolTip"/>s.
     /// </summary>
     internal static void Init() {
         if (initialized) return;
@@ -39,14 +39,14 @@ public static class ModernTooltipService {
             if (sender is FrameworkElement owner && ReferenceEquals(owner, currentOwner)) Close(false);
         }), true);
 
-        // Loaded 负责常规路径；PreviewMouseDown 兜底处理 Init 晚于控件 Loaded 的情况。
+        // Loaded handles the normal path; PreviewMouseDown is a fallback for when Init runs after a control is already loaded.
         EventManager.RegisterClassHandler(typeof(ComboBox), FrameworkElement.LoadedEvent, new RoutedEventHandler(static (sender, _) => HookComboBoxDropDown(sender as ComboBox)), true);
         EventManager.RegisterClassHandler(typeof(ComboBox), UIElement.PreviewMouseDownEvent, new MouseButtonEventHandler(static (sender, _) => HookComboBoxDropDown(sender as ComboBox)), true);
     }
 
-    #region 字段与属性
+    #region Fields and properties
 
-    // 附加属性
+    // Attached properties
     public static readonly DependencyProperty UseModernTooltipProperty = DependencyProperty.RegisterAttached(
         "UseModernTooltip", typeof(bool), typeof(ModernTooltipService), new PropertyMetadata(true));
     public static readonly DependencyProperty FollowMouseProperty = DependencyProperty.RegisterAttached(
@@ -54,7 +54,7 @@ public static class ModernTooltipService {
     private static readonly DependencyProperty IsComboBoxDropDownHookedProperty = DependencyProperty.RegisterAttached(
         "IsComboBoxDropDownHooked", typeof(bool), typeof(ModernTooltipService), new PropertyMetadata(false));
 
-    // 常量
+    // Constants
     private const double closedScale = 0.97;
     private const int shadowRadius = 18, contentMaxWidth = 676;
     private static readonly Thickness contentMargin = new(12, 11, 12, 8);
@@ -64,7 +64,7 @@ public static class ModernTooltipService {
     private static readonly DependencyPropertyDescriptor toolTipPropertyDescriptor =
         DependencyPropertyDescriptor.FromProperty(FrameworkElement.ToolTipProperty, typeof(FrameworkElement));
 
-    // 状态字段
+    // State fields
     private static readonly DispatcherTimer openTimer = new();
     private static bool initialized;
     private static int animationToken;
@@ -90,7 +90,7 @@ public static class ModernTooltipService {
 
     #endregion
 
-    #region 事件入口
+    #region Event entry points
 
     private static void OnMouseEnter(object sender, MouseEventArgs e) {
         if (sender is not FrameworkElement reference) return;
@@ -154,7 +154,7 @@ public static class ModernTooltipService {
             return;
         }
 
-        // 启用状态控件走 MouseEnter 延迟逻辑；禁用控件只能从原生 Opening 事件接管。
+        // Enabled controls go through the MouseEnter delay logic; disabled controls can only be taken over from the native Opening event.
         if (owner.IsEnabled) return;
 
         if (!ReferenceEquals(currentOwner, owner)) HideImmediately();
@@ -166,7 +166,7 @@ public static class ModernTooltipService {
 
     #endregion
 
-    #region Tooltip 目标解析
+    #region Tooltip target resolution
 
     private static void RefreshCurrentOwner(FrameworkElement reference) {
         var owner = FindCurrentTooltipOwner(reference);
@@ -177,7 +177,7 @@ public static class ModernTooltipService {
         }
 
         if (ShouldSuppressTooltip(owner)) {
-            // 鼠标捕获仍在当前拥有者分支内时，保留现有气泡，避免拖选或按压时闪烁。
+            // While mouse capture is still within the current owner's subtree, keep the existing bubble to avoid flickering during drag-selection or pressing.
             if (currentOwner is not null &&
                 Mouse.Captured is DependencyObject captured &&
                 IsSameTreeBranch(captured, currentOwner) &&
@@ -192,7 +192,7 @@ public static class ModernTooltipService {
         if (owner is not null) {
             BeginShow(owner, Mouse.GetPosition(owner));
         } else if (currentOwner is not null) {
-            Close(true); // 弹窗遮挡等情况可能不会触发原拥有者的 MouseLeave，需要由其他元素收到的 MouseMove 主动关闭
+            Close(true); // When covered by a popup, the original owner may not receive MouseLeave, so a MouseMove received by another element must close it explicitly
         }
     }
 
@@ -210,7 +210,7 @@ public static class ModernTooltipService {
         var owner = FindOwnerInAncestors(Mouse.DirectlyOver as DependencyObject);
         if (owner is not null) return owner;
 
-        // 重新从窗口根元素命中测试，避免弹窗出现后 Mouse.DirectlyOver 尚未刷新，继续命中已被遮挡的旧元素。
+        // Hit-test again from the window root, since Mouse.DirectlyOver may not be updated yet after a popup appears and would still hit the covered old element.
         if (PresentationSource.FromVisual(reference)?.RootVisual is UIElement root) {
             var rootHit = root.InputHitTest(Mouse.GetPosition(root)) as DependencyObject;
             owner = FindOwnerInAncestors(rootHit);
@@ -268,7 +268,7 @@ public static class ModernTooltipService {
 
     #endregion
 
-    #region 显示生命周期
+    #region Display lifecycle
 
     private static void BeginShow(FrameworkElement owner, Point point) {
         if (!CanShowModernTooltip(owner) || !TryGetToolTip(owner, out _, out _)) return;
@@ -305,7 +305,7 @@ public static class ModernTooltipService {
 
     private static void Show(FrameworkElement owner, Point point) {
         if (!ReferenceEquals(owner, currentOwner) || !CanShowModernTooltip(owner) || !TryGetToolTip(owner, out var content, out var sourceToolTip)) return;
-        // 禁用控件由原生 ToolTipOpening 确认命中，无法通过常规 InputHitTest 可靠地重新定位。
+        // Disabled controls are confirmed by the native ToolTipOpening and cannot be reliably relocated through a normal InputHitTest.
         if (owner.IsEnabled && !ReferenceEquals(owner, FindCurrentTooltipOwner(owner))) {
             Close(false);
             return;
@@ -346,7 +346,7 @@ public static class ModernTooltipService {
         popupCard!.DataContext = sourceToolTip?.DataContext ?? owner.DataContext;
         popupCard.FlowDirection = owner.FlowDirection;
 
-        // 先还原上一次借出的 Visual，再挂载新的内容，避免同一元素拥有两个逻辑父级。
+        // Restore the previously borrowed Visual before mounting the new content, so the same element never has two logical parents.
         popupCard.Child = null;
         RestoreBorrowedContent();
 
@@ -437,7 +437,7 @@ public static class ModernTooltipService {
 
     #endregion
 
-    #region Popup 渲染与动画
+    #region Popup rendering and animation
 
     private static void UpdatePosition(FrameworkElement owner, Point point) {
         popup!.PlacementTarget = owner;
@@ -463,7 +463,7 @@ public static class ModernTooltipService {
 
     #endregion
 
-    // WPF 原生 Tooltip 会在 ComboBox 下拉弹出时关闭；这里保持同样行为。
+    // The native WPF Tooltip closes when a ComboBox drop-down opens; keep the same behavior here.
     private static void HookComboBoxDropDown(ComboBox? comboBox) {
         if (comboBox is null || (bool) comboBox.GetValue(IsComboBoxDropDownHookedProperty)) return;
         comboBox.SetValue(IsComboBoxDropDownHookedProperty, true);

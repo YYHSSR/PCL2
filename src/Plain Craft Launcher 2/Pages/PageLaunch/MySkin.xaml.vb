@@ -1,9 +1,9 @@
 Public Class MySkin
 
-    '事件
+    'Events
     Public Event Click(sender As Object, e As MouseButtonEventArgs)
 
-    '皮肤储存
+    'Skin storage
     Private _Address As String
     Public Property Address As String
         Get
@@ -16,7 +16,7 @@ Public Class MySkin
     End Property
     Public Loader As LoaderTask(Of (String, String), String)
 
-    '控件动画
+    'Control animation
     Private Sub PanSkin_MouseEnter(sender As Object, e As MouseEventArgs) Handles Me.MouseEnter
         AniStart(AaOpacity(ShadowSkin, 0.8 - ShadowSkin.Opacity, 200, 100), "Skin Shadow")
     End Sub
@@ -26,7 +26,7 @@ Public Class MySkin
         AniStart(AaScaleTransform(Me, 1 - CType(Me.RenderTransform, ScaleTransform).ScaleX, 60,, New AniEaseOutFluent), "Skin Scale")
     End Sub
 
-    '点击
+    'Click
     Private IsSkinMouseDown As Boolean = False
     Private Sub PanSkin_MouseLeftButtonDown(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseLeftButtonDown
         IsSkinMouseDown = True
@@ -40,7 +40,7 @@ Public Class MySkin
         End If
     End Sub
 
-    '保存皮肤
+    'Save skin
     Public Sub BtnSkinSave_Click() Handles BtnSkinSave.Click
         Save(Loader)
     End Sub
@@ -73,15 +73,15 @@ Public Class MySkin
     End Sub
 
     ''' <summary>
-    ''' 载入皮肤。
+    ''' Load the skin.
     ''' </summary>
     Public Sub Load()
         Try
-            '检查文件存在
+            'Check that the file exists
             Address = Loader.Output
             If String.IsNullOrEmpty(Address) Then Throw New Exception("皮肤加载器 " & Loader.Name & " 没有输出")
             If Not Address.StartsWithF(PathImage) AndAlso Not FileUtils.Exists(Address) Then Throw New FileNotFoundException("皮肤文件未找到", Address)
-            '加载
+            'Load
             Dim Image As MyBitmap
             Try
                 Image = New MyBitmap(Address)
@@ -91,18 +91,18 @@ Public Class MySkin
                 Return
             End Try
             ImgBack.Tag = Address
-            '大小检查
+            'Size check
             Dim Scale As Integer = Image.Pic.Width / 64
             If Image.Pic.Width < 32 OrElse Image.Pic.Height < 32 Then
                 ImgFore.Source = Nothing : ImgBack.Source = Nothing
                 Throw New Exception("图片大小不足，长为 " & Image.Pic.Height & "，宽为 " & Image.Pic.Width)
             End If
-            '头发层（附加层）
+            'Hair layer (overlay)
             If Image.Pic.Width >= 64 AndAlso Image.Pic.Height >= 32 Then
-                If (Image.Pic.GetPixel(1, 1).A = 0 OrElse '如果图片中有任何透明像素（避免纯色白底）
+                If (Image.Pic.GetPixel(1, 1).A = 0 OrElse 'If the image has any transparent pixel (skip a solid white background)
                     Image.Pic.GetPixel(Image.Pic.Width - 1, Image.Pic.Height - 1).A = 0 OrElse
                     Image.Pic.GetPixel(Image.Pic.Width - 2, Image.Pic.Height / 2 - 2).A = 0) OrElse
-                   (Image.Pic.GetPixel(1, 1) <> Image.Pic.GetPixel(Scale * 41, Scale * 9) AndAlso '或是头部颜色和透明区均不一样
+                   (Image.Pic.GetPixel(1, 1) <> Image.Pic.GetPixel(Scale * 41, Scale * 9) AndAlso 'Or the head color differs from the transparent area
                     Image.Pic.GetPixel(Image.Pic.Width - 1, Image.Pic.Height - 1) <> Image.Pic.GetPixel(Scale * 41, Scale * 9) AndAlso
                     Image.Pic.GetPixel(Image.Pic.Width - 2, Image.Pic.Height / 2 - 2) <> Image.Pic.GetPixel(Scale * 41, Scale * 9)) Then
                     ImgFore.Source = Image.Clip(Scale * 40, Scale * 8, Scale * 8, Scale * 8)
@@ -112,7 +112,7 @@ Public Class MySkin
             Else
                 ImgFore.Source = Nothing
             End If
-            '脸层
+            'Face layer
             ImgBack.Source = Image.Clip(Scale * 8, Scale * 8, Scale * 8, Scale * 8)
             Logger.Info($"载入头像成功：{Loader.Name}")
         Catch ex As Exception
@@ -120,7 +120,7 @@ Public Class MySkin
         End Try
     End Sub
     ''' <summary>
-    ''' 清空皮肤。
+    ''' Clear the skin.
     ''' </summary>
     Public Sub Clear()
         Address = ""
@@ -128,12 +128,12 @@ Public Class MySkin
         ImgBack.Source = Nothing
     End Sub
 
-    '刷新缓存
+    'Refresh the cache
     Public Sub RefreshClick() Handles BtnSkinRefresh.Click
         RefreshCache(Loader)
     End Sub
     ''' <summary>
-    ''' 刷新皮肤缓存。
+    ''' Refresh the skin cache.
     ''' </summary>
     Public Shared Sub RefreshCache(Optional sender As LoaderTask(Of (String, String), String) = Nothing)
         Dim HasLoaderRunning As Boolean = False
@@ -143,14 +143,14 @@ Public Class MySkin
             End If
         Next
         If FrmLaunchLeft IsNot Nothing AndAlso HasLoaderRunning Then
-            '由于取消不是实时的，暂时不会释放文件，会导致删除报错，故只能取消执行
+            'Cancel is not immediate, so the file stays locked and delete would fail; abort instead
             Hint("有正在获取中的皮肤，请稍后再试！", HintType.Blue)
         Else
             RunInThread(
             Sub()
                 Try
                     Hint("正在刷新皮肤……")
-                    '清空缓存
+                    'Clear the cache
                     Logger.Info("正在清空皮肤缓存")
                     If DirectoryUtils.Exists(PathTemp & "Cache\Skin") Then DirectoryUtils.Delete(PathTemp & "Cache\Skin")
                     If DirectoryUtils.Exists(PathTemp & "Cache\Uuid") Then DirectoryUtils.Delete(PathTemp & "Cache\Uuid")
@@ -158,7 +158,7 @@ Public Class MySkin
                     IniClearCache(PathTemp & "Cache\Skin\IndexNide.ini")
                     IniClearCache(PathTemp & "Cache\Skin\IndexAuth.ini")
                     IniClearCache(PathTemp & "Cache\Uuid\Mojang.ini")
-                    '刷新控件
+                    'Refresh the controls
                     For Each SkinLoader In If(sender IsNot Nothing, {sender}, {PageLaunchLeft.SkinLegacy, PageLaunchLeft.SkinMs})
                         SkinLoader.WaitForExit(IsForceRestart:=True)
                     Next
@@ -170,21 +170,21 @@ Public Class MySkin
         End If
     End Sub
     ''' <summary>
-    ''' 在更换正版皮肤后，刷新正版皮肤。
+    ''' After changing the Microsoft skin, refresh it.
     ''' </summary>
-    ''' <param name="SkinAddress">新的正版皮肤完整地址。</param>
+    ''' <param name="SkinAddress">Full URL of the new Microsoft skin.</param>
     Public Shared Sub ReloadCache(SkinAddress As String)
         RunInThread(
         Sub()
             Try
-                '更新缓存
+                'Update the cache
                 WriteIni(PathTemp & "Cache\Skin\IndexMs.ini", Settings.Get(Of String)("CacheMsV2Uuid"), SkinAddress)
                 Logger.Info($"已写入皮肤地址缓存 {Settings.Get(Of String)("CacheMsV2Uuid")} -> {SkinAddress}")
-                '刷新控件
+                'Refresh the controls
                 For Each SkinLoader In {PageLaunchLeft.SkinMs, PageLaunchLeft.SkinLegacy}
                     SkinLoader.WaitForExit(IsForceRestart:=True)
                 Next
-                '完成提示
+                'Show the success hint
                 Hint("更改皮肤成功！", HintType.Green)
             Catch ex As Exception
                 Logger.Error(ex, "更改正版皮肤后刷新皮肤失败")
@@ -192,7 +192,7 @@ Public Class MySkin
         End Sub)
     End Sub
 
-    '披风
+    'Cape
     Public Property HasCape As Boolean
         Get
             Return BtnSkinCape.Visibility = Visibility.Collapsed
@@ -207,7 +207,7 @@ Public Class MySkin
     End Property
     Private IsChanging As Boolean = False
     Public Sub BtnSkinCape_Click() Handles BtnSkinCape.Click
-        '检查条件，获取新披风
+        'Check conditions and get the new cape
         If IsChanging Then
             Hint("正在更改披风中，请稍候！")
             Return
@@ -218,12 +218,12 @@ Public Class MySkin
         End If
         If McLoginMsLoader.State <> LoadState.Finished Then Hint("正在获取披风列表，请稍候……")
         IsChanging = True
-        '开始实际获取
+        'Start the actual fetch
         RunInNewThread(
         Sub()
 Retry:
             Try
-                '获取登录信息
+                'Get the login info
                 If McLoginMsLoader.State <> LoadState.Finished Then McLoginMsLoader.WaitForExit(PageLoginMsSkin.GetLoginData())
                 If McLoginMsLoader.State <> LoadState.Finished Then
                     Hint("登录失败，无法更改披风！", HintType.Red)
@@ -232,7 +232,7 @@ Retry:
                 Dim AccessToken As String = McLoginMsLoader.Output.AccessToken
                 Dim Uuid As String = McLoginMsLoader.Output.Uuid
                 Dim SkinData As JObject = McLoginMsLoader.Output.ProfileJson.DeserializeJson()
-                '获取玩家的所有披风
+                'Get all of the player's capes
                 Dim SelectedIndex As Integer? = Nothing
                 RunInUiWait(
                 Sub()
@@ -261,7 +261,7 @@ Retry:
                     End Try
                 End Sub)
                 If SelectedIndex Is Nothing Then Return
-                '发送请求
+                'Send the request
                 Dim Result As String = NetRequestByClientRetry("https://api.minecraftservices.com/minecraft/profile/capes/active",
                     If(SelectedIndex = 0, HttpMethod.Delete, HttpMethod.Put),
                     Content:=If(SelectedIndex = 0, "", New JObject(New JProperty("capeId", SkinData("capes")(SelectedIndex - 1)("id"))).ToString(0)),
@@ -272,7 +272,7 @@ Retry:
                     Return
                 Else
                     Hint("更改披风成功！", HintType.Green)
-                    '更新当前选择的披风
+                    'Update the currently selected cape
                     For Each Cape In SkinData("capes")
                         Cape("state") = "INACTIVE"
                     Next

@@ -2,7 +2,7 @@ Public Class PageInstanceLeft
     Implements IRefreshable
 
     ''' <summary>
-    ''' 当前显示设置的 MC 版本。
+    ''' The MC instance whose settings are currently shown.
     ''' </summary>
     Public Shared Instance As McInstance = Nothing
 
@@ -19,19 +19,19 @@ Public Class PageInstanceLeft
         End If
     End Sub
 
-#Region "页面切换"
+#Region "Page switching"
 
     ''' <summary>
-    ''' 当前页面的编号。从 0 开始计算。
+    ''' Current page index. Starts at 0.
     ''' </summary>
     Public PageID As FormMain.PageSubType = FormMain.PageSubType.Default
 
     ''' <summary>
-    ''' 勾选事件改变页面。
+    ''' Check event changes the page.
     ''' </summary>
     Private Sub PageCheck(sender As FrameworkElement, e As RouteEventArgs) Handles ItemOverall.Check, ItemMod.Check, ItemModDisabled.Check, ItemSetup.Check, ItemModify.Check, ItemExport.Check
-        '尚未初始化控件属性时，sender.Tag 为 Nothing，会导致切换到页面 0
-        '若使用 IsLoaded，则会导致模拟点击不被执行（模拟点击切换页面时，控件的 IsLoaded 为 False）
+        'Before control properties are initialized, sender.Tag is Nothing and would switch to page 0
+        'IsLoaded would skip simulated clicks (it is False when a simulated click switches pages)
         If sender.Tag IsNot Nothing Then PageChange(Val(sender.Tag))
     End Sub
 
@@ -62,7 +62,7 @@ Public Class PageInstanceLeft
     End Function
 
     ''' <summary>
-    ''' 切换现有页面。
+    ''' Switch to an existing page.
     ''' </summary>
     Public Sub PageChange(ID As FormMain.PageSubType)
         If PageID = ID Then Return
@@ -81,7 +81,7 @@ Public Class PageInstanceLeft
         End Try
     End Sub
     Private Shared Sub PageChangeRun(Target As MyPageRight)
-        AniStop("FrmMain PageChangeRight") '停止主页面的右页面切换动画，防止它与本动画一起触发多次 PageOnEnter
+        AniStop("FrmMain PageChangeRight") 'Stop the main window's right-page animation so it does not fire PageOnEnter again with this one
         If Target.Parent IsNot Nothing Then Target.SetValue(ContentPresenter.ContentProperty, Nothing)
         FrmMain.PageRight = Target
         CType(FrmMain.PanMainRight.Child, MyPageRight).PageOnExit()
@@ -92,7 +92,7 @@ Public Class PageInstanceLeft
                        FrmMain.PageRight.Opacity = 0
                    End Sub, 130),
             AaCode(Sub()
-                       '延迟触发页面通用动画，以使得在 Loaded 事件中加载的控件得以处理
+                       'Delay the shared page animation so controls loaded in Loaded can finish handling it
                        FrmMain.PageRight.Opacity = 1
                        FrmMain.PageRight.PageOnEnter()
                    End Sub, 30, True)
@@ -101,7 +101,7 @@ Public Class PageInstanceLeft
 
 #End Region
 
-    Public Sub Refresh_Click(sender As Object, e As EventArgs) '由边栏按钮匿名调用
+    Public Sub Refresh_Click(sender As Object, e As EventArgs) 'Called anonymously by a sidebar button
         Refresh(Val(sender.Tag))
     End Sub
     Public Sub Refresh() Implements IRefreshable.Refresh
@@ -133,7 +133,7 @@ Public Class PageInstanceLeft
         End If
     End Sub
 
-    '加载当前版本将要选择的 Java
+    'Load the Java this instance will select
     Public Shared CurrentJavaWorker As New RedoableWorker(Of Java)(Function(c, p) SelectOrDownloadJava(PageInstanceLeft.Instance, False, c, p))
     Public Shared Sub ReloadCurrentJava() Handles Me.Loaded
         If AniControlEnabled <> 0 Then Return

@@ -3,7 +3,7 @@ Public Class MyTextButton
 
     Public Event Click(sender As Object, e As EventArgs)
 
-    '基础
+    'Basics
 
     Public Uuid As Integer = GetUuid()
     Public Sub New()
@@ -11,7 +11,7 @@ Public Class MyTextButton
         Background = ColorSemiTransparent
     End Sub
 
-    '文本
+    'Text
 
     Public Property Text As String
         Get
@@ -32,7 +32,7 @@ Public Class MyTextButton
             }, "MyTextButton Text " & sender.Uuid)
         End Sub))
 
-    '鼠标事件
+    'Mouse events
 
     Public IsMouseDown As Boolean = False
     Private Sub MyTextButton_MouseLeftButtonDown(sender As Object, e As MouseButtonEventArgs) Handles Me.PreviewMouseLeftButtonDown
@@ -45,19 +45,18 @@ Public Class MyTextButton
     Private Sub MyTextButton_MouseLeftButtonUp(sender As Object, e As MouseButtonEventArgs) Handles Me.PreviewMouseLeftButtonUp
         If Not IsMouseDown Then Return
         IsMouseDown = False
-        Logger.Info($"按下文本按钮：{Text}")
         RaiseEvent Click(Me, Nothing)
         RaiseCustomEvent()
         e.Handled = True
     End Sub
 
-    '指向动画
+    'Hover animation
 
     Private Const AnimationTimeIn As Integer = 100
     Private Const AnimationTimeOut As Integer = 200
     Private ColorName As String
     Private Sub RefreshColor() Handles Me.MouseEnter, Me.MouseLeave, Me.IsEnabledChanged, Me.MouseLeftButtonDown, Me.MouseLeftButtonUp
-        '判断当前颜色
+        'Determine the current color
         Dim ForeName As String
         Dim Time As Integer
         If IsMouseDown Then
@@ -70,15 +69,15 @@ Public Class MyTextButton
             ForeName = "ColorBrush1"
             Time = AnimationTimeOut
         End If
-        '重复性验证
+        'Skip if unchanged
         If ColorName = ForeName Then Return
         ColorName = ForeName
-        '触发颜色动画
-        If IsLoaded AndAlso AniControlEnabled = 0 Then '防止默认属性变更触发动画
-            '有动画
+        'Trigger the color animation
+        If IsLoaded AndAlso AniControlEnabled = 0 Then 'Prevent default property changes from triggering animations
+            'With animation
             AniStart(AaColor(Me, ForegroundProperty, ForeName, Time), "MyTextButton Color " & Uuid)
         Else
-            '无动画
+            'Without animation
             AniStop("MyTextButton Color " & Uuid)
             SetResourceReference(ForegroundProperty, ForeName)
         End If

@@ -3,74 +3,74 @@ using System.Text.RegularExpressions;
 namespace MeloongCore.Extensions;
 public static class StringExtensions {
 
-    #region 区域性 / 大小写 简化
+    #region Culture / case-sensitivity shorthands
 
     /// <summary>
-    /// 非区域性的 <see cref="string.StartsWith(string)"/>。
+    /// Culture-invariant <see cref="string.StartsWith(string)"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool StartsWithF(this string? value, string prefix, bool ignoreCase = false) 
         => value?.StartsWith(prefix, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) ?? false;
     /// <summary>
-    /// 判断字符串是否以 <paramref name="prefix"/> 开头。
+    /// Whether the string starts with <paramref name="prefix"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool StartsWithF(this string? value, char prefix, bool ignoreCase = false) 
         => value?.StartsWith(prefix.ToString(), ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) ?? false;
     /// <summary>
-    /// 非区域性的 <see cref="string.EndsWith(string)"/>。
+    /// Culture-invariant <see cref="string.EndsWith(string)"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool EndsWithF(this string? value, string suffix, bool ignoreCase = false) 
         => value?.EndsWith(suffix, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) ?? false;
     /// <summary>
-    /// 判断字符串是否以 <paramref name="suffix"/> 结尾。
+    /// Whether the string ends with <paramref name="suffix"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool EndsWithF(this string? value, char suffix, bool ignoreCase = false) 
         => value?.EndsWith(suffix.ToString(), ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal) ?? false;
 
     /// <summary>
-    /// 忽略大小写的 <see cref="string.Contains(string)"/>。
+    /// Case-insensitive <see cref="string.Contains(string)"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool ContainsIgnoreCase(this string value, string subString) 
         => value.IndexOf(subString, StringComparison.OrdinalIgnoreCase) >= 0;
 
     /// <summary>
-    /// 非区域性的 <see cref="string.IndexOf(string)"/>。
+    /// Culture-invariant <see cref="string.IndexOf(string)"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int IndexOfF(this string value, string subString, bool ignoreCase = false) 
         => value.IndexOf(subString, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     /// <summary>
-    /// 非区域性的 <see cref="string.IndexOf(string, int)"/>。
+    /// Culture-invariant <see cref="string.IndexOf(string, int)"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int IndexOfF(this string value, string subString, int startIndex, bool ignoreCase = false) 
         => value.IndexOf(subString, startIndex, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
     /// <summary>
-    /// 非区域性的 <see cref="string.LastIndexOf(string)"/>。
+    /// Culture-invariant <see cref="string.LastIndexOf(string)"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int LastIndexOfF(this string value, string subString, bool ignoreCase = false) 
         => value.LastIndexOf(subString, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     /// <summary>
-    /// 非区域性的 <see cref="string.LastIndexOf(string, int)"/>。
+    /// Culture-invariant <see cref="string.LastIndexOf(string, int)"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int LastIndexOfF(this string value, string subString, int startIndex, bool ignoreCase = false) 
         => value.LastIndexOf(subString, startIndex, ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 
     /// <summary>
-    /// <see cref="string.ToLowerInvariant"/> 的简略写法。
+    /// Shorthand for <see cref="string.ToLowerInvariant"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string Lower(this string str) 
         => str.ToLowerInvariant();
     /// <summary>
-    /// <see cref="string.ToUpperInvariant"/> 的简略写法。
+    /// Shorthand for <see cref="string.ToUpperInvariant"/>.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string Upper(this string str) 
@@ -81,8 +81,8 @@ public static class StringExtensions {
     #region Split
 
     /// <summary>
-    /// 分割字符串。
-    /// 若原始字符串为空，则返回 {""}。
+    /// Splits the string.
+    /// Returns {""} if the original string is empty.
     /// </summary>
     public static string[] Split(this string fullStr, string splitStr, bool removeEmptyEntries = false) {
         if (splitStr.IsSingle()) {
@@ -92,36 +92,36 @@ public static class StringExtensions {
         }
     }
     /// <summary>
-    /// 分割字符串。
-    /// 若原始字符串为空，则返回 {""}。
+    /// Splits the string.
+    /// Returns {""} if the original string is empty.
     /// </summary>
     public static string[] Split(this string fullStr, char splitChar, bool removeEmptyEntries = false) 
         => fullStr.Split([splitChar], removeEmptyEntries);
     /// <summary>
-    /// 分割字符串。
-    /// 若原始字符串为空，则返回 {""}。
+    /// Splits the string.
+    /// Returns {""} if the original string is empty.
     /// </summary>
     public static string[] Split(this string fullStr, string[] splitStrings, bool removeEmptyEntries = false)
         => fullStr.Split(splitStrings, removeEmptyEntries ? StringSplitOptions.RemoveEmptyEntries : StringSplitOptions.None);
     /// <summary>
-    /// 分割字符串。
-    /// 若原始字符串为空，则返回 {""}。
+    /// Splits the string.
+    /// Returns {""} if the original string is empty.
     /// </summary>
     public static string[] Split(this string fullStr, char[] splitChars, bool removeEmptyEntries = false)
         => fullStr.Split(splitChars, removeEmptyEntries ? StringSplitOptions.RemoveEmptyEntries : StringSplitOptions.None);
 
     /// <summary>
-    /// 将字符串分割为多行。
+    /// Splits the string into lines.
     /// </summary>
     public static string[] SplitLines(this string input, bool skipEmptyLines = false)
         => input.ReplaceLineEndings("\n").Split('\n', skipEmptyLines);
 
     #endregion
 
-    #region 裁切
+    #region Trimming
 
     /// <summary>
-    /// 获取在子字符串第一次出现之前的部分，如果未找到子字符串则不裁切。
+    /// Gets the part before the first occurrence of the substring; returns the string unchanged if not found.
     /// <code>"2024/11/08".BeforeFirst("/") => "2024"</code>
     /// </summary>
     public static string BeforeFirst(this string str, string text, bool ignoreCase = false) {
@@ -130,7 +130,7 @@ public static class StringExtensions {
         return str[..pos];
     }
     /// <summary>
-    /// 获取在任意子字符串第一次出现之前的部分，如果未找到任意子字符串则不裁切。
+    /// Gets the part before the first occurrence of any of the substrings; returns the string unchanged if none is found.
     /// <code>"2024/11-08".BeforeFirstOfAny(["/", "-"]) => "2024"</code>
     /// </summary>
     public static string BeforeFirstOfAny(this string str, IEnumerable<string>? texts, bool ignoreCase = false) {
@@ -146,7 +146,7 @@ public static class StringExtensions {
     }
 
     /// <summary>
-    /// 获取在子字符串最后一次出现之前的部分，如果未找到子字符串则不裁切。
+    /// Gets the part before the last occurrence of the substring; returns the string unchanged if not found.
     /// <code>"2024/11/08".BeforeLast("/") => "2024/11"</code>
     /// </summary>
     public static string BeforeLast(this string str, string text, bool ignoreCase = false) {
@@ -155,7 +155,7 @@ public static class StringExtensions {
         return str[..pos];
     }
     /// <summary>
-    /// 获取在任意子字符串最后一次出现之前的部分，如果未找到任意子字符串则不裁切。
+    /// Gets the part before the last occurrence of any of the substrings; returns the string unchanged if none is found.
     /// <code>"2024/11-08".BeforeLastOfAny(["/", "-"]) => "2024/11"</code>
     /// </summary>
     public static string BeforeLastOfAny(this string str, IEnumerable<string>? texts, bool ignoreCase = false) {
@@ -171,7 +171,7 @@ public static class StringExtensions {
     }
 
     /// <summary>
-    /// 获取在子字符串第一次出现之后的部分，如果未找到子字符串则不裁切。
+    /// Gets the part after the first occurrence of the substring; returns the string unchanged if not found.
     /// <code>"2024/11/08".AfterFirst("/") => "11/08"</code>
     /// </summary>
     public static string AfterFirst(this string str, string? text, bool ignoreCase = false) {
@@ -180,7 +180,7 @@ public static class StringExtensions {
         return str[(pos + text!.Length)..];
     }
     /// <summary>
-    /// 获取在任意子字符串第一次出现之后的部分，如果未找到任意子字符串则不裁切。
+    /// Gets the part after the first occurrence of any of the substrings; returns the string unchanged if none is found.
     /// <code>"2024/11-08".AfterFirstOfAny(["/", "-"]) => "11-08"</code>
     /// </summary>
     public static string AfterFirstOfAny(this string str, IEnumerable<string>? texts, bool ignoreCase = false) {
@@ -200,7 +200,7 @@ public static class StringExtensions {
     }
 
     /// <summary>
-    /// 获取在子字符串最后一次出现之后的部分，如果未找到子字符串则不裁切。
+    /// Gets the part after the last occurrence of the substring; returns the string unchanged if not found.
     /// <code>"2024/11/08".AfterLast("/") => "08"</code>
     /// </summary>
     public static string AfterLast(this string str, string? text, bool ignoreCase = false) {
@@ -209,7 +209,7 @@ public static class StringExtensions {
         return str[(pos + text!.Length)..];
     }
     /// <summary>
-    /// 获取在任意子字符串最后一次出现之后的部分，如果未找到任意子字符串则不裁切。
+    /// Gets the part after the last occurrence of any of the substrings; returns the string unchanged if none is found.
     /// <code>"2024/11-08".AfterLastOfAny(["/", "-"]) => "08"</code>
     /// </summary>
     public static string AfterLastOfAny(this string str, IEnumerable<string>? texts, bool ignoreCase = false) {
@@ -229,9 +229,9 @@ public static class StringExtensions {
     }
 
     /// <summary>
-    /// 获取处于两个子字符串之间的部分，裁切尽可能多的内容。
-    /// 等效于 AfterLast 后接 BeforeFirst。
-    /// 如果未找到子字符串则不裁切。
+    /// Gets the part between two substrings, trimming as much as possible.
+    /// Equivalent to AfterLast followed by BeforeFirst.
+    /// Returns the string unchanged if a substring is not found.
     /// </summary>
     public static string Between(this string str, string after, string before, bool ignoreCase = false) {
         int startPos = string.IsNullOrEmpty(after) ? -1 : str.LastIndexOfF(after, ignoreCase);
@@ -253,30 +253,30 @@ public static class StringExtensions {
 
     #endregion
 
-    #region 替换
+    #region Replacement
 
     /// <summary>
-    /// 替换字符串中的内容。
-    /// 仅当需要替换时，才调用 <paramref name="newValueGetter"/> 获取结果字符串。
+    /// Replaces content in the string.
+    /// <paramref name="newValueGetter"/> is called to get the replacement only when a replacement is actually needed.
     /// </summary>
     public static string Replace(this string str, string oldValue, Func<string> newValueGetter) 
         => str.Contains(oldValue) ? str.Replace(oldValue, newValueGetter()) : str;
 
     /// <summary>
-    /// 将字符串中的换行符统一替换为指定字符串。
-    /// 若指定了 <paramref name="mergeMultiple"/>，会将多个连续换行符仅替换为一个目标内容。
+    /// Replaces all line breaks in the string with the specified string.
+    /// If <paramref name="mergeMultiple"/> is set, consecutive line breaks are replaced by a single occurrence of the target.
     /// </summary>
     public static string ReplaceLineEndings(this string input, string newValue, bool mergeMultiple = false) 
-        => (mergeMultiple ? regexLineEndingAndMerge : regexLineEnding).Replace(input, newValue.Replace("$", "$$")); // 避免识别成捕获组
+        => (mergeMultiple ? regexLineEndingAndMerge : regexLineEnding).Replace(input, newValue.Replace("$", "$$")); // Escape $ so it is not treated as a capture group reference
     private static readonly Regex regexLineEndingAndMerge = new(@"(?:\r\n|[\n\r\f\u0085\u2028\u2029])+", RegexOptions.Compiled);
     private static readonly Regex regexLineEnding = new(@"\r\n|[\n\r\f\u0085\u2028\u2029]", RegexOptions.Compiled);
 
     #endregion
 
-    #region 正则
+    #region Regex
 
     /// <summary>
-    /// 搜索字符串中所有的正则匹配项。
+    /// Finds all regex matches in the string.
     /// </summary>
     public static IEnumerable<string> RegexSearch(this string str, string pattern, RegexOptions options = RegexOptions.None) {
         try {
@@ -288,7 +288,7 @@ public static class StringExtensions {
     }
 
     /// <summary>
-    /// 获取字符串中的第一个正则匹配项，若无匹配或失败则返回 <see langword="null"/>。
+    /// Gets the first regex match in the string, or <see langword="null"/> if there is no match or the match fails.
     /// </summary>
     public static string? RegexSeek(this string str, string pattern, RegexOptions options = RegexOptions.None) {
         try {
@@ -301,7 +301,7 @@ public static class StringExtensions {
     }
 
     /// <summary>
-    /// 检查字符串是否匹配某正则模式。
+    /// Whether the string matches the regex pattern.
     /// </summary>
     public static bool RegexCheck(this string str, string pattern, RegexOptions options = RegexOptions.None) {
         try {
@@ -313,16 +313,16 @@ public static class StringExtensions {
     }
 
     /// <summary>
-    /// 进行正则替换。
-    /// 失败时会抛出异常。
+    /// Performs a regex replacement.
+    /// Throws on failure.
     /// </summary>
     public static string RegexReplace(this string allContents, string searchRegex, string replaceTo, RegexOptions options = RegexOptions.None) {
         return Regex.Replace(allContents, searchRegex, replaceTo, options);
     }
 
     /// <summary>
-    /// 对每个正则匹配分别进行替换。
-    /// 失败时会抛出异常。
+    /// Replaces each regex match separately.
+    /// Throws on failure.
     /// </summary>
     public static string RegexReplace(this string allContents, string searchRegex, MatchEvaluator replaceTo, RegexOptions options = RegexOptions.None) {
         return Regex.Replace(allContents, searchRegex, replaceTo, options);
@@ -331,8 +331,8 @@ public static class StringExtensions {
     #endregion
 
     /// <summary>
-    /// 读取 <see cref="Stream"/> 中的内容，并解码为字符串。
-    /// 会将流的位置主动重置到开头。
+    /// Reads the content of a <see cref="Stream"/> and decodes it into a string.
+    /// Resets the stream position to the beginning first.
     /// </summary>
     public static string ReadString(this Stream stream, Encoding? encoding = null) {
         using var memoryStream = new MemoryStream();
@@ -342,29 +342,29 @@ public static class StringExtensions {
     }
 
     /// <summary>
-    /// 将 <paramref name="bytes"/> 解码为字符串。
+    /// Decodes <paramref name="bytes"/> into a string.
     /// </summary>
     public static string GetString(this byte[] bytes, Encoding? encoding = null) {
         if (encoding is not null) return encoding.GetString(bytes);
         int length = bytes.Length;
-        // 根据 BOM 判断编码
+        // Detect encoding by BOM
         if (length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) {
-            return Encoding.UTF8.GetString(bytes, 3, length - 3); // 带 BOM 的 UTF8
+            return Encoding.UTF8.GetString(bytes, 3, length - 3); // UTF8 with BOM
         } else if (length >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF) {
             return Encoding.BigEndianUnicode.GetString(bytes, 2, length - 2);
         } else if (length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE) {
             return Encoding.Unicode.GetString(bytes, 2, length - 2);
         }
-        // 无 BOM 文件：GB18030（ANSI）或 UTF8
+        // Files without BOM: GB18030 (ANSI) or UTF8
         try {
-            return new UTF8Encoding(false, true).GetString(bytes); // 不带 BOM 的 UTF8
+            return new UTF8Encoding(false, true).GetString(bytes); // UTF8 without BOM
         } catch (DecoderFallbackException) {
             return Encoding.GetEncoding("GB18030").GetString(bytes);
         }
     }
 
     /// <summary>
-    /// 将第一个字符转换为大写，其余字符转换为小写。
+    /// Converts the first character to upper case and the rest to lower case.
     /// </summary>
     public static string Capitalize(this string word) {
         if (string.IsNullOrEmpty(word)) return word;
@@ -372,8 +372,8 @@ public static class StringExtensions {
     }
 
     /// <summary>
-    /// 将字符串统一至某个长度。
-    /// 过短则用 <paramref name="code"/> 将其左侧填充，过长则截取靠左的指定长度。
+    /// Normalizes the string to the given length.
+    /// Pads it on the left with <paramref name="code"/> if too short, or keeps the leftmost characters if too long.
     /// </summary>
     public static string EnsureLength(this string? str, char code, int length) {
         str ??= "";
@@ -381,13 +381,13 @@ public static class StringExtensions {
     }
 
     /// <summary>
-    /// 该字符串中的字符是否均为 ASCII 字符。
+    /// Whether all characters in the string are ASCII.
     /// </summary>
     public static bool IsAsciiOnly(this string input) 
         => input.All(c => c < 128);
 
     /// <summary>
-    /// 计算字符串的哈希，其结果在不同环境中均能保持一致。
+    /// Computes a hash of the string that stays consistent across environments.
     /// </summary>
     public static ulong GetStableHashCode(this string str) {
         ulong result = 5381;
@@ -396,7 +396,7 @@ public static class StringExtensions {
     }
 
     /// <summary>
-    /// 将字符串转化为 JSON 对象，若失败则抛出异常。
+    /// Parses the string into a JSON object, throwing on failure.
     /// </summary>
     public static JToken? DeserializeJson(this string data) {
         try {
@@ -410,7 +410,7 @@ public static class StringExtensions {
         }
     }
     /// <summary>
-    /// 将字符串转化为 JSON 对象，若失败则抛出异常。
+    /// Parses the string into a JSON object, throwing on failure.
     /// </summary>
     public static T? DeserializeJson<T>(this string data) where T : JToken 
         => (T?) DeserializeJson(data);

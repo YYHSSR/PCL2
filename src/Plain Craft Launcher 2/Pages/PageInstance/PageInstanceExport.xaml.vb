@@ -3,8 +3,8 @@ Public Class ExportOption
     Public Property Description As String
     Public Property Rules As String
     ''' <summary>
-    ''' 如果 Rules 为空，则根据 ShowRules 的内容判断是否应该显示这个复选框。
-    ''' 如果 ShowRules 也为空，则始终显示。
+    ''' If Rules is empty, ShowRules decides whether to show this checkbox.
+    ''' If ShowRules is also empty, always show it.
     ''' </summary>
     Public Property ShowRules As String
     Public Property DefaultChecked As Boolean
@@ -22,7 +22,7 @@ Public Class PageInstanceExport
     End Sub
     Private Sub PageInstanceExport_Loaded() Handles Me.Loaded
         AniControlEnabled += 1
-        If Not PathUtils.IsSame(CurrentInstance, PageInstanceLeft.Instance.PathVersion) Then RefreshAll() '切换到了另一个版本，重置页面
+        If Not PathUtils.IsSame(CurrentInstance, PageInstanceLeft.Instance.PathVersion) Then RefreshAll() 'Switched to another instance; reset the page
         AniControlEnabled -= 1
     End Sub
     Public Sub RefreshAll() Implements IRefreshable.Refresh
@@ -43,11 +43,11 @@ Public Class PageInstanceExport
         PanBack.ScrollToHome()
     End Sub
 
-#Region "子选项"
+#Region "Sub-options"
     Private SubOptionBlackList As String() = {"Quark Programmer Art.zip", "+ EuphoriaPatches_", "PCL2 Skin.zip"}
 
     ''' <summary>
-    ''' 动态生成子文件夹下的选项，例如资源包、存档等。
+    ''' Build options for subfolders such as resource packs and saves.
     ''' </summary>
     Private Sub ReloadAllSubOptions()
         ReloadSubOptions(PanOptionsResourcePacks, True, True, "resourcepacks", "texturepacks")
@@ -60,7 +60,7 @@ Public Class PageInstanceExport
         For Each Folder In Folders
             Dim TargetFolder = DirectoryUtils.GetInfo(PageInstanceLeft.Instance.PathIndie & Folder)
             If Not TargetFolder.Exists() Then Continue For
-            '查找文件夹下的对应项
+            'Find matching items in the folder
             If AcceptCompressedFile Then
                 For Each File In TargetFolder.EnumerateFiles("*.zip").Concat(TargetFolder.EnumerateFiles("*.rar"))
                     If SubOptionBlackList.Any(Function(b) File.Name.Contains(b)) Then Continue For
@@ -84,20 +84,20 @@ Public Class PageInstanceExport
 
 #End Region
 
-#Region "选项"
+#Region "Options"
 
     ''' <summary>
-    ''' 重新确认是否应该显示每个选项，并将 ExportOption 同步到 UI。
+    ''' Recheck which options should be shown and sync ExportOption to the UI.
     ''' </summary>
     Private Sub RefreshAllOptionsUI()
-        '预先归纳所有至多二级的文件/文件夹
+        'Collect every file and folder up to two levels deep
         Dim AllEntries As New List(Of String)
-        Dim IsValidDirectory = '检查文件夹不为空
+        Dim IsValidDirectory = 'Folder is not empty
         Function(Folder As DirectoryInfo) As Boolean
             Try
                 Return Folder.Exists AndAlso
                     Folder.EnumerateFileSystemInfos().Any(Function(i) Not SubOptionBlackList.Any(Function(b) i.Name.Contains(b)))
-            Catch '一般是由于无法访问，或是一个指向已不存在的文件夹的链接（例如使用 mklink 创造的 resource 文件夹链接）
+            Catch 'Usually inaccessible, or a link to a folder that no longer exists (for example a resource folder link made with mklink)
                 Return False
             End Try
         End Function
@@ -109,41 +109,41 @@ Public Class PageInstanceExport
             AllEntries.AddRange(SubFolder.EnumerateDirectories().Where(IsValidDirectory).Select(Function(d) $"{SubFolder.Name}\{d.Name}\"))
         Next
         Logger.Info($"共发现 {AllEntries.Count} 个可行的二级文件/文件夹")
-        '确认选项是否应该被显示
+        'Decide whether the option should be shown
         Dim IsVisible =
         Function(TargetOption As ExportOption) As Boolean
-            '检查需要 OptiFine（例如光影）或 Mod 加载器（例如 mods/）
+            'Require OptiFine (for example shaders) or a mod loader (for example mods/)
             If TargetOption.RequireOptiFine AndAlso Not PageInstanceLeft.Instance.Version.HasOptiFine Then Return False
             If TargetOption.RequireModLoader AndAlso Not PageInstanceLeft.Instance.Modable Then Return False
             If TargetOption.RequireModLoaderOrOptiFine AndAlso Not PageInstanceLeft.Instance.Version.HasOptiFine AndAlso Not PageInstanceLeft.Instance.Modable Then Return False
-            '粗略检查是否可能有符合规则的文件/文件夹
+            'Roughly check whether any file or folder might match
             Return StandardizeLines(If(TargetOption.Rules, TargetOption.ShowRules).Split("|"c), True).Any(
             Function(Rule As String)
-                If Rule.StartsWithF("!") Then Return False '只看正向规则
-                '检查前两级
+                If Rule.StartsWithF("!") Then Return False 'Only positive rules
+                'Check the first two levels
                 Try
                     If AllEntries.Any(Function(Entry) Entry.Lower Like Rule.Lower) Then Return True
                 Catch ex As Exception
                     Logger.Error(ex, $"错误的规则：{Rule}", LogBehavior.Toast)
                     Return False
                 End Try
-                '粗略检查所有级
+                'Roughly check every level
                 Rule = Rule.Trim("*?".ToCharArray)
                 If Rule.Split("\"c, True).Count >= 3 Then
                     If Rule.EndsWithF("\") Then
-                        Return IsValidDirectory(DirectoryUtils.GetInfo(PageInstanceLeft.Instance.PathIndie & Rule)) '文件夹有效
+                        Return IsValidDirectory(DirectoryUtils.GetInfo(PageInstanceLeft.Instance.PathIndie & Rule)) 'Folder is valid
                     Else
-                        Return FileUtils.Exists(PageInstanceLeft.Instance.PathIndie & Rule) '文件有效
+                        Return FileUtils.Exists(PageInstanceLeft.Instance.PathIndie & Rule) 'File is valid
                     End If
                 Else
                     Return False
                 End If
             End Function)
         End Function
-        '逐个检查选项
+        'Check each option
         For Each CheckBox In GetAllOptions(True)
             Dim TargetOption = GetExportOption(CheckBox)
-            '可见性、默认勾选
+            'Visibility and default check
             If String.IsNullOrEmpty(TargetOption.Rules) AndAlso String.IsNullOrEmpty(TargetOption.ShowRules) Then
                 CheckBox.Visibility = Visibility.Visible
                 CheckBox.Checked = TargetOption.DefaultChecked
@@ -152,7 +152,7 @@ Public Class PageInstanceExport
                 CheckBox.Visibility = If(Pass, Visibility.Visible, Visibility.Collapsed)
                 CheckBox.Checked = TargetOption.DefaultChecked AndAlso Pass
             End If
-            '名称与简介
+            'Name and description
             CheckBox.Inlines.Clear()
             If CheckBox.Visibility <> Visibility.Visible Then Continue For
             CheckBox.Inlines.Add(New Run(TargetOption.Title))
@@ -163,7 +163,7 @@ Public Class PageInstanceExport
     End Sub
 
     ''' <summary>
-    ''' 对文本行进行标准化处理，以便使用 Like 进行匹配。
+    ''' Normalize text lines so they can be matched with Like.
     ''' </summary>
     Private Iterator Function StandardizeLines(Raw As IEnumerable(Of String), AddSuffixStarToFolderPath As Boolean) As IEnumerable(Of String)
         For Each IgnoreLine In Raw
@@ -175,7 +175,7 @@ Public Class PageInstanceExport
     End Function
 
     ''' <summary>
-    ''' 获取所有可作为选项的 CheckBox。
+    ''' Get every CheckBox that can be an option.
     ''' </summary>
     Private Iterator Function GetAllOptions(IncludeHidden As Boolean) As IEnumerable(Of MyCheckBox)
         For Each Element In PanOptions.Children
@@ -192,7 +192,7 @@ Public Class PageInstanceExport
     End Function
 
     ''' <summary>
-    ''' 获取该 CheckBox 对应的 ExportOption。
+    ''' Get the ExportOption for this CheckBox.
     ''' </summary>
     Private Function GetExportOption(CheckBox As MyCheckBox) As ExportOption
         Return CType(CheckBox.Tag, ExportOption)
@@ -200,14 +200,14 @@ Public Class PageInstanceExport
 
 #End Region
 
-#Region "配置文件"
+#Region "Config file"
     Private Const Sperator As String = "=============================================================="
 
-    ' ================ 导出内容段 ================
+    ' ================ Exported content section ================
 
     ''' <summary>
-    ''' 从配置文件中读取的规则。
-    ''' 如果不为 Nothing，则会覆写当前勾选的规则并禁用对应 UI。
+    ''' Rules read from the config file.
+    ''' When not Nothing, they override the checked rules and disable that UI.
     ''' </summary>
     Private Property RulesOverrides As List(Of String)
         Get
@@ -231,16 +231,16 @@ Public Class PageInstanceExport
     End Property
     Private _RulesOverrides As List(Of String) = Nothing
     ''' <summary>
-    ''' 获取当前实际生效的所有规则。
+    ''' Get every rule that currently applies.
     ''' </summary>
     Private Iterator Function GetAllRules() As IEnumerable(Of String)
         If RulesOverrides IsNot Nothing Then
-            '返回覆盖的列表
+            'Yield the override list
             For Each Rule In RulesOverrides
                 Yield Rule
             Next
         Else
-            '从当前勾选的所有选项中获取所有规则行
+            'Take every rule line from the currently checked options
             Yield ""
             Yield "# 修改下方的规则以控制需要导出的内容。"
             Yield "# 以 ! 开头以反选。可以使用 *、?、[] 通配符。靠后的行覆盖靠前的。"
@@ -250,8 +250,8 @@ Public Class PageInstanceExport
                 Dim TargetOption = GetExportOption(CheckBox)
                 Dim Rules = If(TargetOption.Rules?.Split("|"c).ToList(), New List(Of String))
 
-                '动态 Rules
-                If CheckBox Is CheckOptionsShaderPackSettings Then '光影包设置：只导出勾选的光影包的设置
+                'Dynamic rules
+                If CheckBox Is CheckOptionsShaderPackSettings Then 'Shader pack settings: export settings only for checked shader packs
                     For Each ShaderPackCheckBox In PanOptionsShaderPacks.Children.OfType(Of MyCheckBox)()
                         If Not ShaderPackCheckBox.Checked Then Continue For
                         Dim ShaderPackOption = GetExportOption(ShaderPackCheckBox)
@@ -278,20 +278,20 @@ Public Class PageInstanceExport
         End If
     End Function
 
-    ' ================ 追加内容段 ================
+    ' ================ Extra files section ================
 
     Private ExtraFiles As List(Of String) = Nothing
     ''' <summary>
-    ''' 获取当前实际生效的追加内容。
+    ''' Get the extra files that currently apply.
     ''' </summary>
     Private Iterator Function GetExtraFileLines() As IEnumerable(Of String)
         If ExtraFiles IsNot Nothing Then
-            '返回覆盖的列表
+            'Yield the override list
             For Each File In ExtraFiles
                 Yield File
             Next
         Else
-            '从当前勾选的所有选项中获取所有规则行
+            'Take every rule line from the currently checked options
             Yield ""
             Yield "# 如果想将额外的文件自动放到压缩包根目录中，可以将它们的路径写在下方。"
             Yield "# 必须是完整路径。每行中，若以 \ 结尾则代表是文件夹，不以 \ 结尾则代表是文件。"
@@ -299,10 +299,10 @@ Public Class PageInstanceExport
         End If
     End Function
 
-    ' ================ 重置 ================
+    ' ================ Reset ================
 
     ''' <summary>
-    ''' 重置配置文件所带来的影响。
+    ''' Clear the effects of the config file.
     ''' </summary>
     Private Sub ResetConfigOverrides()
         RulesOverrides = Nothing
@@ -315,16 +315,16 @@ Public Class PageInstanceExport
         ResetConfigOverrides()
     End Sub
 
-    ' ================ 保存 / 读取 ================
+    ' ================ Save / load ================
 
-    '保存配置文件
+    'Save the config file
     Private Sub ExportConfig() Handles BtnAdvancedExport.Click
         Try
             Dim ConfigPath As String = Dialogs.SaveFile("选择文件位置", "export_config.txt", Settings.Get(Of String)("CacheExportConfig"), {("txt", "整合包导出配置")})
             If ConfigPath Is Nothing Then Return
             Settings.Set("CacheExportConfig", ConfigPath)
             Dim ConfigLines As New List(Of String)
-            'ini 段
+            'ini section
             ConfigLines.Add("Name:" & TextExportName.Text)
             ConfigLines.Add("Version:" & TextExportVersion.Text)
             ConfigLines.Add("")
@@ -350,13 +350,12 @@ Public Class PageInstanceExport
             ConfigLines.Add("# 若 IncludeLauncher 为 True，应以 .zip 结尾；若为 False，应以 .mrpack 结尾。")
             ConfigLines.Add("PackPath:" & If(ConfigPackPath, ""))
             ConfigLines.Add("")
-            '导出内容段
+            'Exported content section
             ConfigLines.Add(Sperator)
             ConfigLines.AddRange(GetAllRules())
-            '追加内容段
+            'Extra files section
             ConfigLines.Add(Sperator)
             ConfigLines.AddRange(GetExtraFileLines())
-            '结束
             FileUtils.Write(ConfigPath, ConfigLines.Join(vbCrLf))
             Hint("已保存配置文件：" & ConfigPath, HintType.Green)
             OpenExplorer(ConfigPath)
@@ -364,14 +363,14 @@ Public Class PageInstanceExport
             Logger.Error(ex, "保存配置失败", LogBehavior.Alert)
         End Try
     End Sub
-    '读取配置文件
+    'Load the config file
     Private Sub ImportConfig() Handles BtnAdvancedImport.Click
         Try
             Dim ConfigPath As String = Dialogs.SelectFile("选择配置文件", False, Settings.Get(Of String)("CacheExportConfig"), {({"txt"}, "整合包导出配置")}).FirstOrDefault()
             If String.IsNullOrEmpty(ConfigPath) Then Return
             Settings.Set("CacheExportConfig", ConfigPath)
             Dim Segments As String() = FileUtils.ReadAsString(ConfigPath).Split(Sperator)
-            'ini 段
+            'ini section
             Dim Ini As New Dictionary(Of String, String)
             For Each Line In Segments(0).SplitLines(True)
                 Line = Line.Trim
@@ -384,17 +383,16 @@ Public Class PageInstanceExport
             CheckOptionsJava.Checked = Ini.GetOrDefault("IncludeJava", True)
             CheckOptionsPcl.Checked = Ini.GetOrDefault("IncludeLauncher", True)
             CheckAdvancedInclude.Checked = Ini.GetOrDefault("DontCheckHostedAssets", False)
-            If Not CheckAdvancedInclude.Checked Then CheckAdvancedModrinth.Checked = Ini.GetOrDefault("ModrinthUploadMode", False) '#7979，加个特判
+            If Not CheckAdvancedInclude.Checked Then CheckAdvancedModrinth.Checked = Ini.GetOrDefault("ModrinthUploadMode", False) '#7979, special case
             ConfigPackPath = Ini.GetOrDefault("PackPath", Nothing)
-            '导出内容段
+            'Exported content section
             RulesOverrides = Segments(1).SplitLines(True).ToList
-            '追加内容段
+            'Extra files section
             If Segments.Length > 2 Then
                 ExtraFiles = Segments(2).SplitLines(True).ToList
             Else
                 ExtraFiles = Nothing
             End If
-            '结束
             Hint("已读取配置文件：" & ConfigPath, HintType.Green)
         Catch ex As Exception
             Logger.Error(ex, "读取配置失败", LogBehavior.Alert)
@@ -403,21 +401,21 @@ Public Class PageInstanceExport
 
 #End Region
 
-#Region "导出"
+#Region "Export"
 
     ''' <summary>
-    ''' 配置文件中指定的导出位置。
+    ''' Export path specified in the config file.
     ''' </summary>
     Private ConfigPackPath As String = Nothing
 
     ''' <summary>
-    ''' 开始导出。
+    ''' Start the export.
     ''' </summary>
     Private Sub StartExport() Handles BtnExport.Click
         Dim PackName As String = If(String.IsNullOrEmpty(TextExportName.Text), TextExportName.HintText, TextExportName.Text)
         Dim PackVersion As String = If(String.IsNullOrEmpty(TextExportVersion.Text), "1.0.0", TextExportVersion.Text)
 
-        '重复任务检查
+        'Duplicate task check
         Dim LoaderName As String = $"导出整合包：" & PackName
         For Each OngoingLoader In LoaderTaskbar
             If OngoingLoader.Name <> LoaderName Then Continue For
@@ -425,7 +423,7 @@ Public Class PageInstanceExport
             Return
         Next
 
-        '确认导出位置
+        'Confirm the export path
         Dim PackPath As String = Nothing
         If Not String.IsNullOrWhiteSpace(ConfigPackPath) AndAlso
            (Not ConfigPackPath.EndsWithF("\") AndAlso Not ConfigPackPath.EndsWithF("/")) Then
@@ -449,7 +447,7 @@ Public Class PageInstanceExport
         End If
         If PackPath Is Nothing Then Return
 
-        '缓存所需参数
+        'Cache the parameters needed
         Dim CacheFolder = RequestTaskTempFolder()
         Dim OverridesFolder = CacheFolder & "modpack\overrides\"
         Dim TargetInstance = PageInstanceLeft.Instance
@@ -464,36 +462,36 @@ Public Class PageInstanceExport
         Dim AllExtraFiles = StandardizeLines(GetExtraFileLines(), False).ToList()
         Logger.Info($"准备导出整合包，共有 {AllRules.Count} 条规则，{AllExtraFiles.Count} 条追加内容行")
 
-        '构造步骤加载器
+        'Build the step loaders
         Dim Loaders As New List(Of LoaderBase)
 
-#Region "准备 PCL 文件"
+#Region "Prepare PCL files"
 
         If IncludePCL AndAlso Not FileUtils.Exists(PathExe) Then Throw New FileNotFoundException("未找到当前启动器，无法导出。", PathExe)
 
 #End Region
 
-#Region "复制文件"
+#Region "Copy files"
 
         Loaders.Add(New LoaderTask(Of Integer, List(Of LocalResourceFile))("复制导出内容",
         Sub(Loader As LoaderTask(Of Integer, List(Of LocalResourceFile)))
             Loader.Output = New List(Of LocalResourceFile)
-            '复制版本文件
+            'Copy instance files
             Dim Progress As Integer = 0
             Dim SearchFolder As Action(Of DirectoryInfo)
             SearchFolder =
             Sub(Folder As DirectoryInfo)
-                '文件夹：进一步搜索
+                'Folder: search further
                 For Each SubFolder In Folder.EnumerateDirectories("*", SearchOption.TopDirectoryOnly)
-                    '跳过部分又没用文件又多的文件夹，加快搜索
+                    'Skip bulky folders that are useless here to speed up the search
                     If {"assets", "versions", "libraries"}.Contains(SubFolder.Name) AndAlso PathUtils.IsSame(PathIndie, Folder.FullName) Then Continue For
                     If {"structureCacheV1", ".fabric", ".git", "avatar-cache", "cosmetic-cache"}.Contains(SubFolder.Name) Then Continue For
                     SearchFolder(SubFolder)
                 Next
-                '文件：检查规则并复制
+                'File: check the rules and copy
                 For Each Entry In Folder.EnumerateFiles("*", SearchOption.TopDirectoryOnly)
                     Dim RelativePath As String = Entry.FullName.AfterFirst(PathIndie)
-                    '检查规则
+                    'Check the rules
                     Dim ShouldKeep As Boolean = False
                     For Each Rule In AllRules
                         Dim Revert = Rule.StartsWithF("!")
@@ -502,16 +500,16 @@ Public Class PageInstanceExport
                     If Not ShouldKeep Then Continue For
                     Dim TargetPath As String = OverridesFolder & RelativePath
                     FileUtils.Copy(Entry.FullName, TargetPath)
-                    '若为压缩包，考虑联网获取路径
+                    'For an archive, consider looking up a download URL online
                     If CheckHostedAssets AndAlso
                        {".zip", ".rar", ".jar", ".disabled", ".old"}.Contains(Entry.Extension.Lower) AndAlso
                        {"mods", "packs", "openloader", "resource"}.Any(Function(s) RelativePath.Contains(s)) Then
                         Dim ModFile As New LocalResourceFile(TargetPath)
-                        Dim Unused = ModFile.ModrinthHash '提前计算 Hash
+                        Dim Unused = ModFile.ModrinthHash 'Compute the hash ahead of time
                         Unused = ModFile.CurseForgeHash
                         Loader.Output.Add(ModFile)
                     End If
-                    '更新进度（进度并不准确，主要突出一个我还没似）
+                    'Update progress (inaccurate; mainly to show it has not frozen)
                     Progress += 1
                     If Progress = 25 Then
                         Loader.Progress += (0.84 - Loader.Progress) * 0.012
@@ -522,7 +520,7 @@ Public Class PageInstanceExport
             SearchFolder(DirectoryUtils.GetInfo(PathIndie))
             Logger.Info($"复制 overrides 文件完成，有 {Loader.Output.Count} 个文件需要联网检查")
             Loader.Progress = 0.85
-            '复制 Java
+            'Copy Java
             If IncludeJava Then
                 Dim JavaToExport = SelectOrDownloadJava(TargetInstance, False, Loader.CreateCancellationToken, Loader.CreateSyncProgressProvider(0.85, 0.93))
                 If JavaToExport Is Nothing Then Throw New FileNotFoundException("版本文件夹中没有找到可导出的 Java。")
@@ -532,7 +530,7 @@ Public Class PageInstanceExport
                 Logger.Info($"已复制版本文件夹中的 Java：{JavaFolder} → {DestFolder}")
             End If
             Loader.Progress = 0.95
-            '复制追加内容到根目录
+            'Copy extra files to the root
             Dim BaseFolder As String = If(IncludePCL, CacheFolder, CacheFolder & "modpack\")
             For Each Line In AllExtraFiles
                 If Line.EndsWithF("\") OrElse Line.EndsWithF("/") Then
@@ -550,16 +548,16 @@ Public Class PageInstanceExport
                 End If
             Next
             Loader.Progress = 0.97
-            '复制 PCL 版本设置
+            'Copy PCL instance settings
             If DirectoryUtils.Exists(TargetInstance.PathVersion & "PCL\") Then DirectoryUtils.Copy(TargetInstance.PathVersion & "PCL\", OverridesFolder & "PCL\")
             WriteIni(OverridesFolder & "PCL\Setup.ini", "IsStar", False)
-            '复制 PCL 本体（正式版）
+            'Copy the PCL executable (release build)
             If IncludePCL Then FileUtils.Copy(PathExe, CacheFolder & "Plain Craft Launcher.exe")
         End Sub) With {.ProgressWeight = 5})
 
 #End Region
 
-#Region "联网检查"
+#Region "Online check"
 
         Loaders.Add(New LoaderTask(Of List(Of LocalResourceFile), Dictionary(Of LocalResourceFile, List(Of String)))("联网获取文件信息",
         Sub(Loader As LoaderTask(Of List(Of LocalResourceFile), Dictionary(Of LocalResourceFile, List(Of String))))
@@ -567,10 +565,10 @@ Public Class PageInstanceExport
             If Not CheckHostedAssets Then Logger.Info($"要求跳过联网获取步骤") : Return
             If Not Loader.Input.Any Then Logger.Info($"没有需要联网检查的文件，跳过联网获取步骤") : Return
 
-            '分平台获取下载地址
+            'Get download URLs per platform
             Dim EndedThreadCount As Integer = 0, FailedExceptions As New List(Of Exception)
 
-            '从 Modrinth 获取信息
+            'Get info from Modrinth
             RunInNewThread(
             Sub()
                 Try
@@ -578,10 +576,10 @@ Public Class PageInstanceExport
                     Dim ModrinthRaw As JObject = DlModRequest("https://api.modrinth.com/v2/version_files", HttpMethod.Post,
                         $"{{""hashes"": [""{ModrinthHashes.Join(""",""")}""], ""algorithm"": ""sha1""}}", "application/json")
                     For Each ModFile In Loader.Input
-                        '查找对应的文件
+                        'Find the matching file
                         If Not ModrinthRaw.ContainsKey(ModFile.ModrinthHash) Then Continue For
                         If ModrinthRaw(ModFile.ModrinthHash)?("files")?(0)("hashes")?("sha1") <> ModFile.ModrinthHash Then Continue For
-                        '写入下载地址
+                        'Write the download URL
                         Loader.Output.AddIntoValueCollection(ModFile, ModrinthRaw(ModFile.ModrinthHash)("files")(0)("url"))
                     Next
                     Logger.Info($"从 Modrinth 获取到 {ModrinthRaw.Count} 个本地资源项的对应信息")
@@ -594,11 +592,11 @@ Public Class PageInstanceExport
                 End Try
             End Sub, "Modrinth - " & LoaderName)
 
-            '从 CurseForge 获取信息
+            'Get info from CurseForge
             RunInNewThread(
             Sub()
                 Try
-                    If ModrinthUploadMode Then Return 'Modrinth 上传模式下，不从 CurseForge 获取信息
+                    If ModrinthUploadMode Then Return 'In Modrinth upload mode, do not get info from CurseForge
                     Dim CurseForgeHashes = Loader.Input.Select(Function(m) m.CurseForgeHash)
                     Dim CurseForgeRaw As JContainer = DlModRequest("https://api.curseforge.com/v1/fingerprints/432", HttpMethod.Post,
                         $"{{""fingerprints"": [{CurseForgeHashes.Join(",")}]}}", "application/json")("data")("exactMatches")
@@ -606,10 +604,10 @@ Public Class PageInstanceExport
                         If Not ResultJson.ContainsKey("file") Then Continue For
                         Dim File As JObject = ResultJson("file")
                         If String.IsNullOrEmpty(File("downloadUrl")) Then Continue For
-                        '查找对应的文件
+                        'Find the matching file
                         Dim ModFile As LocalResourceFile = Loader.Input.FirstOrDefault(Function(m) m.CurseForgeHash = File("fileFingerprint").ToObject(Of UInteger))
                         If ModFile Is Nothing Then Continue For
-                        '写入下载地址
+                        'Write the download URL
                         For Each Address In ResourceVersion.ParseCurseForgeDownloadUrls(File("downloadUrl").ToString)
                             Loader.Output.AddIntoValueCollection(ModFile, Address)
                         Next
@@ -624,13 +622,13 @@ Public Class PageInstanceExport
                 End Try
             End Sub, "CurseForge - " & LoaderName)
 
-            '等待线程结束
+            'Wait for the threads to finish
             Do Until EndedThreadCount = 2
                 If Loader.IsCanceled Then Return
                 Thread.Sleep(10)
             Loop
 
-            '若失败，确认是否继续
+            'If it failed, ask whether to continue
             If FailedExceptions.Count = 1 Then
                 If MyMsgBox("联网获取部分文件信息失败，是否继续导出？" & vbCrLf & vbCrLf &
                             "若继续，无法获取信息的文件将被直接打包。" & vbCrLf &
@@ -646,24 +644,24 @@ Public Class PageInstanceExport
 
 #End Region
 
-#Region "生成压缩包"
+#Region "Create the archive"
 
         Loaders.Add(New LoaderTask(Of Dictionary(Of LocalResourceFile, List(Of String)), Integer)("生成压缩包",
         Sub(Loader As LoaderTask(Of Dictionary(Of LocalResourceFile, List(Of String)), Integer))
-            '整理文件列表
+            'Build the file list
             Dim Files As New JArray
             For Each Pair In Loader.Input
                 Dim ModFile As LocalResourceFile = Pair.Key
                 Files.Add(New JObject From {
                     {"path", PathUtils.RemoveExtendedPrefix(ModFile.File.FullName).AfterFirst(OverridesFolder).Replace("\", "/")},
                     {"hashes", New JObject From {{"sha1", ModFile.ModrinthHash}, {"sha512", CryptographyUtils.ComputeFileHash(ModFile.File.FullName, CryptographyUtils.HashMethod.Sha512)}}},
-                    {"downloads", New JArray(Pair.Value.OrderBy(Function(u) u.Contains("modrinth.com")))}, '不优先选择 Modrinth
+                    {"downloads", New JArray(Pair.Value.OrderBy(Function(u) u.Contains("modrinth.com")))}, 'Do not prefer Modrinth
                     {"fileSize", ModFile.File.Length}
                 })
                 ModFile.File.Delete()
             Next
             Loader.Progress = 0.2
-            '导出最终 JSON 文件
+            'Write the final JSON file
             Dim Dependencies As New JObject From {{"minecraft", TargetInstance.Version.VanillaName}}
             If TargetInstance.Version.ModLoaders.HasFlagF(ModLoaders.Forge) Then Dependencies.Add("forge", TargetInstance.Version.ModLoaderVersions(ModLoaders.Forge))
             If TargetInstance.Version.ModLoaders.HasFlagF(ModLoaders.Fabric) Then Dependencies.Add("fabric-loader", TargetInstance.Version.ModLoaderVersions(ModLoaders.Fabric))
@@ -678,18 +676,18 @@ Public Class PageInstanceExport
                 {"dependencies", Dependencies}
             }
             FileUtils.Write(CacheFolder & "modpack\modrinth.index.json", ResultJson.ToString(Newtonsoft.Json.Formatting.Indented))
-            '打包
+            'Pack
             If IncludePCL Then
-                '首次压缩整合包
+                'First zip of the modpack
                 FileUtils.CreateZipFromDirectory(CacheFolder & "modpack.mrpack", CacheFolder & "modpack\")
                 Loader.Progress = 0.5
                 DirectoryUtils.Delete(CacheFolder & "modpack\")
                 Loader.Progress = 0.6
-                '二次压缩整合包
+                'Second zip of the modpack
                 FileUtils.CreateZipFromDirectory(PackPath, CacheFolder)
                 Loader.Progress = 0.9
             Else
-                '直接压缩整合包
+                'Zip the modpack directly
                 FileUtils.CreateZipFromDirectory(PackPath, CacheFolder & "modpack\")
                 Loader.Progress = 0.8
             End If
@@ -698,7 +696,6 @@ Public Class PageInstanceExport
 
 #End Region
 
-        '启动
         Dim MainLoader As New LoaderCombo(Of String)(LoaderName, Loaders) With {.OnStateChanged = AddressOf LoaderStateChangedHintOnly}
         MainLoader.Start()
         LoaderTaskbarAdd(MainLoader)
@@ -712,7 +709,7 @@ Public Class PageInstanceExport
     Private Sub RefreshJavaInfo() Handles Me.Loaded
         Dim JavaType As Integer = Settings.Get(Of Integer)("VersionArgumentJavaV2", PageInstanceLeft.Instance)
         Dim JavaWorker = PageInstanceLeft.CurrentJavaWorker
-        '导出选项
+        'Export option
         Dim JavaToExport = If(JavaType = 2 AndAlso JavaWorker.LastSucceeded AndAlso Not JavaWorker.Running, JavaWorker.LastResult, Nothing)
         If JavaToExport Is Nothing Then
             CheckOptionsJava.Visibility = Visibility.Collapsed
@@ -725,7 +722,7 @@ Public Class PageInstanceExport
                 $"Java {JavaToExport.Version.Major} ({JavaToExport.Version})：{ _
                 PathUtils.AddSlashSuffix(PathUtils.RemoveLastPart(JavaToExport.Folder.Replace(PathUtils.RemoveLastPart(PathUtils.RemoveLastPart(PageInstanceLeft.Instance.PathVersion)), ""))).TrimStart("\")}") With {.Foreground = ColorGray5})
         End If
-        '警告条
+        'Warning bar
         If JavaType = 3 Then
             BtnExport.IsEnabled = True
             HintJava.Visibility = Visibility.Visible
@@ -742,7 +739,7 @@ Public Class PageInstanceExport
         End If
     End Sub
 
-    '自动填写整合包名称
+    'Autofill the modpack name
     Private Sub TextExportName_GotFocus() Handles TextExportName.GotFocus
         If TextExportName.Text = "" Then
             TextExportName.Text = TextExportName.HintText
@@ -751,7 +748,7 @@ Public Class PageInstanceExport
     End Sub
 
     Private Sub CheckAdvancedInclude_Change(sender As Object, user As Boolean) Handles CheckAdvancedInclude.Change
-        '勾选打包资源文件时，禁止开启仅 Modrinth 资源模式
+        'When packing resource files, do not allow Modrinth-only mode
         If CheckAdvancedInclude.Checked Then CheckAdvancedModrinth.Checked = False
         CheckAdvancedModrinth.IsEnabled = Not CheckAdvancedInclude.Checked
     End Sub

@@ -3,36 +3,36 @@ using System.Diagnostics;
 namespace MeloongCore;
 
 /// <summary>
-/// 日志等级。
+/// Log level.
 /// </summary>
 public enum LogLevel { Trace, Info, Warn, Error }
 
 /// <summary>
-/// 输出日志时执行的错误汇报行为。
+/// Error reporting behavior when a log is written.
 /// </summary>
 public enum LogBehavior {
     /// <summary>
-    /// 无提示。
+    /// No notification.
     /// </summary>
     None,
     /// <summary>
-    /// 只在调试状态下给出错误提示信息。
+    /// Shows an error hint only in debug mode.
     /// </summary>
     ToastIfDebug,
     /// <summary>
-    /// 给出错误提示信息。
+    /// Shows an error hint.
     /// </summary>
     Toast,
     /// <summary>
-    /// 弹出错误弹窗，不要求反馈。
+    /// Shows an error dialog without requesting feedback.
     /// </summary>
     Alert,
     /// <summary>
-    /// 弹出错误弹窗，要求提交反馈。
+    /// Shows an error dialog and requests feedback.
     /// </summary>
     AlertThenFeedback,
     /// <summary>
-    /// 弹出系统原生样式的错误弹窗，要求提交反馈，然后使程序崩溃。
+    /// Shows a native system error dialog, requests feedback, and then crashes the program.
     /// </summary>
     AlertThenCrash
 }
@@ -40,7 +40,7 @@ public enum LogBehavior {
 public static class Logger {
     public static BaseLogger Instance { get; set; } = new();
 
-    // 转发给 BaseLogger 实例的对外方法
+    // Public methods forwarded to the BaseLogger instance
 
     public static void Trace(string message, LogBehavior behavior = LogBehavior.None, [CallerFilePath] string filePath = "")
         => Log(null, message, LogLevel.Trace, behavior, filePath);
@@ -65,27 +65,27 @@ public static class Logger {
         => Instance.Log(ex, message, level, behavior, filePath);
 
     /// <summary>
-    /// 在不调用 Logger 的情况下，将信息直接发送到输出窗口。
+    /// Sends the message directly to the output window without going through the Logger.
     /// </summary>
     [Conditional("DEBUG")]
     public static void SendToDebug(string message, LogLevel level = LogLevel.Error, [CallerFilePath] string filePath = "")
         => Debug.WriteLine($"{BaseLogger.GetLogPrefix(level, filePath)}{message}");
     /// <summary>
-    /// 在不调用 Logger 的情况下，将信息直接发送到输出窗口。
+    /// Sends the message directly to the output window without going through the Logger.
     /// </summary>
     [Conditional("DEBUG")]
     public static void SendToDebug(Exception ex, string? message = null, LogLevel level = LogLevel.Error, [CallerFilePath] string filePath = "")
         => Debug.WriteLine($"{BaseLogger.GetLogPrefix(level, filePath)}{(message is null ? "" : $"{message}：")}{ex.GetDisplay(true)}");
 
     /// <summary>
-    /// 记录当前堆栈信息。
+    /// Logs the current stack trace.
     /// </summary>
     public static void StackTrace(LogLevel level = LogLevel.Trace, [CallerFilePath] string filePath = "")
         => Instance.Log(null, new StackTrace(skipFrames: 1, fNeedFileInfo: true).ToString(), level, LogBehavior.None, filePath);
 
-    #region 内插优化
+    #region Interpolation optimization
 
-    // VB.NET：由于不兼容 InterpolatedStringHandler，只能手动使用 Lambda
+    // VB.NET: incompatible with InterpolatedStringHandler, so a lambda has to be used manually
 
     public static void Log(Func<string?> messageFactory, LogLevel level = LogLevel.Info, LogBehavior behavior = LogBehavior.None, [CallerFilePath] string filePath = "") {
         if (Instance.MinLevel > level) return;
@@ -100,7 +100,7 @@ public static class Logger {
     public static void Error(Func<string?> messageFactory, LogBehavior behavior = LogBehavior.AlertThenFeedback, [CallerFilePath] string filePath = "")
         => Log(messageFactory, LogLevel.Error, behavior, filePath);
 
-    // C#：仅当实际需要输出日志时，才格式化内插字符串，以优化性能
+    // C#: format the interpolated string only when the log is actually written, for performance
 
     public static void Log(LogLevel level, [InterpolatedStringHandlerArgument("level")] ref LogInterpolatedStringHandler handler, LogBehavior behavior = LogBehavior.None, [CallerFilePath] string filePath = "") {
         if (handler.isEnabled) Instance.Log(null, handler.ToStringAndClear(), level, behavior, filePath);
@@ -178,17 +178,17 @@ public static class Logger {
 }
 
 /// <summary>
-/// 最基础的日志实现。
-/// 仅将日志输出到 <see cref="Debug"/>，不实现 <see cref="LogBehavior"/>。
+/// The most basic logger implementation.
+/// Only writes logs to <see cref="Debug"/> and does not implement <see cref="LogBehavior"/>.
 /// </summary>
 public class BaseLogger {
 
     /// <summary>
-    /// 最低日志输出等级，低于此等级的日志将被忽略。
+    /// Minimum log level; logs below this level are ignored.
     /// </summary>
     public LogLevel MinLevel { get; set; } = LogLevel.Trace;
 
-    // 核心方法
+    // Core methods
     public virtual void Log(Exception? ex, string? message, LogLevel level, LogBehavior behavior, string filePath) {
         if (ex?.IsCanceled() == true) {
             Log(null, $"操作已取消（{message}）", LogLevel.Info, LogBehavior.None, filePath);
@@ -196,17 +196,17 @@ public class BaseLogger {
         }
         if (MinLevel > level) return;
         try {
-            // 格式化文本
+            // Format the text
             var formattedMessage = ex is null ?
                 (message ?? "") :
                 (message is null ? "" : $"{message}：") + ex.GetDisplay(true);
             formattedMessage = Format(formattedMessage, level, filePath, ex);
-            // 将格式化后的日志文本置入缓冲区
-            if (available || queue.Count < 100) { // 在初始化前保留至多 100 条日志
+            // Put the formatted log text into the buffer
+            if (available || queue.Count < 100) { // Keep at most 100 entries before initialization
                 queue.Enqueue(new(level, formattedMessage));
                 queuedEvent.Set();
             }
-            // 执行事件
+            // Raise events
             HandleBehavior(message, formattedMessage, behavior, ex);
         } catch (Exception logEx) {
             Logger.SendToDebug(logEx, "打印日志失败");
@@ -214,7 +214,7 @@ public class BaseLogger {
     }
 
     /// <summary>
-    /// 格式化日志文本。
+    /// Formats the log text.
     /// </summary>
     public virtual string Format(string text, LogLevel level, string filePath, Exception? ex) {
         string prefix = GetLogPrefix(level, filePath);
@@ -231,13 +231,13 @@ public class BaseLogger {
             PathUtils.GetLastPart(filePath).BeforeFirst(".")}] ";
 
     /// <summary>
-    /// 执行 <see cref="LogBehavior"/>。
+    /// Executes the <see cref="LogBehavior"/>.
     /// </summary>
     public virtual void HandleBehavior(string? rawMessage, string formattedMessage, LogBehavior behavior, Exception? ex) {
     }
 
     /// <summary>
-    /// 输出格式化后的日志文本。
+    /// Outputs the formatted log text.
     /// </summary>
     public virtual void Output(LogEntry entry) {
         Debug.WriteLine(entry.message);
@@ -245,7 +245,7 @@ public class BaseLogger {
 
     public virtual void Init() { }
 
-    #region 缓冲区与初始化
+    #region Buffer and initialization
 
     internal volatile bool available = false;
     public record struct LogEntry(LogLevel Level, string message);
@@ -271,14 +271,14 @@ public class BaseLogger {
     }
 
     /// <summary>
-    /// 立即输出缓冲区的日志。
-    /// 不会抛出异常。
+    /// Flushes the buffered logs immediately.
+    /// Never throws.
     /// </summary>
     public void Flush() {
         try {
             if (!available) return;
             lock (flushLock) {
-                while (queue.TryDequeue(out LogEntry entry)) Output(entry); // writer 指定了 AutoFlush
+                while (queue.TryDequeue(out LogEntry entry)) Output(entry); // writer has AutoFlush enabled
             }
         } catch (Exception logEx) {
             Logger.SendToDebug(logEx, "输出日志失败");
@@ -291,8 +291,8 @@ public class BaseLogger {
 }
 
 /// <summary>
-/// 将日志输出到 <see cref="Debug"/> 并写入指定的文件夹，最多保留 5 个文件。
-/// 不实现 <see cref="LogBehavior"/>。
+/// Writes logs to <see cref="Debug"/> and to the specified folder, keeping at most 5 files.
+/// Does not implement <see cref="LogBehavior"/>.
 /// </summary>
 public class FileLogger : BaseLogger, IDisposable {
 
@@ -302,11 +302,11 @@ public class FileLogger : BaseLogger, IDisposable {
     private StreamWriter? writer;
 
     /// <summary>
-    /// 初始化此 Logger。
-    /// 会在新线程中，将之前的日志文件依次后移，最多保留 5 个文件。
+    /// Initializes this Logger.
+    /// Shifts the previous log files one by one on a new thread, keeping at most 5 files.
     /// </summary>
     public override void Init() {
-        // 轮转日志文件，将 Log1.txt 留空
+        // Rotate log files, leaving Log1.txt empty
         Logger.Info("开始轮转日志文件");
         try {
             for (int i = 4; i >= 1; i--) {
@@ -321,7 +321,7 @@ public class FileLogger : BaseLogger, IDisposable {
         } catch (Exception ex) {
             Logger.Warn(ex, "整理日志文件失败");
         }
-        // 新建 writer
+        // Create the writer
         string logFilePath = PathUtils.ForApi(Path.Combine(logFolder, $"{fileNamePrefix}1{fileNameSuffix}"));
         DirectoryUtils.Create(logFolder);
         writer = new StreamWriter(logFilePath, append: true) { AutoFlush = true };
@@ -330,7 +330,7 @@ public class FileLogger : BaseLogger, IDisposable {
     /// <inheritdoc/>
     public override void Output(LogEntry entry) {
         base.Output(entry);
-        writer?.WriteLine(entry.message); // writer 指定了 AutoFlush
+        writer?.WriteLine(entry.message); // writer has AutoFlush enabled
     }
 
     public void Dispose() {

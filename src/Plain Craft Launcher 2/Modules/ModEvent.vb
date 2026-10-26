@@ -1,12 +1,12 @@
 
 
-#Region "附加属性"
+#Region "Attached Properties"
 
 Imports PCL.FormMain
 
 ''' <summary>
-''' 用于在 XAML 中初始化列表对象。
-''' 附加属性无法在 XAML 中为每个对象初始化独立的列表对象，因此需要一个包装类，然后在 XAML 中显式初始化。
+''' Used to initialize list objects in XAML.
+''' Attached properties cannot initialize a separate list object for each instance in XAML, so a wrapper class is needed and must be initialized explicitly in XAML.
 ''' </summary>
 <Markup.ContentProperty("Events")>
 Public Class CustomEventCollection
@@ -26,7 +26,7 @@ Public Class CustomEventCollection
 End Class
 
 ''' <summary>
-''' 提供自定义事件的附加属性。
+''' Attached property that provides custom events.
 ''' </summary>
 Public Class CustomEventService
 
@@ -72,16 +72,15 @@ End Class
 Partial Public Module ModMain
 
     ''' <summary>
-    ''' 触发该控件上的自定义事件。
-    ''' 事件会在新线程中执行。
+    ''' Raises the custom events on this control.
+    ''' The events are executed in a new thread.
     ''' </summary>
     <Runtime.CompilerServices.Extension>
     Public Sub RaiseCustomEvent(Control As DependencyObject)
-        '收集事件列表
+        'Collect the event list
         Dim Events = CustomEventService.GetEvents(Control).ToList
         Dim EventType = CustomEventService.GetEventType(Control)
         If EventType <> CustomEvent.EventType.None Then Events.Add(New CustomEvent(EventType, CustomEventService.GetEventData(Control)))
-        '执行事件
         If Not Events.Any Then Return
         RunInNewThread(
         Sub()
@@ -96,12 +95,12 @@ End Module
 #End Region
 
 ''' <summary>
-''' 自定义事件。
+''' Custom event.
 ''' </summary>
 Public Class CustomEvent
     Inherits DependencyObject
 
-#Region "属性与触发"
+#Region "Properties and Raising"
 
     Public Property Type As EventType
         Get
@@ -137,7 +136,7 @@ Public Class CustomEvent
     End Sub
 
     ''' <summary>
-    ''' 在当前线程中触发该自定义事件。
+    ''' Raises this custom event on the current thread.
     ''' </summary>
     Public Sub Raise()
         Raise(Type, Data)
@@ -163,11 +162,10 @@ Public Class CustomEvent
         写入设置 = 20
         修改变量 = 21
         写入变量 = 22
-        加入房间 = 23
     End Enum
 
     ''' <summary>
-    ''' 在当前线程中触发一个自定义事件。
+    ''' Raises a custom event on the current thread.
     ''' </summary>
     Public Shared Sub Raise(Type As EventType, Arg As String)
         If Type = EventType.None Then Return
@@ -180,7 +178,7 @@ Public Class CustomEvent
             Select Case Type
                 Case EventType.打开网页
                     Arg = Arg.Replace("\", "/")
-                    If Not Arg.Contains("://") OrElse Arg.StartsWithF("file", True) Then '为了支持更多协议（#2200）
+                    If Not Arg.Contains("://") OrElse Arg.StartsWithF("file", True) Then 'Support more protocols (#2200)
                         MyMsgBox("EventData 必须为一个网址。" & vbCrLf & "如果想要启动程序，请将 EventType 改为 打开文件。", "事件执行失败")
                         Return
                     End If
@@ -191,11 +189,10 @@ Public Class CustomEvent
                     RunInThread(
                     Sub()
                         Try
-                            '确认实际路径
+                            'Resolve the actual path
                             Dim ActualPaths = GetAbsoluteUrls(Arg0, Type)
                             Dim Location = ActualPaths(0), WorkingDir = ActualPaths(1)
                             Logger.Info($"打开类自定义事件实际路径：{Location}，工作目录：{WorkingDir}")
-                            '执行
                                 If Not EventSafetyConfirm("即将执行：" & Location & If(Args.Length >= 2, " " & Arg1, "")) Then Return
                                 Dim Info As New ProcessStartInfo With {
                                     .Arguments = If(Args.Length >= 2, Arg1, ""),
@@ -286,17 +283,6 @@ Public Class CustomEvent
                         Logger.Warn(ex, $"写入变量失败：{Arg0} → {Args(1)}", LogBehavior.Toast)
                     End Try
 
-                Case EventType.加入房间
-                    RunInUi(
-                    Sub()
-                        If String.IsNullOrWhiteSpace(Arg) Then
-                            PageLinkMain.Join()
-                        Else
-                            If Not EventSafetyConfirm("即将加入第三方联机房间。") Then Return
-                            PageLinkMain.Join(Arg)
-                        End If
-                    End Sub)
-
                 Case Else
                     MyMsgBox("未知的事件类型：" & Type & vbCrLf & "请检查事件类型填写是否正确，或者 PCL 是否为最新版本。", "事件执行失败")
             End Select
@@ -306,8 +292,8 @@ Public Class CustomEvent
     End Sub
 
     ''' <summary>
-    ''' 返回自定义事件的绝对 Url。实际返回 {绝对 Url, WorkingDir}。
-    ''' 失败会抛出异常。
+    ''' Returns the absolute Url of the custom event. Actually returns {absolute Url, WorkingDir}.
+    ''' Throws an exception on failure.
     ''' </summary>
     Public Shared Function GetAbsoluteUrls(RelativeUrl As String, Type As EventType) As String()
         Dim WorkingDir = Paths.Base & "PCL"
@@ -319,7 +305,7 @@ Public Class CustomEvent
     End Function
 
     ''' <summary>
-    ''' 弹出安全确认弹窗。返回是否继续执行。
+    ''' Shows a security confirmation dialog. Returns whether to continue.
     ''' </summary>
     Private Shared Function EventSafetyConfirm(Message As String) As Boolean
         If Settings.Get(Of Boolean)("HintCustomCommand") Then Return True

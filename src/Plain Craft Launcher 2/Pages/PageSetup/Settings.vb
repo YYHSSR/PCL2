@@ -6,32 +6,21 @@ Public Class Settings
         New Setting("Identify", "", Source:=Sources.Registry),
         New Setting("WindowHeight", 550),
         New Setting("WindowWidth", 900),
-        New Setting("AprilYear", 0, Source:=Sources.Registry, Encrypted:=True),
-        New Setting("Potatoes", "", Source:=Sources.Registry, Encrypted:=True),
         New Setting("HintDownloadThread", False, Source:=Sources.Registry),
         New Setting("ToolCurseForgeApiKey", "", Source:=Sources.Registry, Encrypted:=True),
-        New Setting("HintNotice", 0, Source:=Sources.Registry),
         New Setting("HintDownload", 0, Source:=Sources.Registry),
-        New Setting("HintHide", False, Source:=Sources.Registry),
-        New Setting("HintHandInstall", False, Source:=Sources.Registry),
         New Setting("HintBuy", False, Source:=Sources.Registry),
-        New Setting("HintClearRubbish", 0, Source:=Sources.Registry),
         New Setting("HintUpdateMod", False, Source:=Sources.Registry),
         New Setting("HintCustomCommand", False, Source:=Sources.Registry),
-        New Setting("HintCustomWarn", False, Source:=Sources.Registry),
         New Setting("HintMoreAdvancedSetup", False, Source:=Sources.Registry),
         New Setting("HintIndieSetup", False, Source:=Sources.Registry),
         New Setting("HintExportConfig", False, Source:=Sources.Registry),
-        New Setting("HintSnapshot", False, Source:=Sources.Registry),
-        New Setting("SystemEulaVersion", 0, Source:=Sources.Registry),
         New Setting("SystemCount", 0, Source:=Sources.Registry, Encrypted:=True),
         New Setting("SystemLaunchCount", 0, Source:=Sources.Registry, Encrypted:=True),
         New Setting("SystemLastVersionReg", 0, Source:=Sources.Registry, Encrypted:=True),
-        New Setting("SystemHighestSavedBetaVersionReg", 0, Source:=Sources.Registry, Encrypted:=True),
         New Setting("SystemHighestBetaVersionReg", 0, Source:=Sources.Registry, Encrypted:=True),
         New Setting("SystemHighestAlphaVersionReg", 0, Source:=Sources.Registry, Encrypted:=True),
         New Setting("CacheDrops", "", Source:=Sources.Registry),
-        New Setting("CacheConfig", 0, Source:=Sources.Registry),
         New Setting("CacheExportConfig", "", Source:=Sources.Registry),
         New Setting("CacheMsOAuthRefresh", "", Source:=Sources.Registry, Encrypted:=True),
         New Setting("CacheMsAccess", "", Source:=Sources.Registry, Encrypted:=True),
@@ -61,8 +50,6 @@ Public Class Settings
         New Setting("CacheAuthServerServer", "", Source:=Sources.Registry, Encrypted:=True),
         New Setting("CacheAuthServerName", "", Source:=Sources.Registry, Encrypted:=True),
         New Setting("CacheAuthServerRegister", "", Source:=Sources.Registry, Encrypted:=True),
-        New Setting("CacheDownloadFolder", "", Source:=Sources.Registry),
-        New Setting("CacheJavaListVersion", 0, Source:=Sources.Registry),
         New Setting("LoginRemember", True, Source:=Sources.Registry, Encrypted:=True),
         New Setting("LoginLegacyName", "", Source:=Sources.Registry, Encrypted:=True),
         New Setting("LoginMsJson", "{}", Source:=Sources.Registry, Encrypted:=True), '{UserName: OAuthToken, ...}
@@ -101,10 +88,6 @@ Public Class Settings
         New Setting("LaunchAdvanceGraphicCard", True, Source:=Sources.Registry),
         New Setting("LaunchRamType", 0, OnChanged:=AddressOf PageSetupLaunch.UpdateRamType),
         New Setting("LaunchRamCustom", 15),
-        New Setting("LinkLastAutoJoinInviteCode", "", Source:=Sources.Registry),
-        New Setting("LinkLatencyMode", 0, Source:=Sources.Registry),
-        New Setting("LinkCustomPeer", ""),
-        New Setting("LinkEasyTierVersion", -1, Source:=Sources.Registry),
         New Setting("ToolDownloadThread", 63, Source:=Sources.Registry),
         New Setting("ToolDownloadSpeed", 42, Source:=Sources.Registry, OnChanged:=AddressOf ModNet.UpdateNetTaskSpeedLimitHigh),
         New Setting("ToolDownloadSource", 1, Source:=Sources.Registry),
@@ -151,11 +134,11 @@ Public Class Settings
         Public DefaultValue As Object
         Public Source As Sources
         ''' <summary>
-        ''' 当设置项的值实际被改变时触发，参数为新值。
+        ''' Raised when the setting's value actually changes. The argument is the new value.
         ''' </summary>
         Public OnChanged As Action(Of Object)
         ''' <summary>
-        ''' 该设置的值的实际类型。
+        ''' Actual type of this setting's value.
         ''' </summary>
         Public Type As Type
         Public Sub New(Key As String, Value As Object, Optional Source As Sources = Sources.Normal, Optional Encrypted As Boolean = False, Optional OnChanged As Action(Of Object) = Nothing)
@@ -167,13 +150,13 @@ Public Class Settings
                 Me.Type = If(Value, "").GetType
                 Me.OnChanged = OnChanged
             Catch ex As Exception
-                Logger.Error(ex, "初始化设置项失败") '#5095 的 fallback
+                Logger.Error(ex, "初始化设置项失败") '#5095 fallback
             End Try
         End Sub
 
         ''' <summary>
-        ''' 读取过的设置的缓存，若从未读取过则为 Nothing。
-        ''' 若为版本独立设置，键为版本路径；否则，键为空字符串。
+        ''' Cache of values that have been read. Nothing if never read.
+        ''' For a per-version setting the key is the version path; otherwise the key is an empty string.
         ''' </summary>
         Public ValueCache As New ConcurrentDictionary(Of String, Object)
         Public Function GetCache(Instance As McInstance)
@@ -187,7 +170,7 @@ Public Class Settings
         End Sub
 
         ''' <summary>
-        ''' 立即将当前的 Value 写入对应的注册表或文件。
+        ''' Write the current Value to the matching registry key or file immediately.
         ''' </summary>
         Public Sub Save(Optional Instance As McInstance = Nothing)
             Dim Value As String = GetCache(Instance)
@@ -211,17 +194,17 @@ Public Class Settings
     End Class
 
     ''' <summary>
-    ''' 改变某个设置项的值。
+    ''' Change a setting's value.
     ''' </summary>
     Public Shared Sub [Set](Key As String, Value As Object, Optional Instance As McInstance = Nothing)
         Dim Entry As Setting = Nothing
         If Not Entries.TryGetValue(Key, Entry) Then Throw New KeyNotFoundException("未找到设置项：" & Key)
         Try
-            '判断是否一致
+            'Check whether the values match
             Value = CTypeDynamic(Value, Entry.Type)
             If Entry.GetCache(Instance) Is Nothing Then [Get](Key, Instance)
             If Entry.GetCache(Instance) = Value Then Return
-            '设置新值
+            'Set the new value
             Dim PreviousValue = Entry.GetCache(Instance)
             Entry.Set(Value, Instance)
             Try
@@ -230,15 +213,15 @@ Public Class Settings
                 Entry.Set(PreviousValue, Instance)
                 Throw
             End Try
-            '触发改变事件（必须在保存之后，以保证 VersionServerLogin 之类的在事件中读取到的是最新的值）
+            'Raise the change event after saving, so handlers such as VersionServerLogin read the latest value
             If Entry.OnChanged IsNot Nothing Then Entry.OnChanged.Invoke(Value)
         Catch ex As Exception
             Logger.Error(ex, $"设置设置项时出错（{Key}）")
         End Try
     End Sub
     ''' <summary>
-    ''' 写入某个未经加密的设置项。
-    ''' 若该设置项经过了加密，则会抛出异常。
+    ''' Write a setting that is not encrypted.
+    ''' Throws if the setting is encrypted.
     ''' </summary>
     Public Shared Sub SetSafe(Key As String, Value As Object, Optional Instance As McInstance = Nothing)
         Dim Entry As Setting = Nothing
@@ -248,16 +231,16 @@ Public Class Settings
     End Sub
 
     ''' <summary>
-    ''' 获取某个设置项的值。
+    ''' Get a setting's value.
     ''' </summary>
     Public Shared Function [Get](Key As String, Optional Instance As McInstance = Nothing)
         Dim Entry As Setting = Nothing
         If Not Entries.TryGetValue(Key, Entry) Then Throw New KeyNotFoundException("未找到设置项：" & Key)
         Dim Value = Entry.GetCache(Instance)
         If Value IsNot Nothing Then Return Value
-        '正常读取
+        'Normal read
         Try
-            Dim GotValue As String = Nothing '先用 String 储存，避免类型转换
+            Dim GotValue As String = Nothing 'Store as String first to avoid a type conversion
             Dim DefaultValue As String = Entry.DefaultValue
             Dim NeedsMigration As Boolean = False
             Select Case Entry.Source
@@ -298,8 +281,8 @@ Public Class Settings
         Return [Get](Key, Instance)
     End Function
     ''' <summary>
-    ''' 获取某个未经加密的设置项的值。
-    ''' 若该设置项经过了加密，则会抛出异常。
+    ''' Get a setting that is not encrypted.
+    ''' Throws if the setting is encrypted.
     ''' </summary>
     Public Shared Function GetSafe(Key As String, Optional Instance As McInstance = Nothing)
         Dim Entry As Setting = Nothing
@@ -309,16 +292,16 @@ Public Class Settings
     End Function
 
     ''' <summary>
-    ''' 初始化某个设置项的值。
+    ''' Reset a setting to its default.
     ''' </summary>
     Public Shared Sub Reset(Key As String, Optional Instance As McInstance = Nothing)
         Dim Entry As Setting = Nothing
         If Not Entries.TryGetValue(Key, Entry) Then Throw New KeyNotFoundException("未找到设置项：" & Key)
         Try
-            '判断是否一致
+            'Check whether the values match
             If Entry.GetCache(Instance) Is Nothing Then [Get](Key, Instance)
             If Entry.GetCache(Instance) = Entry.DefaultValue Then Return
-            '设置新值
+            'Set the new value
             Entry.Set(Entry.DefaultValue, Instance)
             Select Case Entry.Source
                 Case Sources.Normal
@@ -333,7 +316,7 @@ Public Class Settings
                     If Instance Is Nothing Then Throw New Exception($"重置版本设置 {Key} 时未提供目标版本")
                     DeleteIniKey(Instance.PathVersion & "PCL\Setup.ini", Key)
             End Select
-            '触发改变事件
+            'Raise the change event
             If Entry.OnChanged IsNot Nothing Then Entry.OnChanged.Invoke(Entry.DefaultValue)
         Catch ex As Exception
             Logger.Error(ex, $"重置设置项时出错（{Key}）")
@@ -341,15 +324,15 @@ Public Class Settings
     End Sub
 
     ''' <summary>
-    ''' 获取某个设置项的默认值。
+    ''' Get a setting's default value.
     ''' </summary>
     Public Shared Function GetDefault(Key As String) As String
         Return Entries(Key).DefaultValue
     End Function
 
     ''' <summary>
-    ''' 对应的注册表或文件是否已经储存了某个设置项。
-    ''' 若改成了和默认值一样的，在 2.12.3- 会储存更改，在 2.12.4+ 不会储存更改。
+    ''' Whether the registry or file already stores this setting.
+    ''' Matching the default was stored in 2.12.3 and earlier, and is not stored in 2.12.4 and later.
     ''' </summary>
     Public Shared Function HasSaved(Key As String, Optional Instance As McInstance = Nothing) As Boolean
         Select Case Entries(Key).Source
@@ -368,12 +351,12 @@ Public Class Settings
         End Select
     End Function
 
-#Region "用户凭据保护与旧缓存迁移"
+#Region "Credential protection and legacy cache migration"
 
     Private Shared ReadOnly desInitialVector As Byte() = Encoding.UTF8.GetBytes("95168702")
 
     ''' <summary>
-    ''' 使用 DES 对称加密算法加密字符串。
+    ''' Encrypt a string with the DES symmetric algorithm.
     ''' </summary>
     Private Const ProtectedSettingPrefix As String = "dpapi:v1:"
 
@@ -388,7 +371,7 @@ Public Class Settings
     End Function
 
     ''' <summary>
-    ''' 使用 DES 对称加密算法解密字符串。
+    ''' Decrypt a string with the DES symmetric algorithm.
     ''' </summary>
     Private Shared Function DesDecrypt(encryptedString As String, Optional key As String = Nothing) As String
         key = If(key Is Nothing, "@;$ Abv2", key.GetStableHashCode().ToString().EnsureLength("X"c, 8).Substring(0, 8))

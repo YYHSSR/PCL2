@@ -1,10 +1,10 @@
 Public Class MyMsgLogin
     Private Data As JObject
-    Private UserCode As String '需要用户在网页上输入的设备代码
-    Private DeviceCode As String '用于轮询的设备代码
-    Private Website As String '验证网页的网址
+    Private UserCode As String 'Device code the user must enter on the web page
+    Private DeviceCode As String 'Device code used for polling
+    Private Website As String 'URL of the verification page
 
-#Region "弹窗"
+#Region "Dialog"
 
     Private ReadOnly MyConverter As MyMsgBoxConverter
     Private ReadOnly Uuid As Integer = GetUuid()
@@ -26,7 +26,7 @@ Public Class MyMsgLogin
 
     Private Sub Load(sender As Object, e As EventArgs) Handles MyBase.Loaded
         Try
-            '动画
+            'Animation
             Opacity = 0
             AniStart(AaColor(FrmMain.PanMsg, Grid.BackgroundProperty, If(MyConverter.IsWarn, New MyColor(140, 80, 0, 0), New MyColor(90, 0, 0, 0)) - FrmMain.PanMsg.Background, 200), "PanMsg Background")
             AniStart({
@@ -34,14 +34,14 @@ Public Class MyMsgLogin
                 AaDouble(Sub(i) TransformPos.Y += i, -TransformPos.Y, 300, 60, New AniEaseOutBack(AniEasePower.Weak)),
                 AaDouble(Sub(i) TransformRotate.Angle += i, -TransformRotate.Angle, 300, 60, New AniEaseOutFluent(AniEasePower.Weak))
             }, "MyMsgBox " & Uuid)
-            '记录日志
+            'Log the dialog
             Logger.Info($"登录弹窗：{LabTitle.Text}{vbCrLf}{LabCaption.Text}")
         Catch ex As Exception
             Logger.Error(ex, "登录弹窗加载失败", LogBehavior.Toast)
         End Try
     End Sub
     Private Sub Close()
-        '动画
+        'Animation
         AniStart({
             AaCode(
             Sub()
@@ -56,7 +56,7 @@ Public Class MyMsgLogin
         }, "MyMsgBox " & Uuid)
     End Sub
 
-    '实现回车和 Esc 的接口（#4857）
+    'Enter and Esc hooks (#4857)
     Public Sub Btn1_Click() Handles Btn1.Click
     End Sub
     Public Sub Btn3_Click() Handles Btn3.Click
@@ -83,7 +83,7 @@ Public Class MyMsgLogin
         UserCode = Data("user_code")
         DeviceCode = Data("device_code")
         Website = Data("verification_uri")
-        '设置 UI
+        'Set up the UI
         LabTitle.Text = "登录 Minecraft"
         LabCaption.Text =
             $"登录网页将自动开启，请在网页中输入 {UserCode}（已自动复制）。" & vbCrLf & vbCrLf &
@@ -91,7 +91,7 @@ Public Class MyMsgLogin
             $"你也可以用其他设备打开 {Website} 并输入上述代码。"
         CustomEventService.SetEventData(Btn1, Website)
         CustomEventService.SetEventData(Btn2, UserCode)
-        '启动工作线程
+        'Start the worker thread
         RunInNewThread(AddressOf WorkThread, "MyMsgLogin")
     End Sub
 
@@ -101,7 +101,7 @@ Public Class MyMsgLogin
         OpenWebsite(Website)
         ClipboardSet(UserCode)
         Thread.Sleep((Data("interval").ToObject(Of Integer) - 1) * 1000)
-        '轮询
+        'Poll
         Dim UnknownFailureCount As Integer = 0
         Do While Not MyConverter.IsExited
             Try
@@ -115,14 +115,14 @@ Public Class MyMsgLogin
                     ContentType:="application/x-www-form-urlencoded",
                     Timeout:=5000 + UnknownFailureCount * 5000,
                     MakeLog:=False, RequireJson:=True)
-                '获取结果
+                'Read the result
                 Dim ResultJson As JObject = Result.DeserializeJson()
                 McLaunchLog($"令牌过期时间：{ResultJson("expires_in")} 秒")
                 Hint("网页登录成功！", HintType.Green)
                 Finished({ResultJson("access_token").ToString, ResultJson("refresh_token").ToString})
                 Return
             Catch ex As Exception
-                '修改错误列表时，同时修改 ModLaunch.MsLoginStep1Refresh 中的对应代码
+                'When changing this error list, also update the matching code in ModLaunch.MsLoginStep1Refresh
                 If TypeOf ex Is HttpRequestCodeException Then
                     Dim Response = CType(ex, HttpRequestCodeException).Response
                     If Response.Contains("authorization_declined") Then
@@ -137,7 +137,7 @@ Public Class MyMsgLogin
                     ElseIf Response.Contains("service abuse") Then
                         Finished(New Exception("$非常抱歉，该账号已被微软封禁，无法登录。"))
                         Return
-                    ElseIf Response.Contains("AADSTS70000") Then '可能不能判 “invalid_grant”，见 #269
+                    ElseIf Response.Contains("AADSTS70000") Then 'May not be safe to match "invalid_grant"; see #269
                         Finished(New RestartException)
                         Return
                     ElseIf Response.Contains("authorization_pending") Then

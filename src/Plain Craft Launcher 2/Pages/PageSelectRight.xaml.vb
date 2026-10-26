@@ -1,6 +1,6 @@
 Public Class PageSelectRight
 
-    '窗口基础
+    'Window basics
     Private Sub PageSelectRight_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
         LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.RunOnUpdated, MaxDepth:=1, ExtraPath:="versions\")
         PanBack.ScrollToHome()
@@ -14,25 +14,25 @@ Public Class PageSelectRight
         End If
     End Sub
 
-    '窗口属性
+    'Window properties
     ''' <summary>
-    ''' 是否显示隐藏的 Minecraft 版本。
+    ''' Whether hidden Minecraft instances are shown.
     ''' </summary>
     Public ShowHidden As Boolean = False
 
-#Region "结果 UI 化"
+#Region "Render the results"
 
     Private Sub McInstanceListUI(Loader As LoaderTask(Of String, Integer))
         Try
-            '加载 UI
+            'Load the UI
             PanMain.Children.Clear()
 
             For Each Card As KeyValuePair(Of McInstanceCardType, List(Of McInstance)) In McInstanceList.ToArray
-                '确认是否为隐藏版本显示状态
+                'Skip this card unless it matches the hidden-instance view
                 If Card.Key = McInstanceCardType.Hidden Xor ShowHidden Then Continue For
                 Dim Instances = Card.Value.Where(Function(Instance) Not McInstanceLock.IsLocked(Instance)).ToList
                 If Not Instances.Any Then Continue For
-#Region "确认卡片名称"
+#Region "Card title"
                 Dim CardName As String = ""
                 Select Case Card.Key
                     Case McInstanceCardType.OriginalLike
@@ -73,7 +73,7 @@ Public Class PageSelectRight
                         Throw New ArgumentException("未知的卡片种类（" & Card.Key & "）")
                 End Select
 #End Region
-                '建立控件
+                'Create the controls
                 Dim CardTitle As String = CardName & If(CardName = "收藏夹", "", " (" & Instances.Count & ")")
                 Dim NewCard As New MyCard With {.Title = CardTitle, .Margin = New Thickness(0, 0, 0, 15)}
                 Dim NewStack As New StackPanel With {.Margin = New Thickness(20, MyCard.SwapedHeight, 18, 0), .VerticalAlignment = VerticalAlignment.Top, .RenderTransform = New TranslateTransform(0, 0)}
@@ -81,7 +81,7 @@ Public Class PageSelectRight
                 NewCard.SwapControl = NewStack
                 NewCard.SetContentBuilder(Instances, Function(Instance) Instance.ToListItem(AddressOf McInstanceListContent))
                 PanMain.Children.Add(NewCard)
-                '确定卡片是否展开
+                'Decide whether the card starts expanded
                 If Card.Key = McInstanceCardType.Rubbish OrElse Card.Key = McInstanceCardType.Error OrElse Card.Key = McInstanceCardType.Fool Then
                     NewCard.IsSwapped = True
                 Else
@@ -89,12 +89,12 @@ Public Class PageSelectRight
                 End If
             Next
 
-            '若只有一个卡片，则强制展开
+            'Force the only card to stay expanded
             If PanMain.Children.Count = 1 AndAlso CType(PanMain.Children(0), MyCard).IsSwapped Then
                 CType(PanMain.Children(0), MyCard).IsSwapped = False
             End If
 
-            '判断应该显示哪一个页面
+            'Choose which page to show
             If PanMain.Children.Count = 0 Then
                 PanEmpty.Visibility = Visibility.Visible
                 PanBack.Visibility = Visibility.Collapsed
@@ -118,9 +118,9 @@ Public Class PageSelectRight
     End Sub
     Public Shared Sub McInstanceListContent(sender As MyListItem, e As EventArgs)
         Dim Instance As McInstance = sender.Tag
-        '注册点击事件
+        'Register the click handler
         AddHandler sender.Click, AddressOf Item_Click
-        '图标按钮
+        'Icon buttons
         Dim BtnStar As New MyIconButton
         If Instance.IsStar Then
             BtnStar.ToolTip = "取消收藏"
@@ -165,9 +165,9 @@ Public Class PageSelectRight
 
 #End Region
 
-#Region "页面事件"
+#Region "Page events"
 
-    '点击选项
+    'Item click
     Public Shared Sub Item_Click(sender As MyListItem, e As EventArgs)
         Dim Instance As McInstance = sender.Tag
         If McInstanceLock.IsLocked(Instance) Then
@@ -175,11 +175,11 @@ Public Class PageSelectRight
             Return
         End If
         If New McInstance(Instance.PathVersion).Check Then
-            '正常版本
+            'Valid instance
             McInstanceSelected = Instance
             FrmMain.PageBack()
         Else
-            '错误版本
+            'Broken instance
             PageInstanceOverall.OpenInstanceFolder(Instance)
         End If
     End Sub
@@ -188,7 +188,7 @@ Public Class PageSelectRight
         FrmMain.PageChange(FormMain.PageType.Download, FormMain.PageSubType.DownloadInstall)
     End Sub
 
-    '修改此代码时，同时修改 PageInstanceOverall 中的代码
+    'Keep this in sync with the copy in PageInstanceOverall
     Public Shared Sub DeleteInstance(Item As MyListItem, Instance As McInstance)
         Try
             If McInstanceLock.IsLocked(Instance) Then
@@ -210,26 +210,26 @@ Public Class PageSelectRight
                 Case 2
                     Return
             End Select
-            '从 UI 中移除
+            'Remove it from the UI
             If Instance.DisplayType = McInstanceCardType.Hidden OrElse Not Instance.IsStar Then
-                '仅出现在当前卡片
+                'Shown only on the current card
                 Dim Parent As StackPanel = Item.Parent
-                If Parent.Children.Count > 2 Then '当前的项目与一个占位符
-                    '删除后还有剩
+                If Parent.Children.Count > 2 Then 'The current item plus one placeholder
+                    'Other items remain after deletion
                     Dim Card As MyCard = Parent.Parent
-                    Card.Title = Card.Title.Replace(Parent.Children.Count - 1, Parent.Children.Count - 2) '有一个占位符
+                    Card.Title = Card.Title.Replace(Parent.Children.Count - 1, Parent.Children.Count - 2) 'One child is a placeholder
                     Parent.Children.Remove(Item)
                     If McInstanceSelected IsNot Nothing AndAlso PathUtils.IsSame(Instance.PathVersion, McInstanceSelected.PathVersion) Then
-                        '删除当前版本就更改选择
+                        'If the selected instance was deleted, select another
                         McInstanceSelected = MyVirtualizingElement.TryInit(Parent.Children(0)).Tag
                     End If
                     LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.UpdateOnly, MaxDepth:=1, ExtraPath:="versions\")
                 Else
-                    '删除后没剩了
+                    'Nothing remains after deletion
                     LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
                 End If
             Else
-                '同时出现在当前卡片与收藏夹
+                'Shown on both the current card and Favorites
                 LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
             End If
         Catch ex As OperationCanceledException

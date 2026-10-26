@@ -12,16 +12,16 @@ Public Class PageLoginLegacy
 
     Public IsReloaded As Boolean = False
     ''' <summary>
-    ''' 刷新页面显示的所有信息。
+    ''' Refresh everything shown on this page.
     ''' </summary>
     Public Sub Reload(KeepInput As Boolean)
-        If KeepInput AndAlso IsReloaded Then '避免第一次就以 KeepInput 的方式加载，导致文本框里没东西
-            '保留输入，只刷新下拉框列表
+        If KeepInput AndAlso IsReloaded Then 'Skip KeepInput on the first load, or the text box stays empty
+            'Keep the input and only refresh the dropdown list
             Dim Input As String = ComboName.Text.Trim
             ComboName.ItemsSource = If(Settings.Get(Of String)("LoginLegacyName") = "", Nothing, Settings.Get(Of String)("LoginLegacyName").Split("¨"))
             ComboName.Text = Input
         Else
-            '不保留输入，刷新列表后自动选择第一项
+            'Drop the input, refresh the list, and select the first item
             If Settings.Get(Of String)("LoginLegacyName") = "" Then
                 ComboName.ItemsSource = Nothing
             Else
@@ -32,14 +32,14 @@ Public Class PageLoginLegacy
         IsReloaded = True
     End Sub
     ''' <summary>
-    ''' 获取当前页面的登录信息。
+    ''' Get this page's login info.
     ''' </summary>
     Public Shared Function GetLoginData() As McLoginData
         Dim UserName As String = If(FrmLoginLegacy Is Nothing, "", FrmLoginLegacy.ComboName.Text.Replace("¨", "").Trim)
         Return New McLoginLegacy With {.UserName = UserName}
     End Function
     ''' <summary>
-    ''' 当前页面的登录信息是否有效。
+    ''' Whether this page's login info is valid.
     ''' </summary>
     Public Shared Function IsVaild(LoginData As McLoginLegacy) As String
         If LoginData.UserName.Trim = "" Then Return "玩家名不能为空！"
@@ -64,6 +64,6 @@ Public Class PageLoginLegacy
     Private Sub ComboLegacy_TextChanged(sender As Object, e As TextChangedEventArgs) Handles ComboName.TextChanged
         PageLaunchLeft.SkinLegacy.Start(IsForceRestart:=True)
         HintChinese.Visibility = If(ComboName.Text.RegexCheck("^[0-9A-Za-z_]*$"), Visibility.Collapsed, Visibility.Visible)
-        RunInUi(Sub() PanMain.InvalidateMeasure(), True) '由于 WPF 的 Bug，它不一定会自动更新 HintChinese 的大小（#6627）
+        RunInUi(Sub() PanMain.InvalidateMeasure(), True) 'WPF bug: it may not update the HintChinese size on its own (#6627)
     End Sub
 End Class

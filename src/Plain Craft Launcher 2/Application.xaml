@@ -12,13 +12,10 @@
         <ResourceDictionary>
 
             <!-- Converter -->
-            <corewpf:AdditionConverter x:Key="AdditionConverter"/>
             <corewpf:MultiplicationConverter x:Key="MultiplicationConverter"/>
-            <corewpf:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
-            <corewpf:InverseBooleanConverter x:Key="InverseBooleanConverter"/>
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
 
-            <!-- 颜色表 -->
+            <!-- Color table -->
             <SolidColorBrush x:Key="ColorBrush1">#343d4a</SolidColorBrush>
             <SolidColorBrush x:Key="ColorBrush2">#0b5bcb</SolidColorBrush>
             <SolidColorBrush x:Key="ColorBrush3">#1370f3</SolidColorBrush>
@@ -169,7 +166,7 @@
                                     </Track.DecreaseRepeatButton>
                                     <Track.IncreaseRepeatButton>
                                         <RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Opacity="0" />
-                                    </Track.IncreaseRepeatButton> <!-- 不能删，删了点击 Thumb 以外的部分就不能翻页了 -->
+                                    </Track.IncreaseRepeatButton> <!-- Do not remove: without it, clicking outside the Thumb no longer pages -->
                                     <Track.Thumb>
                                         <Thumb Style="{StaticResource MyThumb}" Foreground="{TemplateBinding Foreground}" />
                                     </Track.Thumb>
@@ -268,7 +265,7 @@
                                 <Border x:Name="border" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding BorderBrush}" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}">
                                     <ScrollViewer x:Name="PART_ContentHost" Style="{StaticResource ScrollViewerNoMargin}" RenderOptions.ClearTypeHint="Enabled" BorderThickness="0"
                                            Margin="5,0,0,0" Cursor="IBeam" />
-                                    <!-- 由于未知原因，TextView 会有 2,0 的 Margin -->
+                                    <!-- For unknown reasons, TextView has a Margin of 2,0 -->
                                 </Border>
                                 <Border Margin="{TemplateBinding Padding}" IsHitTestVisible="False" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" BorderThickness="0">
                                     <TextBlock x:Name="labHint" Foreground="{StaticResource ColorBrushGray4}" Margin="7,0,0,0" Padding="{TemplateBinding BorderThickness}" FontSize="{TemplateBinding FontSize}" FontFamily="Resources/#PCL English, Microsoft YaHei UI" />
@@ -503,8 +500,6 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" SharedSizeGroup="Icon"/>
                                         <ColumnDefinition />
-                                        <!--  <ColumnDefinition Width="Auto" SharedSizeGroup="Shortcut"/>
-                                    <ColumnDefinition Width="13"/>  -->
                                     </Grid.ColumnDefinitions>
                                     <Path Name="Icon" VerticalAlignment="Center" Stretch="Uniform" Margin="8,0" Fill="{TemplateBinding Foreground}" Height="12" Width="15" />
                                     <TextBlock Name="HeaderHost" Grid.Column="1" Text="{TemplateBinding Header}" Foreground="{TemplateBinding Foreground}" Margin="0,0,40,0" VerticalAlignment="Center" Height="16" />

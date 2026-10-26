@@ -6,7 +6,7 @@ Class MySearchBox
         TextBox.Focus()
     End Sub
 
-    '属性
+    'Properties
     Public Property HintText() As String
         Get
             Return TextBox.HintText

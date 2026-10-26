@@ -1,16 +1,16 @@
 Public Class MyImage
     Inherits Image
 
-#Region "公开属性"
+#Region "Public properties"
 
     ''' <summary>
-    ''' 网络图片的缓存有效期。
-    ''' 在这个时间后，才会重新尝试下载图片。
+    ''' Cache lifetime for network images.
+    ''' The image will only be downloaded again after this period.
     ''' </summary>
-    Public FileCacheExpiredTime As New TimeSpan(7, 0, 0, 0) '7 天
+    Public FileCacheExpiredTime As New TimeSpan(7, 0, 0, 0) '7 days
 
     ''' <summary>
-    ''' 是否允许将网络图片存储到本地用作缓存。
+    ''' Whether network images may be stored locally as a cache.
     ''' </summary>
     Public Property EnableCache As Boolean
         Get
@@ -24,11 +24,11 @@ Public Class MyImage
         "EnableCache", GetType(Boolean), GetType(MyImage), New PropertyMetadata(True))
 
     ''' <summary>
-    ''' 与 Image 的 Source 类似。
-    ''' 若输入以 http 开头的字符串，则会尝试下载图片然后显示；若 EnableCache 设为 True，图片还会保存为本地缓存。
-    ''' 支持 WebP 格式的图片。
+    ''' Similar to the Source of Image.
+    ''' If the string starts with http, the image is downloaded and then displayed; if EnableCache is True, the image is also saved as a local cache.
+    ''' Supports WebP images.
     ''' </summary>
-    Public Shadows Property Source As String '覆写 Image 的 Source 属性
+    Public Shadows Property Source As String 'Overrides the Source property of Image
         Get
             Return _Source
         End Get
@@ -36,7 +36,7 @@ Public Class MyImage
             If value = "" Then value = Nothing
             If _Source = value Then Return
             _Source = value
-            If Not IsInitialized Then Return '属性读取顺序修正：在完成 XAML 属性读取后再触发图片加载（#4868）
+            If Not IsInitialized Then Return 'Fix property read order: load the image only after all XAML properties have been read (#4868)
             Load()
         End Set
     End Property
@@ -46,7 +46,7 @@ Public Class MyImage
     Sub(sender, e) If sender IsNot Nothing Then CType(sender, MyImage).Source = e.NewValue.ToString())))
 
     ''' <summary>
-    ''' 若 Source 是一个网络图片，该地址将作为第二图片源。
+    ''' If Source is a network image, this address is used as the fallback image source.
     ''' </summary>
     Public Property FallbackSource As String
         Get
@@ -59,7 +59,7 @@ Public Class MyImage
     Private _FallbackSource As String = Nothing
 
     ''' <summary>
-    ''' 正在下载网络图片时显示的本地图片。
+    ''' Local image shown while the network image is downloading.
     ''' </summary>
     Public Property LoadingSource As String
         Get
@@ -74,7 +74,7 @@ Public Class MyImage
 #End Region
 
     ''' <summary>
-    ''' 实际被呈现的图片地址。
+    ''' The image path that is actually rendered.
     ''' </summary>
     Public Property ActualSource As String
         Get
@@ -85,7 +85,7 @@ Public Class MyImage
             If _ActualSource = value Then Return
             _ActualSource = value
             Try
-                Dim Bitmap As ImageSource = If(value Is Nothing, Nothing, New MyBitmap(value)) '在这里先触发可能的文件读取，尽量避免在 UI 线程中读取文件
+                Dim Bitmap As ImageSource = If(value Is Nothing, Nothing, New MyBitmap(value)) 'Trigger any file read here to avoid reading files on the UI thread as much as possible
                 RunInUi(Sub() MyBase.Source = Bitmap)
             Catch ex As Exception
                 Logger.Warn(ex, $"加载图片失败（{value}）")
@@ -99,32 +99,32 @@ Public Class MyImage
     Private _ActualSource As String = Nothing
 
     Private Sub Load() _
-        Handles Me.Initialized '属性读取顺序修正：在完成 XAML 属性读取后再触发图片加载（#4868）
-        '空
+        Handles Me.Initialized 'Fix property read order: load the image only after all XAML properties have been read (#4868)
+        'Empty
         If Source Is Nothing Then
             ActualSource = Nothing
             Return
         End If
-        '本地图片
+        'Local image
         If Not Source.StartsWithF("http") Then
             ActualSource = Source
             Return
         End If
-        '从缓存加载网络图片
+        'Load the network image from cache
         Dim EnableCache As Boolean = Me.EnableCache
-        Dim TempPath As String = $"{PathTemp}MyImage\{Source.GetStableHashCode()}.png{If(EnableCache, "", GetUuid())}" '不启用缓存时在末尾加上随机字符串，避免冲突
+        Dim TempPath As String = $"{PathTemp}MyImage\{Source.GetStableHashCode()}.png{If(EnableCache, "", GetUuid())}" 'Append a random string when caching is disabled to avoid conflicts
         Dim TempFile = FileUtils.GetInfo(TempPath)
         If EnableCache AndAlso TempFile.Exists Then
-            ActualSource = TempPath '显示缓存的图片
-            If (Date.Now - TempFile.LastWriteTime) < FileCacheExpiredTime Then Return '无需刷新缓存
+            ActualSource = TempPath 'Show the cached image
+            If (Date.Now - TempFile.LastWriteTime) < FileCacheExpiredTime Then Return 'No need to refresh the cache
         Else
-            ActualSource = LoadingSource '显示加载中图片
+            ActualSource = LoadingSource 'Show the loading image
         End If
         RunInNewThread(
         Sub()
             Dim IsLocalFallback As Boolean = Not String.IsNullOrEmpty(FallbackSource) AndAlso Not FallbackSource.StartsWithF("http")
             Try
-                '下载
+                'Download
                 NetDownloadByLoader(
                     If(FallbackSource IsNot Nothing AndAlso FallbackSource.StartsWithF("http") AndAlso Source <> FallbackSource,
                         {Source, FallbackSource}, {Source}),
@@ -136,7 +136,7 @@ Public Class MyImage
                     If TempPath IsNot Nothing Then FileUtils.Delete(TempPath)
                 Catch
                 End Try
-                '加载本地备用图片
+                'Load the local fallback image
                 If IsLocalFallback Then
                     Try
                         ActualSource = FallbackSource

@@ -1,15 +1,15 @@
-'动画引擎模块
-'使用 Ani 作为方法或属性的开头，使用 Aa 作为单个动画对象的开头（便于自动补全）
+'Animation engine module
+'Methods and properties start with Ani, and functions creating a single animation object start with Aa (for easier auto-completion)
 
 Imports System.Windows.Media.Effects
 
 Public Module ModAnimation
 
-#Region "声明"
+#Region "Declarations"
 
     Public Const AniSpeed As Double = 1
     ''' <summary>
-    ''' 动画组列表。
+    ''' List of animation groups.
     ''' </summary>
     Public AniGroups As New Dictionary(Of String, AniGroupEntry)
     Public Class AniGroupEntry
@@ -18,17 +18,17 @@ Public Module ModAnimation
         Public Uuid As Integer = GetUuid()
     End Class
     ''' <summary>
-    ''' 上一次记刻的时间。
+    ''' Time of the last tick.
     ''' </summary>
     Private AniLastTick As Long
     ''' <summary>
-    ''' 动画模块是否正在运行。
+    ''' Whether the animation module is running.
     ''' </summary>
     Public AniRunning As Boolean = False
     Private _AniControlEnabled As Integer = 0
     Private ReadOnly AniControlEnabledLock As New Object
     ''' <summary>
-    ''' 控件动画执行是否开启。先 +1，再 -1。
+    ''' Whether control animations are enabled. +1 first, then -1.
     ''' </summary>
     Public Property AniControlEnabled() As Integer
         Get
@@ -43,54 +43,54 @@ Public Module ModAnimation
 
 #End Region
 
-#Region "类与枚举"
+#Region "Classes and Enums"
 
     ''' <summary>
-    ''' 单个动画对象。
+    ''' A single animation object.
     ''' </summary>
     Public Structure AniData
 
         ''' <summary>
-        ''' 动画种类。
+        ''' Animation type.
         ''' </summary>
         Public TypeMain As AniType
         ''' <summary>
-        ''' 动画副种类。
+        ''' Animation subtype.
         ''' </summary>
         Public TypeSub As AniTypeSub
 
         ''' <summary>
-        ''' 动画总长度。
+        ''' Total length of the animation.
         ''' </summary>
         Public TimeTotal As Integer
         ''' <summary>
-        ''' 已经执行的动画长度。如果为负数则为延迟。
+        ''' Length of the animation already run. Negative means delay.
         ''' </summary>
         Public TimeFinished As Double
         ''' <summary>
-        ''' 已经完成的百分比。
+        ''' Percentage completed.
         ''' </summary>
         Public TimePercent As Double
 
         ''' <summary>
-        ''' 是否为“以后”。
+        ''' Whether this is an "after" animation.
         ''' </summary>
         Public IsAfter As Boolean
 
         ''' <summary>
-        ''' 插值器类型。
+        ''' Easing function type.
         ''' </summary>
         Public Ease As AniEase
         ''' <summary>
-        ''' 动画对象。
+        ''' The animated object.
         ''' </summary>
         Public Obj As Object
         ''' <summary>
-        ''' 动画值。
+        ''' Animation value.
         ''' </summary>
         Public Value As Object
         ''' <summary>
-        ''' 上次执行时的动画值。
+        ''' Animation value at the last run.
         ''' </summary>
         Public ValueLast As Object
 
@@ -101,40 +101,40 @@ Public Module ModAnimation
     End Structure
 
     ''' <summary>
-    ''' 动画基础种类。
+    ''' Base animation types.
     ''' </summary>
     Public Enum AniType
         ''' <summary>
-        ''' 单个Double的动画，包括位置、长宽、透明度等。这需要附属类型。
+        ''' Animation of a single Double, including position, size, opacity etc. Requires a subtype.
         ''' </summary>
         Number
         ''' <summary>
-        ''' 颜色属性的动画。这需要附属类型。
+        ''' Animation of a color property. Requires a subtype.
         ''' </summary>
         Color
         ''' <summary>
-        ''' 缩放控件大小。比起4个DoubleAnimation来说效率更高。
+        ''' Scales the control size. More efficient than 4 DoubleAnimations.
         ''' </summary>
         Scale
         ''' <summary>
-        ''' 文字一个个出现。
+        ''' Text appears character by character.
         ''' </summary>
         TextAppear
         ''' <summary>
-        ''' 执行代码。
+        ''' Runs code.
         ''' </summary>
         Code
         ''' <summary>
-        ''' 以 WPF 方式缩放控件。
+        ''' Scales the control the WPF way.
         ''' </summary>
         ScaleTransform
         ''' <summary>
-        ''' 以 WPF 方式旋转控件。
+        ''' Rotates the control the WPF way.
         ''' </summary>
         RotateTransform
     End Enum
     ''' <summary>
-    ''' 动画扩展种类。
+    ''' Extended animation types.
     ''' </summary>
     Public Enum AniTypeSub
         X
@@ -155,136 +155,136 @@ Public Module ModAnimation
 
 #End Region
 
-#Region "种类"
+#Region "Types"
 
     'DoubleAnimation
 
     ''' <summary>
-    ''' 移动X轴的动画。
+    ''' Animation moving along the X axis.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">进行移动的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to move.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaX(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.X,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
     ''' <summary>
-    ''' 移动Y轴的动画。
+    ''' Animation moving along the Y axis.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">进行移动的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to move.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaY(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Y,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
     ''' <summary>
-    ''' 改变宽度的动画。
+    ''' Animation changing the width.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">宽度改变的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to change the width by.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaWidth(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Width,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
     ''' <summary>
-    ''' 改变高度的动画。
+    ''' Animation changing the height.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">高度改变的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to change the height by.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaHeight(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Height,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
     ''' <summary>
-    ''' 改变透明度的动画。
+    ''' Animation changing the opacity.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">透明度改变的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to change the opacity by.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaOpacity(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Opacity,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
     ''' <summary>
-    ''' 改变对象的Value属性的动画。
+    ''' Animation changing the object's Value property.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">Value属性改变的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to change the Value property by.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaValue(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Value,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
     ''' <summary>
-    ''' 改变对象的Radius属性的动画。
+    ''' Animation changing the object's Radius property.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">Radius属性改变的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to change the Radius property by.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaRadius(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Radius,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
     ''' <summary>
-    ''' 改变对象的BorderThickness属性的动画。
+    ''' Animation changing the object's BorderThickness property.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">BorderThickness属性改变的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to change the BorderThickness property by.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaBorderThickness(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.BorderThickness,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
     ''' <summary>
-    ''' 改变对象的StrokeThickness属性的动画。
+    ''' Animation changing the object's StrokeThickness property.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">StrokeThickness属性改变的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to change the StrokeThickness property by.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaStrokeThickness(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.StrokeThickness,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
     ''' <summary>
-    ''' 改变 Width 的 GridLength 属性的动画。必须为 Star。
+    ''' Animation changing the GridLength of Width. Must be Star.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">GridLength.Value 改变的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to change GridLength.Value by.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaGridLengthWidth(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.GridLengthWidth,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
@@ -293,26 +293,26 @@ Public Module ModAnimation
     'DoubleAnimation（Obj, Prop, [Res]）
 
     ''' <summary>
-    ''' 改变数字属性的动画。
+    ''' Animation changing a numeric property.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Prop">动画的依赖属性。</param>
-    ''' <param name="Value">改变的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Prop">The dependency property to animate.</param>
+    ''' <param name="Value">The amount to change by.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaDouble(Obj As Object, Prop As DependencyProperty, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.Double, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = {Obj, Prop, ""}, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
     ''' <summary>
-    ''' 获取数字动画值。
+    ''' Gets a numeric animation value.
     ''' </summary>
-    ''' <param name="Value">改变的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Value">The amount to change by.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaDouble(Lambda As ParameterizedThreadStart, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.DoubleParam, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Lambda, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
@@ -320,28 +320,28 @@ Public Module ModAnimation
     'ColorAnimation（Obj, Prop, [Res]）
 
     ''' <summary>
-    ''' 改变颜色属性的动画。
+    ''' Animation changing a color property.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Prop">动画的依赖属性。</param>
-    ''' <param name="Value">颜色改变的值。以RGB加减法进行计算。不用担心超额。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Prop">The dependency property to animate.</param>
+    ''' <param name="Value">The amount to change the color by, computed with RGB addition/subtraction. Overflow is not a concern.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaColor(Obj As FrameworkElement, Prop As DependencyProperty, Value As MyColor, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Color, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = {Obj, Prop, ""}, .Value = Value, .IsAfter = After, .TimeFinished = -Delay, .ValueLast = New MyColor(0, 0, 0, 0)}
     End Function
     ''' <summary>
-    ''' 改变颜色属性为一个资源的动画。
+    ''' Animation changing a color property to a resource.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Prop">动画的依赖属性。</param>
-    ''' <param name="Res">要将颜色改变为该资源值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Prop">The dependency property to animate.</param>
+    ''' <param name="Res">The resource whose value the color changes to.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaColor(Obj As FrameworkElement, Prop As DependencyProperty, Res As String, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Color, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = {Obj, Prop, Res}, .Value = New MyColor(Application.Current.FindResource(Res)) - New MyColor(Obj.GetValue(Prop)), .IsAfter = After, .TimeFinished = -Delay, .ValueLast = New MyColor(0, 0, 0, 0)}
     End Function
@@ -349,15 +349,15 @@ Public Module ModAnimation
     'Scale
 
     ''' <summary>
-    ''' 缩放控件的动画。
+    ''' Animation scaling a control.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">大小改变的百分比（如-0.6）或值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
-    ''' <param name="Absolute">大小改变是否为绝对值。若为 True 则为绝对像素，若为 False 则为相对百分比。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The size change as a percentage (e.g. -0.6) or a value.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
+    ''' <param name="Absolute">Whether the size change is absolute. True means absolute pixels, False means a relative percentage.</param>
     Public Function AaScale(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False, Optional Absolute As Boolean = False) As AniData
         Dim ChangeRect As MyRect
         If Absolute Then
@@ -371,14 +371,14 @@ Public Module ModAnimation
     'TextAppear
 
     ''' <summary>
-    ''' 让一段文字一个个字出现或消失的动画。
+    ''' Animation making text appear or disappear character by character.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。必须是Label或TextBlock。</param>
-    ''' <param name="Hide">是否为一个个字隐藏。默认为False（一个个字出现）。这些字必须已经存在了。</param>
-    ''' <param name="TimePerText">是否采用根据文本长度决定时间的方式。</param>
-    ''' <param name="Time">动画长度（毫秒）。若TimePerText为True，这代表每个字所占据的时间。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object. Must be a Label or TextBlock.</param>
+    ''' <param name="Hide">Whether to hide character by character. Defaults to False (appear character by character). The text must already exist.</param>
+    ''' <param name="TimePerText">Whether the duration is determined by the text length.</param>
+    ''' <param name="Time">Animation duration (ms). If TimePerText is True, this is the time per character.</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaTextAppear(Obj As Object, Optional Hide As Boolean = False, Optional TimePerText As Boolean = True, Optional Time As Integer = 70, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         'Are we cool yet？
         Return New AniData With {.TypeMain = AniType.TextAppear, .Ease = If(Ease, New AniEaseLinear), .TimeTotal = If(TimePerText, Time * If(TypeOf Obj Is TextBlock, Obj.Text, Obj.Context.ToString).ToString.Length, Time), .Obj = Obj, .Value = {If(TypeOf Obj Is TextBlock, Obj.Text, Obj.Context.ToString), Hide}, .IsAfter = After, .TimeFinished = -Delay}
@@ -387,11 +387,11 @@ Public Module ModAnimation
     'Code
 
     ''' <summary>
-    ''' 执行代码。
+    ''' Runs code.
     ''' </summary>
-    ''' <param name="Code">一个ThreadStart。这将会在执行时在主线程调用。</param>
-    ''' <param name="Delay">代码延迟执行的时间（毫秒）。</param>
-    ''' <param name="After">是否等到以前的动画完成后才执行。</param>
+    ''' <param name="Code">A ThreadStart, invoked on the main thread when run.</param>
+    ''' <param name="Delay">Delay before the code runs (ms).</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before running.</param>
     Public Function AaCode(Code As ThreadStart, Optional Delay As Integer = 0, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Code,
                                    .TimeTotal = 1, .Value = Code, .IsAfter = After, .TimeFinished = -Delay}
@@ -400,14 +400,14 @@ Public Module ModAnimation
     'ScaleTransform
 
     ''' <summary>
-    ''' 按照 WPF 方式缩放控件的动画。
+    ''' Animation scaling a control the WPF way.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。它必须已经拥有了单一的 ScaleTransform 值。</param>
-    ''' <param name="Value">大小改变的百分比（如-0.6）。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object. It must already have a single ScaleTransform value.</param>
+    ''' <param name="Value">The size change as a percentage (e.g. -0.6).</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaScaleTransform(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.ScaleTransform, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
@@ -415,14 +415,14 @@ Public Module ModAnimation
     'RotateTransform
 
     ''' <summary>
-    ''' 按照 WPF 方式旋转控件的动画。
+    ''' Animation rotating a control the WPF way.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。它必须已经拥有了单一的 ScaleTransform 值。</param>
-    ''' <param name="Value">旋转角度（度）。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object. It must already have a single ScaleTransform value.</param>
+    ''' <param name="Value">Rotation angle (degrees).</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaRotateTransform(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.RotateTransform, .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
@@ -430,36 +430,36 @@ Public Module ModAnimation
     'TranslateTransform
 
     ''' <summary>
-    ''' 利用 TranslateTransform 移动 X 轴的动画，这不会造成布局更新。
+    ''' Animation moving along the X axis via TranslateTransform, which does not trigger a layout update.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">进行移动的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to move.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaTranslateX(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.TranslateX,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
     ''' <summary>
-    ''' 利用 TranslateTransform 移动 Y 轴的动画，这不会造成布局更新。
+    ''' Animation moving along the Y axis via TranslateTransform, which does not trigger a layout update.
     ''' </summary>
-    ''' <param name="Obj">动画的对象。</param>
-    ''' <param name="Value">进行移动的值。</param>
-    ''' <param name="Time">动画长度（毫秒）。</param>
-    ''' <param name="Delay">动画延迟执行的时间（毫秒）。</param>
-    ''' <param name="Ease">插值器类型。</param>
-    ''' <param name="After">是否等到以前的动画完成后才继续本动画。</param>
+    ''' <param name="Obj">The animated object.</param>
+    ''' <param name="Value">The amount to move.</param>
+    ''' <param name="Time">Animation duration (ms).</param>
+    ''' <param name="Delay">Delay before the animation starts (ms).</param>
+    ''' <param name="Ease">Easing function type.</param>
+    ''' <param name="After">Whether to wait for previous animations to finish before starting this one.</param>
     Public Function AaTranslateY(Obj As Object, Value As Double, Optional Time As Integer = 400, Optional Delay As Integer = 0, Optional Ease As AniEase = Nothing, Optional After As Boolean = False) As AniData
         Return New AniData With {.TypeMain = AniType.Number, .TypeSub = AniTypeSub.TranslateY,
                                    .TimeTotal = Time, .Ease = If(Ease, New AniEaseLinear), .Obj = Obj, .Value = Value, .IsAfter = After, .TimeFinished = -Delay}
     End Function
 
-    '特殊
+    'Special
 
     ''' <summary>
-    ''' 将一个StackPanel中的各个项目依次显示。
+    ''' Shows the items in a StackPanel one after another.
     ''' </summary>
     Public Function AaStack(Stack As StackPanel, Optional Time As Integer = 100, Optional Delay As Integer = 25) As List(Of AniData)
         Dim Result = New List(Of AniData)
@@ -474,9 +474,9 @@ Public Module ModAnimation
 
 #End Region
 
-#Region "缓动函数"
+#Region "Easing Functions"
 
-    '基类
+    'Base classes
     Public Enum AniEasePower As Integer
         Weak = 2
         Middle = 3
@@ -484,25 +484,25 @@ Public Module ModAnimation
         ExtraStrong = 5
     End Enum
     ''' <summary>
-    ''' 缓动函数基类。
+    ''' Base class of easing functions.
     ''' </summary>
     Public MustInherit Class AniEase
         ''' <summary>
-        ''' 获取函数值。
+        ''' Gets the function value.
         ''' </summary>
-        ''' <param name="t">时间百分比。</param>
+        ''' <param name="t">Time percentage.</param>
         Public MustOverride Function GetValue(t As Double) As Double
         ''' <summary>
-        ''' 获取增量值。
+        ''' Gets the delta value.
         ''' </summary>
-        ''' <param name="t1">较大的 X。</param>
-        ''' <param name="t0">较小的 X。</param>
+        ''' <param name="t1">The larger X.</param>
+        ''' <param name="t0">The smaller X.</param>
         Public Overridable Function GetDelta(t1 As Double, t0 As Double) As Double
             Return GetValue(t1) - GetValue(t0)
         End Function
     End Class
     ''' <summary>
-    ''' 渐入渐出组合。
+    ''' Combination of ease-in and ease-out.
     ''' </summary>
     Public Class AniEaseInout
         Inherits AniEase
@@ -519,9 +519,9 @@ Public Module ModAnimation
         End Function
     End Class
 
-    'Linear / 线性
+    'Linear
     ''' <summary>
-    ''' 线性，无缓动。
+    ''' Linear, no easing.
     ''' </summary>
     Public Class AniEaseLinear
         Inherits AniEase
@@ -533,9 +533,9 @@ Public Module ModAnimation
         End Function
     End Class
 
-    'Fluent / 平滑
+    'Fluent / smooth
     ''' <summary>
-    ''' 平滑开始。
+    ''' Smooth start.
     ''' </summary>
     Public Class AniEaseInFluent
         Inherits AniEase
@@ -548,7 +548,7 @@ Public Module ModAnimation
         End Function
     End Class
     ''' <summary>
-    ''' 平滑结束。
+    ''' Smooth end.
     ''' </summary>
     Public Class AniEaseOutFluent
         Inherits AniEase
@@ -561,7 +561,7 @@ Public Module ModAnimation
         End Function
     End Class
     ''' <summary>
-    ''' 平滑开始与结束。
+    ''' Smooth start and end.
     ''' </summary>
     Public Class AniEaseInoutFluent
         Inherits AniEase
@@ -574,29 +574,29 @@ Public Module ModAnimation
         End Function
     End Class
     ''' <summary>
-    ''' 以特定速度开始的平滑结束。
+    ''' Smooth end that starts at a specific speed.
     ''' </summary>
     Public Class AniEaseOutFluentWithInitial
         Inherits AniEase
-        Private ReadOnly alpha As Double '(初速度 / 平均速度) – 1
-        ''' <param name="InitialPixelPerSecond">初速度，px/s</param>
-        ''' <param name="TotalSecond">总时长，s</param>
-        ''' <param name="TotalDistance">总路程，px</param>
+        Private ReadOnly alpha As Double '(initial speed / average speed) – 1
+        ''' <param name="InitialPixelPerSecond">Initial speed, px/s</param>
+        ''' <param name="TotalSecond">Total duration, s</param>
+        ''' <param name="TotalDistance">Total distance, px</param>
         Public Sub New(InitialPixelPerSecond As Double, TotalSecond As Double, TotalDistance As Double)
-            Dim v0_norm As Double = InitialPixelPerSecond * TotalSecond / TotalDistance '归一化初速度
+            Dim v0_norm As Double = InitialPixelPerSecond * TotalSecond / TotalDistance 'Normalized initial speed
             alpha = v0_norm - 1.0
-            If alpha < 0 Then alpha = 0 '初速度小于平均速度时，退化为线性
+            If alpha < 0 Then alpha = 0 'Degrades to linear when the initial speed is below the average speed
         End Sub
         Public Overrides Function GetValue(percent As Double) As Double
             Dim p As Double = percent.Clamp(0, 1)
-            If alpha = 0 Then Return p '退化到线性
+            If alpha = 0 Then Return p 'Degrade to linear
             Return (alpha + 1) * p / (1 + alpha * p)
         End Function
     End Class
 
-    'Back / 回弹
+    'Back / bounce back
     ''' <summary>
-    ''' 回弹开始。有效时间为 1/3。
+    ''' Bounce-back start. Effective for 1/3 of the time.
     ''' </summary>
     Public Class AniEaseInBack
         Inherits AniEase
@@ -610,7 +610,7 @@ Public Module ModAnimation
         End Function
     End Class
     ''' <summary>
-    ''' 回弹结束。有效时间为 1/3。
+    ''' Bounce-back end. Effective for 1/3 of the time.
     ''' </summary>
     Public Class AniEaseOutBack
         Inherits AniEase
@@ -624,9 +624,9 @@ Public Module ModAnimation
         End Function
     End Class
 
-    'Car / 平滑-回弹
+    'Car / smooth-bounce back
     ''' <summary>
-    ''' 回弹开始，短平滑结束。
+    ''' Bounce-back start, short smooth end.
     ''' </summary>
     Public Class AniEaseInCar
         Inherits AniEase
@@ -639,7 +639,7 @@ Public Module ModAnimation
         End Function
     End Class
     ''' <summary>
-    ''' 短平滑开始，回弹结束。
+    ''' Short smooth start, bounce-back end.
     ''' </summary>
     Public Class AniEaseOutCar
         Inherits AniEase
@@ -652,9 +652,9 @@ Public Module ModAnimation
         End Function
     End Class
 
-    'Elastic / 弹簧
+    'Elastic / spring
     ''' <summary>
-    ''' 弹簧开始。约在 60% 到达最小值。
+    ''' Spring start. Reaches its minimum at about 60%.
     ''' </summary>
     Public Class AniEaseInElastic
         Inherits AniEase
@@ -668,7 +668,7 @@ Public Module ModAnimation
         End Function
     End Class
     ''' <summary>
-    ''' 弹簧结束。约在 40% 到达最大值。
+    ''' Spring end. Reaches its maximum at about 40%.
     ''' </summary>
     Public Class AniEaseOutElastic
         Inherits AniEase
@@ -684,20 +684,20 @@ Public Module ModAnimation
 
 #End Region
 
-#Region "接口（开始、中断、检测）"
+#Region "Interface (Start, Stop, Check)"
 
     ''' <summary>
-    ''' 开始一个动画组。
+    ''' Starts an animation group.
     ''' </summary>
-    ''' <param name="AniGroup">由 Aa 开头的函数初始化的 AniData 对象集合。</param>
-    ''' <param name="Name">动画组的名称。如果重复会直接停止同名动画组。</param>
+    ''' <param name="AniGroup">A collection of AniData objects created by the Aa-prefixed functions.</param>
+    ''' <param name="Name">Name of the animation group. An existing group with the same name is stopped immediately.</param>
     Public Sub AniStart(AniGroup As IList, Optional Name As String = "", Optional RefreshTime As Boolean = False)
         If Application.Current IsNot Nothing AndAlso Not Application.Current.Dispatcher.CheckAccess() Then
             RunInUiWait(Sub() AniStart(AniGroup, Name, RefreshTime))
             Return
         End If
-        If RefreshTime OrElse AniGroups.Count = 0 Then AniLastTick = GetTimeMs() '避免处理动画时已经造成了极大的延迟，导致动画突然结束
-        '添加到正在执行的动画组
+        If RefreshTime OrElse AniGroups.Count = 0 Then AniLastTick = GetTimeMs() 'Prevent animations from ending abruptly if processing has already caused a huge delay
+        'Add to the running animation groups
         Dim AllAnis = New List(Of AniData)
         For Each Element In AniGroup
             If TypeOf Element Is ICollection Then
@@ -716,15 +716,15 @@ Public Module ModAnimation
         If AniRunning Then StartRendering()
     End Sub
     ''' <summary>
-    ''' 开始一个动画组。
+    ''' Starts an animation group.
     ''' </summary>
     Public Sub AniStart(AniGroup As AniData, Optional Name As String = "", Optional RefreshTime As Boolean = False)
         AniStart(New List(Of AniData) From {AniGroup}, Name, RefreshTime)
     End Sub
     ''' <summary>
-    ''' 直接停止一个动画组。
+    ''' Stops an animation group immediately.
     ''' </summary>
-    ''' <param name="name">需要停止的动画组的名称。</param>
+    ''' <param name="name">Name of the animation group to stop.</param>
     Public Sub AniStop(Name As String)
         If Application.Current IsNot Nothing AndAlso Not Application.Current.Dispatcher.CheckAccess() Then
             RunInUiWait(Sub() AniStop(Name))
@@ -734,7 +734,7 @@ Public Module ModAnimation
         If AniGroups.Count = 0 Then StopRendering()
     End Sub
     ''' <summary>
-    ''' 获取动画是否正在进行中。
+    ''' Gets whether the animation is in progress.
     ''' </summary>
     Public Function AniIsRun(Name As String) As Boolean
         If Application.Current IsNot Nothing AndAlso Not Application.Current.Dispatcher.CheckAccess() Then
@@ -748,12 +748,12 @@ Public Module ModAnimation
     Private AniFPSCounter As Integer = 0
     Private AniFPSTimer As Long = 0
     ''' <summary>
-    ''' 当前的动画 FPS。
+    ''' Current animation FPS.
     ''' </summary>
     Public AniFPS As Integer = 0
 
     ''' <summary>
-    ''' 开始动画执行。
+    ''' Starts running animations.
     ''' </summary>
     Public Sub AniStart()
         If AniRunning Then Return
@@ -825,41 +825,41 @@ Public Module ModAnimation
                 Dim Entry = Pair.Value
                 Dim CurrentEntry As AniGroupEntry = Nothing
                 If Not AniGroups.TryGetValue(Pair.Key, CurrentEntry) OrElse CurrentEntry.Uuid <> Entry.Uuid Then Continue For
-                If Entry.StartTick > AniLastTick Then Continue For '跳过本刻之后开始的动画
-                Dim CanRemoveAfter = True '是否应该去除“之后”标记
+                If Entry.StartTick > AniLastTick Then Continue For 'Skip animations that start after this tick
+                Dim CanRemoveAfter = True 'Whether the "after" flag should be removed
                 Dim ii = 0
 
-                '循环每个动画
+                'Loop over each animation
                 Do While ii < Entry.Data.Count
                     Dim Anim As AniData = Entry.Data(ii)
-                    '执行种类
-                    If Anim.IsAfter = False Then '之前
-                        CanRemoveAfter = False '取消“之后”标记 
-                        '增加执行时间
+                    'By type
+                    If Anim.IsAfter = False Then 'Before
+                        CanRemoveAfter = False 'Cancel removing the "after" flag
+                        'Increase the elapsed time
                         Anim.TimeFinished += DeltaTick
-                        '执行动画
+                        'Run the animation
                         If Anim.TimeFinished > 0 Then
                             Anim = AniRun(Anim)
                         End If
-                        '如果当前动画已执行完毕
+                        'If the current animation has finished
                         If Anim.TimeFinished >= Anim.TimeTotal Then
-                            '如果是去向颜色资源的动画，设置引用
+                            'If it is an animation to a color resource, set the reference
                             If Anim.TypeMain = AniType.Color AndAlso Not Anim.Obj(2) = "" Then Anim.Obj(0).SetResourceReference(Anim.Obj(1), Anim.Obj(2))
-                            '删除
+                            'Remove
                             Entry.Data.RemoveAt(ii)
                             GoTo NextAni
                         End If
                         Entry.Data(ii) = Anim
-                    Else '之后
+                    Else 'After
                         If CanRemoveAfter Then
-                            '之后改为之前
+                            'Change "after" to "before"
                             CanRemoveAfter = False
                             Anim.IsAfter = False
                             Entry.Data(ii) = Anim
-                            '重新循环该动画
+                            'Loop this animation again
                             GoTo NextAni
                         Else
-                            '不能去除该“之后”标记，结束该动画组
+                            'The "after" flag cannot be removed, so end this animation group
                             Exit Do
                         End If
                     End If
@@ -878,9 +878,9 @@ NextAni:
     End Sub
 
     ''' <summary>
-    ''' 执行一个动画。
+    ''' Runs one animation.
     ''' </summary>
-    ''' <param name="Ani">执行的动画对象。</param>
+    ''' <param name="Ani">The animation object to run.</param>
     Private Function AniRun(Ani As AniData) As AniData
         Try
             Select Case Ani.TypeMain
@@ -949,7 +949,7 @@ NextAni:
                     End If
 
                 Case AniType.Color
-                    '利用 Last 记录了余下的小数值
+                    'Last stores the remaining fractional value
                     Dim Delta As MyColor = MyColor.Lerp(New MyColor(0, 0, 0, 0), Ani.Value, Ani.Ease.GetDelta(Ani.TimeFinished / Ani.TimeTotal, Ani.TimePercent)) + Ani.ValueLast
                     Dim Obj As FrameworkElement = Ani.Obj(0)
                     Dim Prop As DependencyProperty = Ani.Obj(1)
@@ -969,7 +969,7 @@ NextAni:
                     Dim TextCount As Integer = If(Ani.Value(1), Text.Length, 0) +
                                                Math.Round(Text.Length * If(Ani.Value(1), -1, 1) * Ani.Ease.GetDelta(Ani.TimeFinished / Ani.TimeTotal, 0))
                     Dim NewText As String = Text.Substring(0, TextCount)
-                    '添加乱码
+                    'Append garbled characters
                     If TextCount < Text.Length Then
                         Dim NextText As String = Text.Substring(TextCount, 1)
                         If Convert.ToInt32(Convert.ToChar(NextText)) >= Convert.ToInt32(Convert.ToChar(128)) Then
@@ -978,7 +978,7 @@ NextAni:
                             NewText &= RandomInteger(0, 85).ConvertRadix(86)
                         End If
                     End If
-                    '设置文本
+                    'Set the text
                     If TypeOf Ani.Obj Is TextBlock Then
                         Ani.Obj.Text = NewText
                     Else
@@ -1009,7 +1009,7 @@ NextAni:
                     CType(Obj.RenderTransform, RotateTransform).Angle = CType(Obj.RenderTransform, RotateTransform).Angle + Delta
 
             End Select
-            Ani.TimePercent = Ani.TimeFinished / Ani.TimeTotal '修改执行百分比
+            Ani.TimePercent = Ani.TimeFinished / Ani.TimeTotal 'Update the completion percentage
         Catch ex As Exception
             Logger.Error(ex, $"执行动画失败：{Ani}", LogBehavior.Toast)
         End Try

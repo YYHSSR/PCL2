@@ -1,51 +1,51 @@
 namespace MeloongCore;
 public static class PathUtils {
 
-    #region 分隔符
+    #region Separators
 
     /// <summary>
-    /// 确保路径的末尾包含任意文件夹分隔符。
+    /// Ensures the path ends with a folder separator.
     /// </summary>
     public static string AddSlashSuffix(string folder) 
         => folder + (folder.EndsWithF(Path.DirectorySeparatorChar) || folder.EndsWithF(Path.AltDirectorySeparatorChar) ? "" : Path.DirectorySeparatorChar);
 
     /// <summary>
-    /// 确保路径的结尾不包含文件夹分隔符。
+    /// Ensures the path does not end with a folder separator.
     /// </summary>
     public static string RemoveSlashSuffix(string folder) 
         => folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
     #endregion
 
-    #region 长路径
+    #region Long paths
 
     /// <summary>
-    /// 若路径较长，则尽量将其转换为短路径。
-    /// <para/>结果的开头不含 <c>\\?\</c>，结尾不含分隔符。
+    /// If the path is long, tries to convert it to a short path.
+    /// <para/>The result has no <c>\\?\</c> prefix and no trailing separator.
     /// </summary>
     public static string ToShortPath(string pathName) {
-        // 快速返回
+        // Fast path
         if (string.IsNullOrEmpty(pathName)) return pathName;
         if (!pathName.Contains(":") || pathName.Contains("://")) return pathName;
         if (pathName.Length <= 220) return pathName;
-        // 开始实际处理
+        // Actual processing
         pathName = PathUtils.ForCompare(pathName);
-        // 尽量保留原始文件名
+        // Try to keep the original file name
         string pathToKeep = "";
         string pathToShorten = pathName;
         if (FileUtils.Exists(pathName)) {
             var fileName = PathUtils.GetLastPart(pathName);
             if (fileName.Length >= 180) {
-                Logger.Warn($"文件名过长，将为文件名生成短路径：{pathName}", LogBehavior.None); // 部分程序，例如 Forge 的模块加载，依赖于读取文件名进行判断，因此对文件名生成短路径是有风险的
+                Logger.Warn($"文件名过长，将为文件名生成短路径：{pathName}", LogBehavior.None); // Some programs, such as Forge's module loading, rely on file names, so generating a short name for the file name is risky
             } else {
                 pathToKeep = fileName;
                 pathToShorten = PathUtils.RemoveLastPart(pathName);
             }
         }
-        // 逐级向上寻找已存在的文件夹，将不存在的部分挪到 suffix，不再缩短
-        while (!DirectoryUtils.Exists(pathToShorten) && !FileUtils.Exists(pathToShorten)) { // 如果路径不存在
+        // Walk up to the nearest existing folder, moving the non-existent part into suffix without shortening it
+        while (!DirectoryUtils.Exists(pathToShorten) && !FileUtils.Exists(pathToShorten)) { // If the path does not exist
             string? parentPath = Path.GetDirectoryName(pathToShorten);
-            if (string.IsNullOrEmpty(parentPath) || PathUtils.IsSame(parentPath, pathToShorten)) return pathName; // 已经到达根目录，全都不存在，直接返回
+            if (string.IsNullOrEmpty(parentPath) || PathUtils.IsSame(parentPath, pathToShorten)) return pathName; // Reached the root and nothing exists, return directly
             pathToKeep = Path.Combine(PathUtils.GetLastPart(pathToShorten), pathToKeep);
             pathToShorten = parentPath;
         }
@@ -53,14 +53,14 @@ public static class PathUtils {
             Logger.Warn($"路径中的大部分内容都尚未建立，无法在内容不存在时缩短路径：{pathName} → {pathToShorten}", LogBehavior.None);
             return pathName;
         }
-        // 获取短路径
+        // Get the short path
         Func<string, string> TryGetShortPath = static pathName => {
             char[] buffer = new char[220];
             int result = GetShortPathNameW(PathUtils.ForApi(pathName), buffer, buffer.Length);
             return result is 0 or > 220 ? pathName : new string(buffer, 0, result);
         };
         var shortPath = TryGetShortPath(pathToShorten);
-        // 尝试生成新的短名称，以将长度降低到 220 以下（只会在 Windows 没有为其生成过短名称的情况下才会触发，大多数情况都不会进到这里）
+        // Try to generate new short names to bring the length below 220 (only happens when Windows has never generated a short name for it, which is rare)
         if (Path.Combine(shortPath, pathToKeep).Length > 220) {
             Logger.Warn($"{nameof(GetShortPathNameW)} 未能有效缩短路径，将尝试生成新的短名称：{pathToShorten} → {shortPath}", LogBehavior.None);
             var candidates = new List<(string Path, string Name)>();
@@ -74,17 +74,17 @@ public static class PathUtils {
                 candidatePath = Path.GetDirectoryName(candidatePath);
             }
             foreach (var candidate in candidates.OrderByDescending(candidate => candidate.Name.Length)) {
-                using var handle = CreateFileW(PathUtils.ForApi(candidate.Path), 0x40010000, 7, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero); // GENERIC_WRITE | DELETE；共享读、写、删除；OPEN_EXISTING；FILE_FLAG_BACKUP_SEMANTICS
+                using var handle = CreateFileW(PathUtils.ForApi(candidate.Path), 0x40010000, 7, IntPtr.Zero, 3, 0x02000000, IntPtr.Zero); // GENERIC_WRITE | DELETE; share read, write, delete; OPEN_EXISTING; FILE_FLAG_BACKUP_SEMANTICS
                 if (handle.IsInvalid) continue;
                 bool created = false;
                 try {
                     unsafe {
                         fixed (char* originalNameBuffer = candidate.Name) {
-                            char* shortNameBuffer = stackalloc char[12]; // 8.3 名称最长 12 个 Unicode 字符
+                            char* shortNameBuffer = stackalloc char[12]; // An 8.3 name is at most 12 Unicode characters
                             var name = new UnicodeString {Length = (ushort)(candidate.Name.Length * 2), MaximumLength = (ushort)((candidate.Name.Length + 1) * 2), Buffer = originalNameBuffer};
                             var shortName = new UnicodeString {MaximumLength = 24, Buffer = shortNameBuffer};
                             var context = new GenerateNameContext();
-                            for (int i = 0; i < 20; i++) { // 使用 Windows 自身的 8.3 名称生成算法，并通过 context 依次生成避让冲突的候选名
+                            for (int i = 0; i < 20; i++) { // Use Windows' own 8.3 name generation algorithm, using context to generate collision-avoiding candidates one by one
                                 shortName.Length = 0;
                                 if (RtlGenerate8dot3Name(ref name, 0, ref context, ref shortName) != 0) break;
                                 string generatedName = new(shortName.Buffer, 0, shortName.Length / 2);
@@ -115,14 +115,14 @@ public static class PathUtils {
     private static extern int RtlGenerate8dot3Name(ref UnicodeString name, byte allowExtendedCharacters, ref GenerateNameContext context, ref UnicodeString name8dot3);
 
     /// <summary>
-    /// 将完整路径转换为以 <c>\\?\</c> 开头的扩展格式。
-    /// 这会去除路径末尾的分隔符，将 / 替换为 \。
+    /// Converts a full path to the extended format prefixed with <c>\\?\</c>.
+    /// This removes the trailing separator and replaces / with \.
     /// </summary>
     public static string ToExtendedFormat(string pathName) {
         if (string.IsNullOrWhiteSpace(pathName)) return pathName;
-        if (!pathName.Contains(@":")) return pathName; // 可能是相对路径，保持不变
-        if (pathName.StartsWithF(@"\\?\")) return pathName; // 已经是长路径
-        pathName = RemoveSlashSuffix(pathName).Replace('/', '\\'); // API 要求这个格式……
+        if (!pathName.Contains(@":")) return pathName; // Possibly a relative path, keep it unchanged
+        if (pathName.StartsWithF(@"\\?\")) return pathName; // Already a long path
+        pathName = RemoveSlashSuffix(pathName).Replace('/', '\\'); // The API requires this format
         if (pathName.StartsWithF(@"\\")) {
             return $@"\\?\UNC\{pathName[2..]}";
         } else {
@@ -131,7 +131,7 @@ public static class PathUtils {
     }
 
     /// <summary>
-    /// 去除路径开头的 <c>\\?\</c>。
+    /// Removes the leading <c>\\?\</c> from the path.
     /// </summary>
     public static string RemoveExtendedPrefix(string pathName) {
         if (pathName.StartsWithF(@"\\?\UNC\")) return @"\\" + pathName.AfterLast(@"\\?\UNC\");
@@ -141,10 +141,10 @@ public static class PathUtils {
 
     #endregion
 
-    #region 路径处理
+    #region Path manipulation
 
     /// <summary>
-    /// 去除路径的最后一级，并移除末尾的分隔符。
+    /// Removes the last segment of the path and the trailing separator.
     /// <code>
     /// "C:\foo\bar.txt" → "C:\foo"
     /// "C:\foo\bar\" → "C:\foo"
@@ -153,14 +153,14 @@ public static class PathUtils {
     /// "https://foo.bar/file/pack.zip?arg=1" → "https://foo.bar/file"
     /// </code></summary>
     public static string RemoveLastPart(string pathName) {
-        if (pathName.Contains("://")) { // 网络路径
-            pathName = PathUtils.RemoveSlashSuffix(pathName.BeforeFirst("#").BeforeFirst("?")); // 去除参数
+        if (pathName.Contains("://")) { // Network path
+            pathName = PathUtils.RemoveSlashSuffix(pathName.BeforeFirst("#").BeforeFirst("?")); // Remove query and fragment
         }
         return PathUtils.RemoveSlashSuffix(pathName).BeforeLastOfAny([@"\", "/"]);
     }
 
     /// <summary>
-    /// 获取路径的最后一级，即文件名，或当前文件夹名。
+    /// Gets the last segment of the path, i.e. the file name or the current folder name.
     /// <code>
     /// "C:\foo\bar.txt" → "bar.txt"
     /// "C:\foo\bar\" → "bar"
@@ -168,16 +168,16 @@ public static class PathUtils {
     /// "https://foo.bar/file/pack.zip?arg=1" → "pack.zip"
     /// </code></summary>
     public static string GetLastPart(string pathName) {
-        if (pathName.Contains("://")) { // 网络路径
-            pathName = PathUtils.RemoveSlashSuffix(pathName.BeforeFirst("#").BeforeFirst("?")); // 去除参数
-        } else { // 文件路径
+        if (pathName.Contains("://")) { // Network path
+            pathName = PathUtils.RemoveSlashSuffix(pathName.BeforeFirst("#").BeforeFirst("?")); // Remove query and fragment
+        } else { // File path
             pathName = PathUtils.RemoveSlashSuffix(pathName);
         }
         return pathName.AfterLastOfAny([@"\", "/"]);
     }
 
     /// <summary>
-    /// 获取路径或文件名中，仅不包含最后一级扩展名的部分。
+    /// Gets the path or file name without its last extension.
     /// <code>
     /// "C:\foo\bar.txt" → "bar"
     /// "create.jar.disabled" → "create.jar"
@@ -188,8 +188,8 @@ public static class PathUtils {
         => GetLastPart(pathName).BeforeLast(".");
 
     /// <summary>
-    /// 获取路径或文件名中的最后一级文件扩展名，不包含 <c>.</c>，固定小写。
-    /// 如果没有 <c>.</c> 则返回空字符串。
+    /// Gets the last file extension of the path or file name, without the <c>.</c>, always in lower case.
+    /// Returns an empty string if there is no <c>.</c>.
     /// <code>
     /// "C:\FOO\BAR.TXT" → "txt"
     /// "create.jar.disabled" → "disabled"
@@ -203,8 +203,8 @@ public static class PathUtils {
     }
 
     /// <summary>
-    /// 获取路径的盘符，返回一个大写字母。
-    /// 若路径不包含盘符，则返回 <c>null</c>。
+    /// Gets the drive letter of the path as an upper-case letter.
+    /// Returns <c>null</c> if the path has no drive letter.
     /// </summary>
     public static char? GetDiskName(string? pathName) {
         if (string.IsNullOrEmpty(pathName)) return null;
@@ -214,8 +214,8 @@ public static class PathUtils {
     }
 
     /// <summary>
-    /// 统一路径格式，以便比较。
-    /// <para/>具体而言：将短路径展开，去除前导的 <c>\\?\</c>，将分隔符改为 \，去除末尾的分隔符。
+    /// Normalizes the path format for comparison.
+    /// <para/>Specifically: expands short paths, removes the leading <c>\\?\</c>, changes separators to \, and removes the trailing separator.
     /// </summary>
     public static string ForCompare(string pathName) {
         try {
@@ -226,19 +226,19 @@ public static class PathUtils {
     }
 
     /// <summary>
-    /// 比较两个路径是否相同。<c>null</c> 与空字符串视为相同的空路径。
+    /// Whether two paths are the same. <c>null</c> and the empty string are treated as the same empty path.
     /// </summary>
     public static bool IsSame(string? path1, string? path2) {
         return PathUtils.Compare(path1, path2) == 0;
     }
     /// <summary>
-    /// 比较两个路径，忽略大小写。
-    /// <para/><c>null</c> 与空字符串视为相同的空路径，空路径排在非空路径之前。
+    /// Compares two paths, ignoring case.
+    /// <para/><c>null</c> and the empty string are treated as the same empty path, which sorts before non-empty paths.
     /// </summary>
     /// <returns>
-    /// 小于 0：<paramref name="path1"/> 排在 <paramref name="path2"/> 之前。
-    /// <para/>等于 0：两个路径相等。
-    /// <para/>大于 0：<paramref name="path1"/> 排在 <paramref name="path2"/> 之后。
+    /// Less than 0: <paramref name="path1"/> sorts before <paramref name="path2"/>.
+    /// <para/>0: the two paths are equal.
+    /// <para/>Greater than 0: <paramref name="path1"/> sorts after <paramref name="path2"/>.
     /// </returns>
     public static int Compare(string? path1, string? path2) {
         if (string.IsNullOrEmpty(path1)) return string.IsNullOrEmpty(path2) ? 0 : -1;
@@ -247,12 +247,12 @@ public static class PathUtils {
     }
 
     /// <summary>
-    /// 将路径转换为兼容各种 Windows API 的格式。
-    /// <para/>具体而言：将分隔符改为 \。添加前导的 <c>\\?\</c>。若为驱动器则添加末尾分隔符，否则去除分隔符。
+    /// Converts the path to a format compatible with all Windows APIs.
+    /// <para/>Specifically: changes separators to \ and adds the leading <c>\\?\</c>. Adds a trailing separator for drives, otherwise removes it.
     /// </summary>
     public static string ForApi(string pathName) {
         pathName = PathUtils.ToExtendedFormat(pathName);
-        if (pathName.EndsWithF(":")) pathName += @"\"; // 驱动器路径必须保留末尾的分隔符
+        if (pathName.EndsWithF(":")) pathName += @"\"; // Drive paths must keep the trailing separator
         if (pathName.EndsWithF(@":\")) return pathName;
         return PathUtils.RemoveSlashSuffix(pathName);
     }
@@ -260,7 +260,7 @@ public static class PathUtils {
     #endregion
 
     /// <summary>
-    /// 判断 <param name="parentPath"/> 是否为 <paramref name="childPath"/> 的父路径，或两者是否相同。
+    /// Whether <param name="parentPath"/> is a parent path of <paramref name="childPath"/>, or the two are the same.
     /// </summary>
     public static bool IsParentOf(string parentPath, string childPath) {
         parentPath = PathUtils.ForCompare(parentPath);
@@ -271,24 +271,24 @@ public static class PathUtils {
 }
 
 /// <summary>
-/// 常用路径合集。
-/// 所有路径均以分隔符结尾。
+/// Common paths.
+/// All paths end with a separator.
 /// </summary>
 public static class Paths {
     /// <summary>
-    /// 可执行文件所在的文件夹。
+    /// The folder containing the executable.
     /// </summary>
     public static string Base => PathUtils.AddSlashSuffix(AppContext.BaseDirectory);
     /// <summary>
-    /// 可执行文件所在的文件夹中，名为 <see cref="Main.AppName"/> 的子文件夹。
+    /// The subfolder named <see cref="Main.AppName"/> in the folder containing the executable.
     /// </summary>
     public static string BaseThenName => PathUtils.AddSlashSuffix(Base + Main.AppName);
     /// <summary>
-    /// %AppData% 文件夹。
+    /// The %AppData% folder.
     /// </summary>
     public static string AppData => PathUtils.AddSlashSuffix(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
     /// <summary>
-    /// %AppData% 文件夹中，名为 <see cref="Main.AppName"/> 的子文件夹。
+    /// The subfolder named <see cref="Main.AppName"/> in the %AppData% folder.
     /// </summary>
     public static string AppDataThenName => PathUtils.AddSlashSuffix(AppData + Main.AppName);
 }

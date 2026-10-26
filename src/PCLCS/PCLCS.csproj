@@ -54,7 +54,7 @@
 		<Optimize>True</Optimize>
 	</PropertyGroup>
 
-	<!-- 内嵌的资源 -->
+	<!-- Embedded resources -->
 	<ItemGroup>
 		<EmbeddedResource Include="Launch\JavaWrapper.jar" LogicalName="Launch\JavaWrapper.jar" />
 		<EmbeddedResource Include="Launch\LwjglUnsafeAgent.jar" LogicalName="Launch\LwjglUnsafeAgent.jar" />

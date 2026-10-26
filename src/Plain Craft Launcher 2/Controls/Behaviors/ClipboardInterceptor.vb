@@ -59,10 +59,10 @@ Namespace Controls.Behaviors
         End Sub
 
         Private Shared Sub SetClipboardText(text As String)
-            Forms.Clipboard.SetDataObject(text, False, retryTimes:=10, retryDelay:=100) '实际的复制
+            Forms.Clipboard.SetDataObject(text, False, retryTimes:=10, retryDelay:=100)
             Try
-                System.Windows.Clipboard.Flush() '将数据持久化到系统剪贴板，避免应用程序退出后数据丢失
-            Catch ex As Exception '持久化失败不抛出异常
+                System.Windows.Clipboard.Flush() 'Persist the data to the system clipboard so it survives after the app exits
+            Catch ex As Exception 'Do not throw if persisting fails
                 Logger.Warn(ex, $"剪贴板持久化失败（错误码：0x{ex.HResult:X8}）")
             End Try
         End Sub
@@ -114,7 +114,7 @@ Namespace Controls.Behaviors
                 End Function, maxAttempts:=10, delay:=Function() TimeSpan.FromMilliseconds(100))
                 If pasteText IsNot Nothing Then
 
-                    '将换行符替换为空格（#7825）
+                    'Replace line breaks with spaces (#7825)
                     If Not tb.AcceptsReturn Then pasteText = pasteText.ReplaceLineEndings(" ", mergeMultiple:=True)
 
                     Dim start = tb.SelectionStart

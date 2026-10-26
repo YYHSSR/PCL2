@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 namespace MeloongCore;
 
-#region ConfigProvider | 配置提供器
+#region ConfigProvider
 
 public interface IConfigProvider {
     void Set<T>(string key, T? value, bool encrypted);
@@ -15,18 +15,18 @@ public class JsonConfigProvider : IConfigProvider {
     public static readonly ConcurrentBag<WeakReference<JsonConfigProvider>> allProviders = [];
     private readonly string filePath;
 
-#pragma warning disable CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 'required' 修饰符或声明为可以为 null。
+#pragma warning disable CS8618 // Non-nullable fields must contain a non-null value when exiting the constructor.
     public JsonConfigProvider(string filePath) {
-#pragma warning restore CS8618 // 在退出构造函数时，不可为 null 的字段必须包含非 null 值。请考虑添加 'required' 修饰符或声明为可以为 null。
+#pragma warning restore CS8618 // Non-nullable fields must contain a non-null value when exiting the constructor.
         this.filePath = filePath;
         allProviders.Add(new(this));
         saveWorker = new(Save, 500, RateLimitMode.WaitUnillNoNewInvoke);
         InitJson();
     }
 
-    // 原始文件缓存
+    // Raw file cache
     private Lazy<JObject> json;
-    // 反序列化后的结果缓存
+    // Deserialized value cache
     private readonly ConcurrentDictionary<string, object?> cache = new();
     private void InitJson() {
         json = new(() => {
@@ -39,22 +39,20 @@ public class JsonConfigProvider : IConfigProvider {
         });
     }
 
-    // ================================= 设置、读取、缓存 =================================
+    // ================================= Set, get, cache =================================
 
     public void Set<T>(string key, T? value, bool encrypted) {
         cache[key] = value;
         lock (this) {
             if (value is null) {
-                // 直接在 JSON 中表示为 null
+                // Stored directly as null in the JSON
                 json.Value[key] = JValue.CreateNull();
                 Logger.Trace($"配置已修改：{key} = null（{filePath}）");
             } else if (encrypted) {
-                // 需要加密，在 JSON 中保存密文字符串
+                // Encryption required: store the ciphertext string in the JSON
                 throw new NotImplementedException("加密需要改为使用识别码，现在尚未实现。");
-                // Logger.Trace($"配置已修改：{key} = 已加密（{filePath}）");
-                // json.Value[key] = CryptographyUtils.AesEncrypt(value is string str ? str : JsonConvert.SerializeObject(value));
             } else {
-                // 用 JToken 保留原始结构
+                // Use JToken to preserve the original structure
                 JToken token = JToken.FromObject(value);
                 json.Value[key] = token;
                 Logger.Trace($"配置已修改：{key} = {token.ToString(Formatting.None)}（{filePath}）");
@@ -63,10 +61,10 @@ public class JsonConfigProvider : IConfigProvider {
         MakeDirty();
     }
     public T? Read<T>(string key, T? defaultValue, bool encrypted) {
-        if (cache.TryGetValue(key, out var cachedValue)) return (T?) cachedValue; // 读取缓存
+        if (cache.TryGetValue(key, out var cachedValue)) return (T?) cachedValue; // Read from cache
         JToken entry;
         lock (this) {
-            if (!json.Value.TryGetValue(key, out entry!)) return defaultValue; // 未找到该键
+            if (!json.Value.TryGetValue(key, out entry!)) return defaultValue; // Key not found
             entry = entry.DeepClone();
         }
         try {
@@ -101,7 +99,7 @@ public class JsonConfigProvider : IConfigProvider {
         cache.Clear();
     }
 
-    // ===================================== 保存 =====================================
+    // ===================================== Save =====================================
 
     private readonly RateLimitedWorker saveWorker;
     private bool isDirty = false;
@@ -109,7 +107,7 @@ public class JsonConfigProvider : IConfigProvider {
         lock (this) isDirty = true;
         saveWorker.Start();
     }
-    /// <summary>同步保存配置，并等待同一实例正在进行的保存完成；保存失败时保留待保存状态。</summary>
+    /// <summary>Saves the config synchronously, waiting for any in-progress save of the same instance; on failure the pending-save state is kept.</summary>
     public void Save() {
         lock (this) {
             if (!isDirty) return;
@@ -125,28 +123,28 @@ public static class ConfigProviders {
 
 #endregion
 
-#region ConfigEntry | 单个配置项
+#region ConfigEntry
 
 /// <summary>
-/// 当前获取到的配置值。
+/// The current config value.
 /// </summary>
 public class PreviewGetEventArgs<T>(T? value) : EventArgs {
     public T? Value { get; set; } = value;
 }
 
 /// <summary>
-/// 使用固定的 <see cref="IConfigProvider"/> 的配置项。
-/// <para/>若不指定 <paramref name="provider"/>，则使用 <see cref="ConfigProviders.Default"/>。
+/// A config entry bound to a fixed <see cref="IConfigProvider"/>.
+/// <para/>If <paramref name="provider"/> is not specified, <see cref="ConfigProviders.Default"/> is used.
 /// </summary>
 public class ConfigEntry<T>(string key, T? defaultValue, bool encrypted = false, IConfigProvider? provider = null) {
     public IConfigProvider Provider { get; } = provider ?? ConfigProviders.Default;
 
     /// <summary>
-    /// 当调整配置项的值时触发，参数为新值。<para/>新值可能和旧值相同。
+    /// Raised when the config value is changed; the argument is the new value.<para/>The new value may equal the old one.
     /// </summary>
     public event Action<T?>? Changed;
     /// <summary>
-    /// 当获取配置项的值时触发。
+    /// Raised when the config value is read.
     /// </summary>
     public event Action<PreviewGetEventArgs<T>, IConfigProvider>? PreviewGet;
 
@@ -163,7 +161,7 @@ public class ConfigEntry<T>(string key, T? defaultValue, bool encrypted = false,
         Changed?.Invoke(value);
     }
     public void Reset() {
-        if (!Provider.HasValue(key)) return; // 值未设置，无需重置
+        if (!Provider.HasValue(key)) return; // Value not set, nothing to reset
         Provider.Remove(key);
         Changed?.Invoke(defaultValue);
     }
@@ -176,15 +174,15 @@ public class ConfigEntry<T>(string key, T? defaultValue, bool encrypted = false,
 }
 
 /// <summary>
-/// 在每次操作时动态指定 <see cref="IConfigProvider"/> 的配置项。
+/// A config entry whose <see cref="IConfigProvider"/> is specified on each operation.
 /// </summary>
 public class DynamicConfigEntry<T>(string key, T? defaultValue, bool encrypted = false) {
     /// <summary>
-    /// 当调整配置项的值时触发，参数为新值。<para/>新值可能和旧值相同。
+    /// Raised when the config value is changed; the argument is the new value.<para/>The new value may equal the old one.
     /// </summary>
     public event Action<T?>? Changed;
     /// <summary>
-    /// 当获取配置项的值时触发。
+    /// Raised when the config value is read.
     /// </summary>
     public event Action<PreviewGetEventArgs<T>, IConfigProvider>? PreviewGet;
 
@@ -202,7 +200,7 @@ public class DynamicConfigEntry<T>(string key, T? defaultValue, bool encrypted =
         Changed?.Invoke(value);
     }
     public void Reset(IConfigProvider provider) {
-        if (!provider.HasValue(key)) return; // 值未设置，无需重置
+        if (!provider.HasValue(key)) return; // Value not set, nothing to reset
         provider.Remove(key);
         Changed?.Invoke(defaultValue);
     }
@@ -219,7 +217,7 @@ public class DynamicConfigEntry<T>(string key, T? defaultValue, bool encrypted =
 
 public static class ConfigUtils {
 
-    /// <summary>立即保存所有配置。</summary>
+    /// <summary>Saves all configs immediately.</summary>
     public static void SaveAll() {
         foreach (var weakRef in JsonConfigProvider.allProviders) {
             if (weakRef.TryGetTarget(out var provider)) provider.Save();
@@ -231,12 +229,12 @@ public static class ConfigUtils {
         try {
             return FileUtils.Exists(filePath) ? JObject.Parse(FileUtils.ReadAsString(filePath)) : [];
         } catch {
-            // JSON 异常可能包含凭据内容，不保留原始异常，也不回退空配置。
+            // JSON exceptions may contain credential content, so the original exception is not kept and there is no fallback to an empty config.
             throw new InvalidDataException($"读取密钥文件失败（{filePath}），请检查文件内容与加密格式。");
         }
     });
 
-    /// <summary>从 secret.json 中读取加密的密钥；如果未找到对应密钥则抛出异常。</summary>
+    /// <summary>Reads an encrypted secret from secret.json; throws if the secret is not found.</summary>
     public static string GetSecret(string key) {
         string value = secret.Value.Value<string>(key) ?? throw new KeyNotFoundException($"未找到密钥：{key}");
         try {

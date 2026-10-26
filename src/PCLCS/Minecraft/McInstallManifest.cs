@@ -1,20 +1,20 @@
 namespace PCLCS;
 
 /// <summary>
-/// MC 版本安装清单及 PCL 管理文件清单。
+/// MC version install manifest and PCL managed-file manifest.
 /// </summary>
-/// <param name="SchemaVersion"> 清单格式版本；无版本的旧清单为 0。</param>
-/// <param name="Components"> 安装目标及受管理组件版本。</param>
-/// <param name="LastModifiedUtc"> 最后修改时间（UTC）。</param>
-/// <param name="ManagedFiles"> 受管理文件；没有文件时为空列表。</param>
+/// <param name="SchemaVersion"> Manifest schema version; 0 for old manifests without a version.</param>
+/// <param name="Components"> Install target and managed component versions.</param>
+/// <param name="LastModifiedUtc"> Last modified time (UTC).</param>
+/// <param name="ManagedFiles"> Managed files; an empty list if there are none.</param>
 public record McInstallManifest(int SchemaVersion, McComponents Components, DateTime LastModifiedUtc, IReadOnlyList<McInstallManifest.ManagedFile> ManagedFiles) {
     /// <summary>
-    /// 清理以 Mod 形式安装的、已删除或修改的组件的记录，并更新清单。
+    /// Cleans up records of components installed as mods that have been deleted or modified, and updates the manifest.
     /// </summary>
     public McInstallManifest RefreshModComponents(string gameFolder) {
         List<ManagedFile> invalidFiles = [];
         foreach (ManagedFile entry in ManagedFiles) {
-            if (entry.Component is null) continue; // 不检查非组件文件
+            if (entry.Component is null) continue; // Do not check non-component files
             FileInfo file = new(Path.Combine(gameFolder, entry.RelativePath));
             if (!file.Exists || file.LastWriteTimeUtc != entry.LastWriteTimeUtc.ToUniversalTime()) invalidFiles.Add(entry);
         }
@@ -31,21 +31,21 @@ public record McInstallManifest(int SchemaVersion, McComponents Components, Date
     }
 
     /// <summary>
-    /// 由 PCL 管理并记录的版本内文件。
+    /// A file in the version folder that is managed and recorded by PCL.
     /// </summary>
-    /// <param name="RelativePath"> 相对于游戏目录的文件路径。确保路径为全小写且可比较。</param>
-    /// <param name="Sha1"> 小写的 SHA1。</param>
-    /// <param name="LastWriteTimeUtc"> 目标文件的最后修改时间（UTC）。</param>
-    /// <param name="Component"> 安装器组件名；为空时表示文件由整合包管理。</param>
+    /// <param name="RelativePath"> File path relative to the game directory. Guaranteed to be all lower case and comparable.</param>
+    /// <param name="Sha1"> Lower-case SHA1.</param>
+    /// <param name="LastWriteTimeUtc"> Last modified time of the target file (UTC).</param>
+    /// <param name="Component"> Installer component name; empty if the file is managed by a modpack.</param>
     public record ManagedFile(string RelativePath, string Sha1, DateTime LastWriteTimeUtc,
         [property: JsonProperty(NullValueHandling = NullValueHandling.Ignore)] string? Component = null);
 }
 
-/// <param name="MinecraftVersion"> 目标 Minecraft 版本。</param>
-/// <param name="ModLoaderVersions"> 目标中各个 Mod Loader 的版本；原版为空字典。</param>
-/// <param name="OptiFineEntry"> OptiFine 条目信息，不安装时为 <see langword="null"/>。</param>
-/// <param name="FabricApiVersion"> 由 PCL 管理的 Fabric API 版本；不安装时为 <see langword="null"/>。</param>
-/// <param name="OptiFabricVersion"> 由 PCL 管理的 OptiFabric 版本；不安装时为 <see langword="null"/>。</param>
+/// <param name="MinecraftVersion"> Target Minecraft version.</param>
+/// <param name="ModLoaderVersions"> Version of each mod loader in the target; an empty dictionary for vanilla.</param>
+/// <param name="OptiFineEntry"> OptiFine entry info, or <see langword="null"/> if not installed.</param>
+/// <param name="FabricApiVersion"> Fabric API version managed by PCL, or <see langword="null"/> if not installed.</param>
+/// <param name="OptiFabricVersion"> OptiFabric version managed by PCL, or <see langword="null"/> if not installed.</param>
 [method: JsonConstructor]
 public record McComponents(string MinecraftVersion, Dictionary<ModLoaders, string> ModLoaderVersions,
         [property: JsonProperty(NullValueHandling = NullValueHandling.Ignore)] JObject? OptiFineEntry = null,

@@ -8,20 +8,20 @@ Public Class PageInstanceSetup
         PanBack.ScrollToHome()
         RefreshRam(False)
 
-        '由于各个版本不同，每次都需要重新加载
+        'Each instance differs, so this must reload every time
         AniControlEnabled += 1
         Reload()
         AniControlEnabled -= 1
 
-        '非重复加载部分
+        'One-time load
         If LoadedFirst Then Return
         LoadedFirst = True
 
-        'Java 加载器同步
+        'Sync with the Java loader
         AddHandler PageInstanceLeft.CurrentJavaWorker.Started, AddressOf UpdateJavaRelatedUi
         AddHandler PageInstanceLeft.CurrentJavaWorker.Stopped, AddressOf UpdateJavaRelatedUi
 
-        '版本范围校验
+        'Version range validation
         TextArgumentJavaRange.ValidateRules = New ObjectModel.Collection(Of Validate) From {New ValidateFunc(
         Function(Str As String)
             Try
@@ -44,17 +44,17 @@ Public Class PageInstanceSetup
     Public Sub Reload()
         Try
 
-            '启动参数
-            Dim _unused = PageInstanceLeft.Instance.PathIndie '触发自动判定
+            'Launch arguments
+            Dim _unused = PageInstanceLeft.Instance.PathIndie 'Trigger automatic detection
             ComboArgumentIndieV2.SelectedIndex = If(Settings.Get(Of Boolean)("VersionArgumentIndieV2", Instance:=PageInstanceLeft.Instance), 0, 1)
             UpdateJavaList()
 
-            '服务器
+            'Server
             ComboServerLogin.SelectedIndex = Settings.Get(Of Integer)("VersionServerLogin", Instance:=PageInstanceLeft.Instance)
             ComboServerLoginLast = ComboServerLogin.SelectedIndex
             UpdateServerLoginUI()
 
-            '高级设置
+            'Advanced settings
             If Settings.Get(Of Integer)("VersionAdvanceAssets", Instance:=PageInstanceLeft.Instance) = 2 Then
                 Logger.Info("已迁移老版本的关闭文件校验设置")
                 Settings.Reset("VersionAdvanceAssets", Instance:=PageInstanceLeft.Instance)
@@ -63,7 +63,7 @@ Public Class PageInstanceSetup
 
             SettingService.RefreshSettings(Me)
 
-            '游戏内存
+            'Game memory
             OnVersionRamTypeChanged(Settings.Get(Of Integer)("VersionRamType", Instance:=PageInstanceLeft.Instance))
 
         Catch ex As Exception
@@ -71,7 +71,7 @@ Public Class PageInstanceSetup
         End Try
     End Sub
 
-    '初始化
+    'Initialize
     Public Sub Reset()
         Try
 
@@ -92,7 +92,7 @@ Public Class PageInstanceSetup
         Reload()
     End Sub
 
-#Region "游戏内存"
+#Region "Game memory"
 
     Public Shared Sub OnVersionRamTypeChanged(Type As Integer)
         If FrmInstanceSetup Is Nothing Then Return
@@ -105,18 +105,18 @@ Public Class PageInstanceSetup
     End Sub
 
     ''' <summary>
-    ''' 刷新 UI 上的 RAM 显示。
+    ''' Refresh the RAM display on the UI.
     ''' </summary>
     Public Sub RefreshRam(ShowAnim As Boolean)
         If LabRamGame Is Nothing OrElse LabRamUsed Is Nothing OrElse FrmMain.PageCurrent <> FormMain.PageType.InstanceSetup OrElse FrmInstanceLeft.PageID <> FormMain.PageSubType.InstanceSetup Then Return
-        '获取内存情况
+        'Read memory usage
         Dim RamGame As Double = Math.Round(GetRam(PageInstanceLeft.Instance), 5)
         Dim RamTotal As Double = Math.Round(My.Computer.Info.TotalPhysicalMemory / 1024 / 1024 / 1024, 1)
         Dim RamAvailable As Double = Math.Round(My.Computer.Info.AvailablePhysicalMemory / 1024 / 1024 / 1024, 1)
         Dim RamGameActual As Double = Math.Round(Math.Min(RamGame, RamAvailable), 5)
         Dim RamUsed As Double = Math.Round(RamTotal - RamAvailable, 5)
         Dim RamEmpty As Double = Math.Round((RamTotal - RamUsed - RamGame).Clamp(0, 1000), 1)
-        '设置最大可用内存
+        'Set the maximum available memory
         If RamTotal <= 1.5 Then
             SliderRamCustom.MaxValue = Math.Max(Math.Floor((RamTotal - 0.3) / 0.1), 1)
         ElseIf RamTotal <= 8 Then
@@ -126,20 +126,20 @@ Public Class PageInstanceSetup
         Else
             SliderRamCustom.MaxValue = Math.Floor((RamTotal - 16) / 2) + 33
         End If
-        '设置文本
+        'Set the text
         LabRamGame.Text = If(RamGame = Math.Floor(RamGame), RamGame & ".0", RamGame) & " GB" &
                           If(RamGame <> RamGameActual, " (可用 " & If(RamGameActual = Math.Floor(RamGameActual), RamGameActual & ".0", RamGameActual) & " GB)", "")
         LabRamUsed.Text = If(RamUsed = Math.Floor(RamUsed), RamUsed & ".0", RamUsed) & " GB"
         LabRamTotal.Text = " / " & If(RamTotal = Math.Floor(RamTotal), RamTotal & ".0", RamTotal) & " GB"
         If ShowAnim Then
-            '宽度动画
+            'Animate the widths
             AniStart({
                 AaGridLengthWidth(ColumnRamUsed, RamUsed - ColumnRamUsed.Width.Value, 800,, New AniEaseOutFluent(AniEasePower.Strong)),
                 AaGridLengthWidth(ColumnRamGame, RamGameActual - ColumnRamGame.Width.Value, 800,, New AniEaseOutFluent(AniEasePower.Strong)),
                 AaGridLengthWidth(ColumnRamEmpty, RamEmpty - ColumnRamEmpty.Width.Value, 800,, New AniEaseOutFluent(AniEasePower.Strong))
             }, "VersionSetup Ram Grid")
         Else
-            '宽度设置
+            'Set the widths
             ColumnRamUsed.Width = New GridLength(RamUsed, GridUnitType.Star)
             ColumnRamGame.Width = New GridLength(RamGameActual, GridUnitType.Star)
             ColumnRamEmpty.Width = New GridLength(RamEmpty, GridUnitType.Star)
@@ -151,24 +151,24 @@ Public Class PageInstanceSetup
 
     Private RamTextLeft As Integer = 2, RamTextRight As Integer = 1
     ''' <summary>
-    ''' 刷新 UI 上的文本位置。
+    ''' Refresh text positions on the UI.
     ''' </summary>
     Private Sub RefreshRamText() Handles RectRamGame.SizeChanged, RectRamEmpty.SizeChanged, LabRamGame.SizeChanged
-        '获取宽度信息
+        'Read width info
         Dim RectUsedWidth = RectRamUsed.ActualWidth
         Dim TotalWidth = PanRamDisplay.ActualWidth
         Dim LabGameWidth = LabRamGame.ActualWidth, LabUsedWidth = LabRamUsed.ActualWidth, LabTotalWidth = LabRamTotal.ActualWidth
         Dim LabGameTitleWidth = LabRamGameTitle.ActualWidth, LabUsedTitleWidth = LabRamUsedTitle.ActualWidth
-        '左侧
+        'Left side
         Dim Left As Integer
         If RectUsedWidth - 30 < LabUsedWidth OrElse RectUsedWidth - 30 < LabUsedTitleWidth Then
-            '全写不下了
+            'Nothing fits
             Left = 0
         ElseIf RectUsedWidth - 25 < (LabUsedWidth + LabTotalWidth) Then
-            '显示不下完整数据
+            'The full figures do not fit
             Left = 1
         Else
-            '正常
+            'Fits normally
             Left = 2
         End If
         If RamTextLeft <> Left Then
@@ -194,36 +194,36 @@ Public Class PageInstanceSetup
                         }, "VersionSetup Ram TextLeft")
             End Select
         End If
-        '右侧
+        'Right side
         Dim Right As Integer
         If TotalWidth < LabGameWidth + 2 + RectUsedWidth OrElse TotalWidth < LabGameTitleWidth + 2 + RectUsedWidth Then
-            '挤到最右边
+            'Pushed to the far right
             Right = 0
         Else
-            '正常情况
+            'Normal case
             Right = 1
         End If
         If Right = 0 Then
             If AniControlEnabled = 0 AndAlso (RamTextRight <> Right OrElse AniIsRun("VersionSetup Ram TextRight")) Then
-                '需要动画
+                'Needs animation
                 AniStart({
                         AaX(LabRamGame, TotalWidth - LabGameWidth - LabRamGame.Margin.Left, 100,, New AniEaseOutFluent(AniEasePower.Weak)),
                         AaX(LabRamGameTitle, TotalWidth - LabGameTitleWidth - LabRamGameTitle.Margin.Left, 100,, New AniEaseOutFluent(AniEasePower.Weak))
                 }, "VersionSetup Ram TextRight")
             Else
-                '不需要动画
+                'No animation needed
                 LabRamGame.Margin = New Thickness(TotalWidth - LabGameWidth, 3, 0, 0)
                 LabRamGameTitle.Margin = New Thickness(TotalWidth - LabGameTitleWidth, 0, 0, 5)
             End If
         Else
             If AniControlEnabled = 0 AndAlso (RamTextRight <> Right OrElse AniIsRun("VersionSetup Ram TextRight")) Then
-                '需要动画
+                'Needs animation
                 AniStart({
                         AaX(LabRamGame, 2 + RectUsedWidth - LabRamGame.Margin.Left, 100,, New AniEaseOutFluent(AniEasePower.Weak)),
                         AaX(LabRamGameTitle, 2 + RectUsedWidth - LabRamGameTitle.Margin.Left, 100,, New AniEaseOutFluent(AniEasePower.Weak))
                 }, "VersionSetup Ram TextRight")
             Else
-                '不需要动画
+                'No animation needed
                 LabRamGame.Margin = New Thickness(2 + RectUsedWidth, 3, 0, 0)
                 LabRamGameTitle.Margin = New Thickness(2 + RectUsedWidth, 0, 0, 5)
             End If
@@ -232,75 +232,75 @@ Public Class PageInstanceSetup
     End Sub
 
     ''' <summary>
-    ''' 获取当前设置的 RAM 值。单位为 GB。
+    ''' Get the configured RAM value, in GB.
     ''' </summary>
     Public Shared Function GetRam(Instance As McInstance) As Double
-        '跟随全局设置
+        'Follow the global setting
         If Settings.Get(Of Integer)("VersionRamType", Instance:=Instance) = 2 Then
             Return PageSetupLaunch.GetRam(Instance, True)
         End If
 
         '------------------------------------------
-        ' 修改下方代码时需要一并修改 PageSetupLaunch
+        ' When changing the code below, also change PageSetupLaunch
         '------------------------------------------
 
-        '使用当前版本的设置
+        'Use this instance's setting
         Dim RamGive As Double
         If Settings.Get(Of Integer)("VersionRamType", Instance:=Instance) = 0 Then
-            '自动配置
+            'Automatic
             Dim RamAvailable As Double = Math.Round(My.Computer.Info.AvailablePhysicalMemory / 1024 / 1024 / 1024 * 10) / 10
-            '确定需求的内存值
-            Dim RamMininum As Double '无论如何也需要保证的最低限度内存
-            Dim RamTarget1 As Double '估计能勉强带动了的内存
-            Dim RamTarget2 As Double '估计没啥问题了的内存
-            Dim RamTarget3 As Double '安装过多附加组件需要的内存
+            'Decide how much memory is needed
+            Dim RamMininum As Double 'Minimum that must always be guaranteed
+            Dim RamTarget1 As Double 'Enough to barely run
+            Dim RamTarget2 As Double 'Enough to run comfortably
+            Dim RamTarget3 As Double 'Needed when too many addons are installed
             If Instance IsNot Nothing AndAlso Not Instance.IsLoaded Then Instance.Load()
             If Instance IsNot Nothing AndAlso Instance.Modable Then
-                '可安装 Mod 的版本
+                'Instances that can install mods
                 Dim ModCount = ModDirectoryCache.GetCount(Instance.PathIndie & "mods\", Not RunInUi())
                 RamMininum = 0.5 + ModCount / 150
                 RamTarget1 = 1.5 + ModCount / 90
                 RamTarget2 = 2.7 + ModCount / 50
                 RamTarget3 = 4.5 + ModCount / 25
             ElseIf Instance IsNot Nothing AndAlso Instance.Version.HasOptiFine Then
-                'OptiFine 版本
+                'OptiFine instance
                 RamMininum = 0.5
                 RamTarget1 = 1.5
                 RamTarget2 = 3
                 RamTarget3 = 5
             Else
-                '普通版本
+                'Normal instance
                 RamMininum = 0.5
                 RamTarget1 = 1.5
                 RamTarget2 = 2.5
                 RamTarget3 = 4
             End If
             Dim RamDelta As Double
-            '预分配内存，阶段一，0 ~ T1，100%
+            'Preallocate, stage 1, 0 ~ T1, 100%
             RamDelta = RamTarget1
             RamGive += Math.Min(RamAvailable, RamDelta)
             RamAvailable -= RamDelta
             If RamAvailable < 0.1 Then GoTo PreFin
-            '预分配内存，阶段二，T1 ~ T2，70%
+            'Preallocate, stage 2, T1 ~ T2, 70%
             RamDelta = RamTarget2 - RamTarget1
             RamGive += Math.Min(RamAvailable * 0.7, RamDelta)
             RamAvailable -= RamDelta / 0.7
             If RamAvailable < 0.1 Then GoTo PreFin
-            '预分配内存，阶段三，T2 ~ T3，40%
+            'Preallocate, stage 3, T2 ~ T3, 40%
             RamDelta = RamTarget3 - RamTarget2
             RamGive += Math.Min(RamAvailable * 0.4, RamDelta)
             RamAvailable -= RamDelta / 0.4
             If RamAvailable < 0.1 Then GoTo PreFin
-            '预分配内存，阶段四，T3 ~ T3 * 2，15%
+            'Preallocate, stage 4, T3 ~ T3 * 2, 15%
             RamDelta = RamTarget3
             RamGive += Math.Min(RamAvailable * 0.15, RamDelta)
             RamAvailable -= RamDelta / 0.15
             If RamAvailable < 0.1 Then GoTo PreFin
 PreFin:
-            '不低于最低值
+            'Do not go below the minimum
             RamGive = Math.Round(Math.Max(RamGive, RamMininum), 1)
         Else
-            '手动配置
+            'Manual
             Dim Value As Integer = Settings.Get(Of Integer)("VersionRamCustom", Instance:=Instance)
             If Value <= 12 Then
                 RamGive = Value * 0.1 + 0.3
@@ -317,10 +317,10 @@ PreFin:
 
 #End Region
 
-#Region "服务器"
+#Region "Server"
 
-    '当第三方登录更改时，清空版本列表缓存以更新版本分类
-    'TODO: 这会不会导致拖拽改变第三方登录的时候版本列表缓存没有更新？
+    'When third-party login changes, clear the instance list cache so categories update
+    'TODO: does dragging to change third-party login leave the instance list cache stale?
     Public Shared Sub OnVersionServerLoginChanged(Type As Integer)
         If FrmInstanceSetup Is Nothing Then Return
         WriteIni(McFolderSelected & "PCL.ini", "InstanceCache", "")
@@ -329,26 +329,25 @@ PreFin:
         LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
     End Sub
 
-    '自动替换标点
+    'Auto-replace punctuation
     Private Sub TextServerEnter_Change() Handles TextServerEnter.TextChanged
         Dim NewText = TextServerEnter.Text.Replace("：", ":").Replace("。", ".")
         If NewText = TextServerEnter.Text Then Return
-        Dim CurrentPosition = TextServerEnter.SelectionStart '重设焦点
+        Dim CurrentPosition = TextServerEnter.SelectionStart 'Restore the caret
         TextServerEnter.Text = NewText
         TextServerEnter.SelectionStart = CurrentPosition
     End Sub
 
-    '全局
+    'Global login
     Private ComboServerLoginLast As Integer
     Private Sub ComboServerLogin_Changed() Handles ComboServerLogin.SelectionChanged, TextServerNide.ValidatedTextChanged, TextServerAuthServer.ValidatedTextChanged, TextServerAuthRegister.ValidatedTextChanged
         If AniControlEnabled <> 0 Then Return
         UpdateServerLoginUI()
-        '检查是否输入正确，正确才触发设置改变
+        'Apply the setting only when the input is valid
         If ComboServerLogin.SelectedIndex = 3 AndAlso Not TextServerNide.IsValidated Then Return
         If ComboServerLogin.SelectedIndex = 4 AndAlso Not TextServerAuthServer.IsValidated Then Return
-        '检查结果是否发生改变，未改变则不触发设置改变
+        'Skip when the result has not changed
         If ComboServerLoginLast = ComboServerLogin.SelectedIndex Then Return
-        '触发
         ComboServerLoginLast = ComboServerLogin.SelectedIndex
         Settings.Set("VersionServerLogin", ComboServerLogin.SelectedIndex, Instance:=PageInstanceLeft.Instance)
     End Sub
@@ -380,7 +379,7 @@ PreFin:
 
 #End Region
 
-#Region "Java 主类别和预览"
+#Region "Java category and preview"
 
     Private Sub ReloadCurrentJava() Handles ComboArgumentJava.SelectionChanged, TextArgumentJavaRange.ValidatedTextChanged
         PageInstanceLeft.ReloadCurrentJava()
@@ -396,7 +395,7 @@ PreFin:
                 HintArgumentJava.Visibility = Visibility.Visible
                 TextArgumentJavaRange.Visibility = Visibility.Collapsed
                 PanArgumentJavaSelect.Visibility = Visibility.Collapsed
-                '显示当前会选择的 Java
+                'Show the Java that will be selected
                 If Not JavaWorker.LastSucceeded OrElse JavaWorker.Running Then
                     If Not JavaWorker.Running Then JavaWorker.Start()
                     HintArgumentJava.Text = $"正在查找 Java……"
@@ -417,19 +416,19 @@ PreFin:
                 HintArgumentJava.Visibility = Visibility.Visible
                 TextArgumentJavaRange.Visibility = Visibility.Visible
                 PanArgumentJavaSelect.Visibility = Visibility.Collapsed
-                '首次设置
+                'First-time setup
                 If Not Settings.HasSaved("VersionArgumentJavaRange", PageInstanceLeft.Instance) Then
                     Dim DefaultRange As String = GetJavaRequirement(PageInstanceLeft.Instance).Range.ToString.Replace("-∞", "").Replace("+∞", "")
                     Settings.Set("VersionArgumentJavaRange", DefaultRange, PageInstanceLeft.Instance)
                     TextArgumentJavaRange.Text = DefaultRange
                 End If
-                '输入的范围有误
+                'The entered range is invalid
                 If Not String.IsNullOrEmpty(TextArgumentJavaRange.ValidateResult) Then
                     HintArgumentJava.Text = $"Java 版本范围错误：{TextArgumentJavaRange.ValidateResult}"
                     HintArgumentJava.Theme = MyHint.Themes.Red
                     Return
                 End If
-                '显示当前会选择的 Java
+                'Show the Java that will be selected
                 If Not JavaWorker.LastSucceeded OrElse JavaWorker.Running Then
                     If Not JavaWorker.Running Then JavaWorker.Start()
                     HintArgumentJava.Text = $"正在查找 Java……"
@@ -453,25 +452,25 @@ PreFin:
 
 #End Region
 
-#Region "选择特定 Java 的下拉框"
-    '注意：修改此处代码时需要同时修改 PageSetupLaunch.xaml.vb
+#Region "Dropdown for a specific Java"
+    'Note: when changing this code, also change PageSetupLaunch.xaml.vb
 
-    '刷新 Java 下拉框显示
+    'Refresh the Java dropdown
     Public Sub UpdateJavaList()
         If ComboArgumentJavaSelect Is Nothing OrElse LabArgumentJava Is Nothing OrElse Not ComboArgumentJavaSelect.IsLoaded Then Return
         ComboArgumentJavaSelect.Items.Clear()
-        '还需要等待搜索结束
+        'Still waiting for the search to finish
         If JavaListRefreshWorker.Running Then
             BtnArgumentJavaSearch.IsEnabled = False
             ComboArgumentJavaSelect.IsEnabled = False
             LabArgumentJava.Text = "搜索中 …"
             Return
         End If
-        '========================================== 显示结果 ==========================================
+        '========================================== Show results ==========================================
         BtnArgumentJavaSearch.IsEnabled = True
         ComboArgumentJavaSelect.IsEnabled = True
         Dim SelectedJava As Java = Configs.JavaForced.Get(PageInstanceLeft.Instance.Config)
-        '更新下拉框文本
+        'Update the dropdown text
         If Not Configs.JavaList.Get().Any() Then
             LabArgumentJava.Text = "未找到 Java，点击以导入已有的 Java"
         ElseIf SelectedJava Is Nothing Then
@@ -479,7 +478,7 @@ PreFin:
         Else
             LabArgumentJava.Text = SelectedJava.ToString
         End If
-        '更新列表
+        'Update the list
         Try
             For Each JavaEntry In Configs.JavaList.Get()
                 Dim JavaItem As New MyListItem With {
@@ -494,7 +493,7 @@ PreFin:
                 End Sub
                 ComboArgumentJavaSelect.Items.Add(JavaItem)
                 Dim Buttons As New List(Of MyIconButton)
-                '从列表中移除按钮
+                'Remove-from-list button
                 Dim IsOfficial As Boolean = PathUtils.IsParentOf($"{Paths.AppData}.minecraft\runtime\", JavaEntry.Folder)
                 Dim DeleteButton As New MyIconButton With {.Logo = Logo.IconButtonStop, .Height = 24, .Width = 24}
                 DeleteButton.IsEnabled = Not IsOfficial
@@ -502,7 +501,7 @@ PreFin:
                 AddHandler DeleteButton.Click, Sub() ManuallyRemoveJava(JavaEntry)
                 ToolTipService.SetShowOnDisabled(DeleteButton, True)
                 Buttons.Add(DeleteButton)
-                '打开文件夹按钮
+                'Open-folder button
                 Dim OpenButton As New MyIconButton With {.Logo = Logo.IconButtonOpen, .LogoScale = 1.1, .Height = 24, .Width = 24}
                 OpenButton.ToolTip = "打开文件夹"
                 AddHandler OpenButton.Click, Sub() OpenExplorer(JavaEntry.JavaExePath)
@@ -527,7 +526,7 @@ PreFin:
 
 #End Region
 
-    '版本隔离
+    'Version isolation
     Private Sub ComboArgumentIndieV2_SelectionChanged(sender As Object, e As SelectionChangedEventArgs) Handles ComboArgumentIndieV2.SelectionChanged
         If AniControlEnabled <> 0 Then Return
         Static IsReverting As Boolean = False
@@ -540,21 +539,21 @@ PreFin:
             If e.RemovedItems.Count > 0 Then ComboArgumentIndieV2.SelectedItem = e.RemovedItems(0)
             IsReverting = False
         End If
-        '实际应用设置
+        'Apply the setting
         Settings.Set("VersionArgumentIndieV2", sender.SelectedIndex = 0, Instance:=PageInstanceLeft.Instance)
     End Sub
 
-    '启动前执行命令
+    'Command to run before launch
     Private Sub TextAdvanceRun_TextChanged(sender As Object, e As TextChangedEventArgs) Handles TextAdvanceRun.TextChanged
         CheckAdvanceRunWait.Visibility = (TextAdvanceRun.Text <> "").ToVisibility
     End Sub
 
-    '切换到全局设置
+    'Switch to global settings
     Private Sub BtnSwitch_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnSwitch.Click
         FrmMain.PageChange(FormMain.PageType.Setup, FormMain.PageSubType.SetupLaunch)
     End Sub
 
-    '去除参数中的回车
+    'Strip line breaks from arguments
     Private Sub ReplaceEnter(sender As MyTextBox, e As TextChangedEventArgs) Handles TextAdvanceJvm.TextChanged, TextAdvanceGame.TextChanged
         Dim NewText = sender.Text.ReplaceLineEndings(" ", mergeMultiple:=True)
         If NewText = sender.Text Then Return

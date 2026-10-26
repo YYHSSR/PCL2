@@ -1,56 +1,56 @@
 ''' <summary>
-''' 社区资源的单个可下载版本。
+''' A single downloadable version of a community resource.
 ''' </summary>
 Public Class ResourceVersion
 
-    '基础字段
+    'Basic fields
 
     ''' <summary>
-    ''' 用于唯一性鉴别该版本的 ID。CurseForge 中为 123456 的大整数，Modrinth 中为英文乱码的 Version 字段。
+    ''' ID that uniquely identifies this version. A large integer like 123456 on CurseForge; the random-looking Version field on Modrinth.
     ''' </summary>
     Public Id As String
     ''' <summary>
-    ''' 该版本所对应的单一资源类别。
+    ''' The single resource type this version belongs to.
     ''' </summary>
     Public ResourceType As ResourceTypes
 
-    '描述性字段
+    'Descriptive fields
 
     ''' <summary>
-    ''' 版本描述名。
-    ''' 并非文件名或版本号，是由上传者完全自定义的字段。
+    ''' Display name of the version.
+    ''' Not the file name or version number; a field fully customized by the uploader.
     ''' </summary>
     Public Display As String
     ''' <summary>
-    ''' 发布时间。
+    ''' Release date.
     ''' </summary>
     Public ReleaseDate As Date
     ''' <summary>
-    ''' 下载量计数。
-    ''' 注意，仅为一个平台的计数，无法反映多平台加起来的下载量，且 CurseForge 可能错误地返回 0。
+    ''' Download count.
+    ''' Note: this is the count of a single platform only and does not reflect the combined downloads; CurseForge may incorrectly return 0.
     ''' </summary>
     Public DownloadCount As Integer
     ''' <summary>
-    ''' 版本号。
-    ''' 不一定是标准格式。CurseForge 默认为 Nothing。
+    ''' Version number.
+    ''' Not necessarily in a standard format. Nothing by default on CurseForge.
     ''' </summary>
     Public Version As String
     ''' <summary>
-    ''' 所有支持的 Mod 加载器列表。可能为 <see cref="ModLoaders.None"/>。
+    ''' List of all supported mod loaders. May be <see cref="ModLoaders.None"/>.
     ''' </summary>
     Public ModLoaders As ModLoaders = ModLoaders.None
     ''' <summary>
-    ''' 支持的游戏版本列表。类型包括："26.1.5"，"26.1"，"26.1 预览版"，"1.18.5"，"1.18"，"1.18 预览版"，"21w15a"，"未知版本"。
+    ''' List of supported game versions. Possible forms: "26.1.5", "26.1", "26.1 预览版", "1.18.5", "1.18", "1.18 预览版", "21w15a", "未知版本".
     ''' </summary>
     Public GameVersions As List(Of String)
 
     ''' <summary>
-    ''' 发布状态。
+    ''' Release status.
     ''' </summary>
     Public ReleaseType As ReleaseTypes
     ''' <summary>
-    ''' 发布状态的友好描述。
-    ''' 例如："正式版"，"Beta 版"。
+    ''' Friendly description of the release status.
+    ''' For example: "正式版", "Beta 版".
     ''' </summary>
     Public ReadOnly Property ReleaseTypeDisplay As String
         Get
@@ -71,10 +71,10 @@ Public Class ResourceVersion
         Alpha = 3
     End Enum
 
-    '下载信息
+    'Download info
 
     ''' <summary>
-    ''' 下载信息是否可用。
+    ''' Whether the download info is available.
     ''' </summary>
     Public ReadOnly Property DownloadAvailable As Boolean
         Get
@@ -82,35 +82,35 @@ Public Class ResourceVersion
         End Get
     End Property
     ''' <summary>
-    ''' 文件名。
+    ''' File name.
     ''' </summary>
     Public FileName As String = Nothing
     ''' <summary>
-    ''' 对应文件的所有可能的下载 URL。
+    ''' All possible download URLs of the file.
     ''' </summary>
     Public DownloadUrls As List(Of String)
     ''' <summary>
-    ''' 对应文件的 SHA1 或 MD5。固定为小写。
+    ''' SHA1 or MD5 of the file. Always lowercase.
     ''' </summary>
     Public Hash As String = Nothing
     ''' <summary>
-    ''' 文件大小。不可用时为 -1。
+    ''' File size. -1 if unavailable.
     ''' </summary>
     Public Size As Integer = -1
     ''' <summary>
-    ''' 作为该版本依赖项的项目 ID。
-    ''' 它们可能没有加载，在加载后会添加到 Dependencies 中（主要是因为 Modrinth 返回的是字符串 ID 而非 Slug，导致 Project.Id 查询不到）。
+    ''' IDs of the projects this version depends on.
+    ''' They may not be loaded yet and are added to Dependencies once loaded (mainly because Modrinth returns string IDs rather than slugs, so Project.Id lookups fail).
     ''' </summary>
     Private RawDependencies As New List(Of String)
     ''' <summary>
-    ''' 作为该版本依赖项的项目 ID。
+    ''' IDs of the projects this version depends on.
     ''' </summary>
     Public Dependencies As New List(Of String)
 
-    '初始化
+    'Initialization
 
     ''' <summary>
-    ''' 从平台 API 返回的 JSON 中初始化实例。若出错会抛出异常。
+    ''' Initializes the instance from the JSON returned by the platform API. Throws an exception on error.
     ''' </summary>
     Public Shared Function FromPlatformJson(Data As JObject, ExpectedResourceType As ResourceTypes) As ResourceVersion
         Dim Result As New ResourceVersion
@@ -118,7 +118,7 @@ Public Class ResourceVersion
             .ResourceType = ExpectedResourceType
             If Data.ContainsKey("gameId") Then
 #Region "CurseForge"
-                '简单信息
+                'Simple info
                 .Id = Data("id")
                 .Display = Data("displayName").ToString.Replace("	", "").Trim(" ")
                 .Version = Nothing
@@ -127,20 +127,20 @@ Public Class ResourceVersion
                 .DownloadCount = Data("downloadCount")
                 .FileName = Data("fileName")
                 .Size = Data("fileLength")
-                If .Size = 0 Then .Size = -1 'CurseForge 可能错误地返回 0 尺寸（#9104）
+                If .Size = 0 Then .Size = -1 'CurseForge may incorrectly return a size of 0 (#9104)
                 .Hash = CType(Data("hashes"), JArray).ToList.FirstOrDefault(Function(s) s("algo").ToObject(Of Integer) = 1)?("value")?.ToString().Lower()
                 If .Hash Is Nothing Then .Hash = CType(Data("hashes"), JArray).ToList.FirstOrDefault(Function(s) s("algo").ToObject(Of Integer) = 2)?("value")?.ToString().Lower()
                 'DownloadAddress
                 Dim Url = Data("downloadUrl").ToString
                 If Url = "" Then Url = $"https://edge.forgecdn.net/files/{CInt(.Id.ToString.Substring(0, 4))}/{CInt(.Id.ToString.Substring(4))}/{ .FileName}"
-                .DownloadUrls = ParseCurseForgeDownloadUrls(Url.Replace(.FileName, StringUtils.UrlEscape(.FileName))) '对脑残 CurseForge 的下载地址进行多种修正
-                .DownloadUrls.Add(DlSourceModGet(Url)) '添加镜像源；注意 MCIM 源不支持 URL 编码后的文件名，必须传入 URL 编码前的文件名
-                .DownloadUrls = .DownloadUrls.Distinct.ToList '最终去重
+                .DownloadUrls = ParseCurseForgeDownloadUrls(Url.Replace(.FileName, StringUtils.UrlEscape(.FileName))) 'Apply several fixes to CurseForge's download URLs
+                .DownloadUrls.Add(DlSourceModGet(Url)) 'Add mirror sources; note the MCIM source does not support URL-encoded file names, so the unencoded file name must be passed
+                .DownloadUrls = .DownloadUrls.Distinct.ToList 'Final deduplication
                 'Dependencies
                 If Data.ContainsKey("dependencies") Then
                     .RawDependencies = Data("dependencies").
-                            Where(Function(d) d("relationType").ToObject(Of Integer) = 3 AndAlso '种类为依赖
-                                              d("modId").ToObject(Of Integer) <> 306612 AndAlso d("modId").ToObject(Of Integer) <> 634179). '排除 Fabric API 和 Quilt API
+                            Where(Function(d) d("relationType").ToObject(Of Integer) = 3 AndAlso 'The type is a dependency
+                                              d("modId").ToObject(Of Integer) <> 306612 AndAlso d("modId").ToObject(Of Integer) <> 634179). 'Exclude Fabric API and Quilt API
                             Select(Function(d) d("modId").ToString).ToList
                 End If
                 'GameVersions
@@ -153,7 +153,7 @@ Public Class ResourceVersion
                     .GameVersions = .GameVersions.ToList
                 ElseIf .GameVersions.Count > 1 Then
                     .GameVersions = .GameVersions.SortByComparison(AddressOf McUtils.CompareVersionGE).ToList
-                    If .ResourceType = ResourceTypes.ModPack Then .GameVersions = { .GameVersions(0)}.ToList '整合包理应只 “支持” 一个版本
+                    If .ResourceType = ResourceTypes.ModPack Then .GameVersions = { .GameVersions(0)}.ToList 'A modpack should only "support" one version
                 Else
                     .GameVersions = New List(Of String) From {"未知版本"}
                 End If
@@ -165,40 +165,40 @@ Public Class ResourceVersion
 #End Region
             Else
 #Region "Modrinth"
-                '简单信息
+                'Simple info
                 .Id = Data("id")
                 .Display = Data("name").ToString.Replace("	", "").Trim(" ")
                 .Version = Data("version_number")
                 .ReleaseDate = Data("date_published")
                 .ReleaseType = If(Data("version_type").ToString = "release", ReleaseTypes.Release, If(Data("version_type").ToString = "beta", ReleaseTypes.Beta, ReleaseTypes.Alpha))
                 .DownloadCount = Data("downloads")
-                If CType(Data("files"), JArray).Any() Then '可能为空
+                If CType(Data("files"), JArray).Any() Then 'May be empty
                     Dim File As JToken = Data("files")(0)
                     .FileName = File("filename")
-                    .DownloadUrls = New List(Of String) From {File("url"), DlSourceModGet(File("url"))}.Distinct.ToList '同时添加了镜像源
+                    .DownloadUrls = New List(Of String) From {File("url"), DlSourceModGet(File("url"))}.Distinct.ToList 'Mirror sources are added as well
                     .Size = File("size")
                     .Hash = File("hashes")("sha1")?.ToString.Lower()
                 End If
-                '类别与 Loaders
-                '结果可能混杂着 Mod、数据包和服务端插件
+                'Type and loaders
+                'Results may mix mods, data packs and server plugins
                 Dim RawLoaders As List(Of String) = Data("loaders").Select(Function(v) v.ToString).ToList
                 .ModLoaders = ModLoaders.None
                 For Each Loader As ModLoaders In EnumUtils.GetAllFlags(Of ModLoaders)()
                     If RawLoaders.Contains(Loader.ToString.Lower) Then .ModLoaders = .ModLoaders Or Loader
                 Next
                 If .ResourceType.HasFlagF(ResourceTypes.Mod) OrElse .ResourceType.HasFlagF(ResourceTypes.DataPack) Then
-                    If RawLoaders.Intersect({"bukkit", "folia", "paper", "purpur", "spigot"}).Any() Then .ResourceType = ResourceTypes.Plugin 'Veinminer Enchantment 同时支持服务端与 Fabric
+                    If RawLoaders.Intersect({"bukkit", "folia", "paper", "purpur", "spigot"}).Any() Then .ResourceType = ResourceTypes.Plugin 'Veinminer Enchantment supports both servers and Fabric
                     If RawLoaders.Contains("datapack") Then .ResourceType = ResourceTypes.DataPack
                     If .ModLoaders.Flags().Any() Then .ResourceType = ResourceTypes.Mod
                 Else
-                    '使用传入的类别，不作修改（#8377）
+                    'Use the passed-in type without modification (#8377)
                 End If
                 'Dependencies
                 If Data.ContainsKey("dependencies") Then
                     .RawDependencies = Data("dependencies").
-                            Where(Function(d) d("dependency_type") = "required" AndAlso '种类为依赖
-                                              d("project_id") <> "P7dR8mSH" AndAlso d("project_id") <> "qvIfYCYJ" AndAlso '排除 Fabric API 和 Quilt API
-                                              d("project_id").ToString.Length > 0). '有时候真的会空……
+                            Where(Function(d) d("dependency_type") = "required" AndAlso 'The type is a dependency
+                                              d("project_id") <> "P7dR8mSH" AndAlso d("project_id") <> "qvIfYCYJ" AndAlso 'Exclude Fabric API and Quilt API
+                                              d("project_id").ToString.Length > 0). 'It really can be empty sometimes...
                             Select(Function(d) d("project_id").ToString).ToList
                 End If
                 'GameVersions
@@ -207,10 +207,10 @@ Public Class ResourceVersion
                                                Select(Function(v) If(v.Contains("-"), v.BeforeFirst("-") & " 预览版", If(v.StartsWithF("b1."), "远古版本", v))).
                                                Distinct.ToList
                 If .GameVersions.IsSingle Then
-                    '无需处理
+                    'Nothing to handle
                 ElseIf .GameVersions.Count > 1 Then
                     .GameVersions = .GameVersions.SortByComparison(AddressOf McUtils.CompareVersionGE).ToList
-                    If .ResourceType = ResourceTypes.ModPack Then .GameVersions = New List(Of String) From { .GameVersions(0)} '整合包理应只 “支持” 一个版本
+                    If .ResourceType = ResourceTypes.ModPack Then .GameVersions = New List(Of String) From { .GameVersions(0)} 'A modpack should only "support" one version
                 ElseIf RawVersions.Any(Function(v) v.RegexCheck("[0-9]{2}w[0-9]{2}[a-z]")) Then
                     .GameVersions = RawVersions.Where(Function(v) v.RegexCheck("[0-9]{2}w[0-9]{2}[a-z]")).ToList
                 Else
@@ -222,26 +222,20 @@ Public Class ResourceVersion
         Return Result
     End Function
     ''' <summary>
-    ''' 从项目 ID 获取其下的全部版本列表，并获取其前置项目信息。
+    ''' Gets all versions of a project from its ID, along with info about its dependency projects.
     ''' </summary>
     Public Shared Function FromProjectId(ProjectId As String, Platform As ResourcePlatforms, Optional LoadDependencies As Boolean = True) As List(Of ResourceVersion)
         If Not Platform.Flags.IsSingle Then Throw New ArgumentException($"必须指定单一平台，当前值为 {Platform}")
         Dim TargetProject = ResourceProject.FromProjectId(ProjectId, Platform)
-        '获取项目对象的文件列表
+        'Get the file list of the project
         If Not ProjectFilesCache.ContainsKey(ProjectId) Then
             Logger.Info($"开始获取项目版本列表：{ProjectId}")
             Dim ResultJsonArray As JArray = Nothing
             If Platform = ResourcePlatforms.CurseForge Then
                 For RetryCount As Integer = 0 To 2
                     Dim ResultJson As JObject = DlModRequest($"https://api.curseforge.com/v1/mods/{ProjectId}/files?pageSize=" &
-                    (10000 + RetryCount)) '每次重试多请求一个文件，以避免触发 CDN 缓存
-                    'HMCL 一次性请求了 10000 个文件，虽然不知道会不会出问题但先这样吧……（#5522）
-                    '之前只请求一部分文件的方法备份如下：
-                    'If TargetProject.Type = CompType.Mod Then 'Mod 使用每个版本最新的文件
-                    '    ResultJsonArray = DlModRequest("https://api.curseforge.com/v1/mods/files", HttpMethod.Post, "{""fileIds"": [" & Join(TargetProject.CurseForgeFileIds, ",") & "]}", "application/json")("data")
-                    'Else '否则使用全部文件
-                    '    ResultJsonArray = DlModRequest($"https://api.curseforge.com/v1/mods/{ProjectId}/files?pageSize=999")("data")
-                    'End If
+                    (10000 + RetryCount)) 'Request one more file on each retry to avoid hitting the CDN cache
+                    'Same as HMCL, request up to 10000 files at once (#5522)
                     If ResultJson("pagination")("resultCount").ToObject(Of Integer) = ResultJson("pagination")("totalCount").ToObject(Of Integer) Then
                         ResultJsonArray = ResultJson("data")
                         Exit For
@@ -258,11 +252,11 @@ Public Class ResourceVersion
             End If
             ProjectFilesCache(ProjectId) = ResultJsonArray.Select(Function(a) FromPlatformJson(a, TargetProject.Types)).
                 Where(Function(a) a.DownloadAvailable).
-                DistinctBy(Function(a) a.Id).ToList 'CurseForge 可能会重复返回相同项（#1330）
+                DistinctBy(Function(a) a.Id).ToList 'CurseForge may return duplicate items (#1330)
         End If
         Dim Result As List(Of ResourceVersion) = ProjectFilesCache(ProjectId)
         If Not LoadDependencies Then Return Result
-        '加载前置信息
+        'Load dependency info
         Dim Dependencies As List(Of String) = Result.SelectMany(Function(f) f.RawDependencies).Distinct().ToList
         If Dependencies.Any Then
             Logger.Info($"项目 {ProjectId} 中需要加载的前置：{Dependencies.Join("，")}")
@@ -277,14 +271,14 @@ Public Class ResourceVersion
         Return Result
     End Function
     ''' <summary>
-    ''' 项目 ID 对应的版本信息的缓存。不会保存到文件。
+    ''' Cache of version info by project ID. Not saved to a file.
     ''' </summary>
     Protected Friend Shared ProjectFilesCache As New Dictionary(Of String, List(Of ResourceVersion))
 
-    '序列化
+    'Serialization
 
     ''' <summary>
-    ''' 从缓存 JSON 读取字段数据。
+    ''' Reads field data from the cache JSON.
     ''' </summary>
     Public Shared Function FromCacheJson(Data As JObject) As ResourceVersion
         Dim Result As New ResourceVersion
@@ -308,7 +302,7 @@ Public Class ResourceVersion
         Return Result
     End Function
     ''' <summary>
-    ''' 转为缓存 JSON。
+    ''' Converts to cache JSON.
     ''' </summary>
     Public Function ToCacheJson() As JObject
         Dim Result As New JObject
@@ -332,10 +326,10 @@ Public Class ResourceVersion
         Return Result
     End Function
 
-    '杂项
+    'Miscellaneous
 
     ''' <summary>
-    ''' 转为列表项。
+    ''' Converts to a list item.
     ''' </summary>
     Public Function ToListItem(ClickHandler As MyListItem.ClickEventHandler, Optional SaveAsButtonHandler As MyIconButton.ClickEventHandler = Nothing,
                                Optional IsBadDisplay As Boolean = False) As MyVirtualizingElement(Of MyListItem)
@@ -344,7 +338,7 @@ Public Class ResourceVersion
             Dim Result As New MyListItem
             With Result
 
-                '基础属性
+                'Basic properties
                 .SnapsToDevicePixels = True
                 .Height = 42
                 .Type = MyListItem.CheckType.Clickable
@@ -352,19 +346,19 @@ Public Class ResourceVersion
                 .Title = If(IsBadDisplay, FileName, Display).BeforeLastOfAny({".zip", ".jar", ".mrpack", ".litemod"}, True)
                 .Logo = $"{PathImage}ReleaseTypes/{ReleaseType}.png"
                 AddHandler .Click, ClickHandler
-                '描述
+                'Description
                 .Info =
                 Iterator Function()
                     If ModLoaders <> ModLoaders.None Then Yield ModLoaders.Flags.Join("、"c)
                     If .Title <> PathUtils.GetFileNameWithoutExtension(FileName) Then Yield PathUtils.GetFileNameWithoutExtension(FileName)
                     If Dependencies.Any Then Yield $"{Dependencies.Count} 项前置"
                     If GameVersions.All(Function(v) Not v.Contains(".") OrElse {"w", "snapshot", "rc", "pre", "experimental", "-"}.Any(Function(s) v.ContainsIgnoreCase(s))) Then Yield $"游戏版本 {GameVersions.Join("、"c)}"
-                    If DownloadCount > 0 Then Yield $"下载 {If(DownloadCount > 100000, Math.Round(DownloadCount / 10000) & " 万", DownloadCount.ToString() + " ")}次" 'CurseForge 的下载次数经常错误地返回 0
+                    If DownloadCount > 0 Then Yield $"下载 {If(DownloadCount > 100000, Math.Round(DownloadCount / 10000) & " 万", DownloadCount.ToString() + " ")}次" 'CurseForge's download count is often incorrectly returned as 0
                     Yield $"更新于 {StringUtils.FormatTimeSpan(ReleaseDate - Date.Now, False)}"
                     If ReleaseType <> ReleaseTypes.Release Then Yield ReleaseTypeDisplay
                 End Function().Join("，"c)
 
-                '另存为按钮
+                'Save As button
                 If SaveAsButtonHandler IsNot Nothing Then
                     Dim BtnSave As New MyIconButton With {.Logo = Logo.IconButtonSave, .ToolTip = "另存为"}
                     AddHandler BtnSave.Click, SaveAsButtonHandler
@@ -376,9 +370,9 @@ Public Class ResourceVersion
         End Function) With {.Height = 42}
     End Function
     ''' <summary>
-    ''' 获取下载信息。
+    ''' Gets the download info.
     ''' </summary>
-    ''' <param name="LocalFileOrFolder">目标本地文件夹，或完整的文件路径。会自动判断类型。</param>
+    ''' <param name="LocalFileOrFolder">The target local folder or a full file path. The type is detected automatically.</param>
     Public Function ToNetFile(LocalFileOrFolder As String,
             Optional TrackDownloadReason As DownloadReason? = Nothing, Optional TrackGameVersion As String = Nothing, Optional TrackLoader As ModLoaders = ModLoaders.None) As NetFile
         Return New NetFile(
@@ -388,7 +382,7 @@ Public Class ResourceVersion
             SimulateBrowserHeaders:=True)
     End Function
     ''' <summary>
-    ''' 添加 Modrinth 追踪参数。
+    ''' Adds Modrinth tracking parameters.
     ''' </summary>
     Public Shared Iterator Function ParseModrinthTrackArguments(Urls As List(Of String),
             Optional TrackDownloadReason As DownloadReason? = Nothing, Optional TrackGameVersion As String = Nothing, Optional TrackLoader As ModLoaders = ModLoaders.None) As IEnumerable(Of String)
@@ -409,7 +403,7 @@ Public Class ResourceVersion
         Update
     End Enum
     ''' <summary>
-    ''' 重新整理 CurseForge 的下载地址。
+    ''' Reorganizes CurseForge download URLs.
     ''' </summary>
     Public Shared Function ParseCurseForgeDownloadUrls(Url As String) As List(Of String)
         Return {

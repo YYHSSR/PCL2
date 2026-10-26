@@ -13,7 +13,7 @@ Public Class MyScrollViewer
                 GetType(ComboBoxItem).IsAssignableFrom(SourceType) OrElse
                 (TypeOf e.Source Is Visual AndAlso
                     PresentationSource.FromVisual(e.Source)?.RootVisual?.GetType().FullName = "System.Windows.Controls.Primitives.PopupRoot")) Then
-            '如果当前是在对有滚动条的下拉框或文本框执行，则不接管操作
+            'Do not take over when scrolling over a combo box or text box that has its own scroll bar
             Return
         End If
         e.Handled = True
@@ -41,6 +41,6 @@ Public Class MyScrollViewer
     End Sub
 
     Private Sub MyScrollViewer_PreviewGotKeyboardFocus(sender As Object, e As KeyboardFocusChangedEventArgs) Handles Me.PreviewGotKeyboardFocus
-        If e.NewFocus IsNot Nothing AndAlso TypeOf e.NewFocus Is MySlider Then e.Handled = True '#3854，阻止获得焦点时自动滚动
+        If e.NewFocus IsNot Nothing AndAlso TypeOf e.NewFocus Is MySlider Then e.Handled = True '#3854: prevent automatic scrolling when getting focus
     End Sub
 End Class

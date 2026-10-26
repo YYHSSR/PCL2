@@ -7,7 +7,7 @@
     <Grid>
         <Grid x:Name="PanAllBack">
             <local:MyScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" x:Name="PanBack">
-                <StackPanel x:Name="PanMain" Margin="25,10,25,10" Grid.IsSharedSizeScope="True"> <!-- 若显示多选模块则为 92 -->
+                <StackPanel x:Name="PanMain" Margin="25,10,25,10" Grid.IsSharedSizeScope="True"> <!-- 92 when the multi-select module is shown -->
                     <local:MySearchBox Margin="0,15" HintText="搜索 Mod 名称 / 描述 / 标签" x:Name="SearchBox" />
                     <local:MyCard Grid.Row="0" Margin="0,0,0,15" x:Name="PanManage">
                         <Grid Margin="15,15,0,15" Height="35">

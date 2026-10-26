@@ -1,44 +1,44 @@
 namespace PCLCS;
 
 /// <summary>
-/// MC 百科条目。
-/// <para/>使用 <see cref="WikiEntry.All"/> 获取所有条目。
+/// An mcmod.cn (MC百科) entry.
+/// <para/>Use <see cref="WikiEntry.All"/> to get all entries.
 /// </summary>
 public class WikiEntry {
 
     /// <summary>
-    /// 在 MC 百科中的对应 ID。
+    /// The corresponding ID on mcmod.cn.
     /// </summary>
     public int Id;
     /// <summary>
-    /// 中文译名。
-    /// <c>null</c> 代表没有翻译。
+    /// Chinese name.
+    /// <c>null</c> means there is no translation.
     /// </summary>
     public string? ChineseName;
     /// <summary>
-    /// 各个 Mod 平台的 Slug（例如 advanced-solar-panels）。
-    /// 若没有对应键则为不在该平台上。
+    /// Slug on each mod platform (e.g. advanced-solar-panels).
+    /// A missing key means it is not on that platform.
     /// </summary>
     public Dictionary<ResourcePlatforms, string> Slugs = [];
     /// <summary>
-    /// MC 百科的浏览量逆序排行，1 代表浏览量最低。
+    /// Reverse ranking by mcmod.cn page views; 1 means the fewest views.
     /// </summary>
     public int Popularity;
 
     /// <summary>
-    /// 内置数据库中的所有 MC 百科条目。
+    /// All mcmod.cn entries in the built-in database.
     /// </summary>
     public static readonly Lazy<List<WikiEntry>> All = new(() => {
         var dataLines = FileUtils.ReadAsLines(@"Resource\WikiEntries.txt", type: typeof(WikiEntry)).ToList();
 
-        // 读取最后一行的浏览量
+        // Read the page views from the last line
         Queue<int> popularities = [];
-        for (int i = 0; i < dataLines[^1].Length; i += 3) { // 将每 3 个字符切割成一个元素
+        for (int i = 0; i < dataLines[^1].Length; i += 3) { // Split every 3 characters into one element
             popularities.Enqueue(int.Parse(dataLines[^1].Substring(i, 3).ConvertRadix(86, 10)));
         }
         dataLines.RemoveAt(dataLines.Count - 1);
 
-        // 解析每一行
+        // Parse each line
         List<WikiEntry> results = [];
         var lineNumber = 0;
         foreach (var lineData in dataLines) {
@@ -66,8 +66,8 @@ public class WikiEntry {
                 entry.Id = lineNumber;
                 entry.Popularity = popularity;
                 if (parts.Length >= 2) {
-                    entry.ChineseName = parts[^1]; // 最后一项
-                    if (entry.ChineseName.Contains("*")) { // 处理 *
+                    entry.ChineseName = parts[^1]; // Last item
+                    if (entry.ChineseName.Contains("*")) { // Handle *
                         var englishName = entry.Slugs.Values.First().Replace("-", " ").Capitalize();
                         entry.ChineseName = entry.ChineseName.Replace("*", $" ({englishName})");
                     }

@@ -1,10 +1,10 @@
 Public Class MyExtraButton
 
-    '声明
-    Public Event Click(sender As Object, e As MouseButtonEventArgs) '自定义事件
+    'Declarations
+    Public Event Click(sender As Object, e As MouseButtonEventArgs) 'Custom event
     Public Event RightClick(sender As Object, e As MouseButtonEventArgs)
 
-    '进度条
+    'Progress bar
     Private _Progress As Double = 0
     Public Property Progress As Double
         Get
@@ -22,7 +22,7 @@ Public Class MyExtraButton
         End Set
     End Property
 
-    '自定义属性
+    'Custom properties
     Public Uuid As Integer = GetUuid()
     Private _Logo As String = ""
     Public Property Logo As String
@@ -56,7 +56,7 @@ Public Class MyExtraButton
             RunInUi(
             Sub()
                 If value Then
-                    '有了
+                    'Shown
                     Visibility = Visibility.Visible
                     AniStart({
                         AaScaleTransform(Me, 0.3 - CType(RenderTransform, ScaleTransform).ScaleX, 500, 60, New AniEaseOutFluent(AniEasePower.Weak)),
@@ -64,14 +64,14 @@ Public Class MyExtraButton
                         AaHeight(Me, 50 - Height, 200,, New AniEaseOutFluent(AniEasePower.Weak))
                     }, "MyExtraButton MainScale " & Uuid)
                 Else
-                    '没了
+                    'Hidden
                     AniStart({
                         AaScaleTransform(Me, -CType(RenderTransform, ScaleTransform).ScaleX, 100,, New AniEaseInFluent(AniEasePower.Weak)),
                         AaHeight(Me, -Height, 400, 100, New AniEaseOutFluent()),
                         AaCode(Sub() Visibility = Visibility.Collapsed,, True)
                     }, "MyExtraButton MainScale " & Uuid)
                 End If
-                IsHitTestVisible = value '防止缩放动画中依然可以点进去
+                IsHitTestVisible = value 'Prevent clicking it during the scale animation
             End Sub)
         End Set
     End Property
@@ -81,10 +81,9 @@ Public Class MyExtraButton
         If ShowCheck IsNot Nothing Then Show = ShowCheck()
     End Sub
 
-    '触发点击事件
+    'Raise the click event
     Private Sub Button_LeftMouseUp(sender As Object, e As MouseButtonEventArgs) Handles PanClick.MouseLeftButtonUp
         If IsLeftMouseHeld Then
-            Logger.Info($"按下附加按钮{If(ToolTip = "", "", "：" & ToolTip)}")
             RaiseEvent Click(sender, e)
             e.Handled = True
             Button_LeftMouseUp()
@@ -92,7 +91,6 @@ Public Class MyExtraButton
     End Sub
     Private Sub Button_RightMouseUp(sender As Object, e As MouseButtonEventArgs) Handles PanClick.MouseRightButtonUp
         If IsRightMouseHeld Then
-            Logger.Info($"右键按下附加按钮{If(ToolTip = "", "", "：" & ToolTip)}")
             RaiseEvent RightClick(sender, e)
             e.Handled = True
             Button_RightMouseUp()
@@ -108,7 +106,7 @@ Public Class MyExtraButton
         End Set
     End Property
 
-    '鼠标点击判定（务必放在点击事件之后，以使得 Button_MouseUp 先于 Button_MouseLeave 执行）
+    'Mouse click detection (must be placed after the click event so that Button_MouseUp runs before Button_MouseLeave)
     Private IsLeftMouseHeld As Boolean = False
     Private IsRightMouseHeld As Boolean = False
     Private Sub Button_LeftMouseDown(sender As Object, e As MouseButtonEventArgs) Handles PanClick.MouseLeftButtonDown
@@ -140,7 +138,7 @@ Public Class MyExtraButton
         End If
         If IsLeftMouseHeld Then RaiseCustomEvent()
         IsLeftMouseHeld = False
-        RefreshColor() '直接刷新颜色以判断是否已触发 MouseLeave
+        RefreshColor() 'Refresh the color directly to determine whether MouseLeave has been raised
     End Sub
     Private Sub Button_RightMouseUp() Handles PanClick.MouseRightButtonUp
         If Not CanRightClick Then Return
@@ -150,7 +148,7 @@ Public Class MyExtraButton
             }, "MyExtraButton Scale " & Uuid)
         End If
         IsRightMouseHeld = False
-        RefreshColor() '直接刷新颜色以判断是否已触发 MouseLeave
+        RefreshColor() 'Refresh the color directly to determine whether MouseLeave has been raised
     End Sub
     Private Sub Button_MouseLeave() Handles PanClick.MouseLeave
         IsLeftMouseHeld = False
@@ -158,25 +156,25 @@ Public Class MyExtraButton
         AniStart({
             AaScaleTransform(PanScale, 1 - CType(PanScale.RenderTransform, ScaleTransform).ScaleX, 500,, New AniEaseOutFluent)
         }, "MyExtraButton Scale " & Uuid)
-        RefreshColor() '直接刷新颜色以判断是否已触发 MouseLeave
+        RefreshColor() 'Refresh the color directly to determine whether MouseLeave has been raised
     End Sub
 
-    '自定义事件
-    '务必放在 IsMouseDown 更新之后
+    'Custom event
+    'Must be placed after IsMouseDown is updated
     Private Const AnimationColorIn As Integer = 120
     Private Const AnimationColorOut As Integer = 150
     Public Sub RefreshColor() Handles PanClick.MouseEnter, PanClick.MouseLeave, Me.Loaded, Me.IsEnabledChanged
         Try
-            If IsLoaded AndAlso AniControlEnabled = 0 Then '防止默认属性变更触发动画
+            If IsLoaded AndAlso AniControlEnabled = 0 Then 'Prevent default property changes from triggering animations
 
                 If Not IsEnabled Then
-                    '禁用
+                    'Disabled
                     AniStart(AaColor(PanColor, BackgroundProperty, "ColorBrushGray4", AnimationColorIn), "MyExtraButton Color " & Uuid)
                 ElseIf IsMouseOver Then
-                    '指向
+                    'Hover
                     AniStart(AaColor(PanColor, BackgroundProperty, "ColorBrush4", AnimationColorIn), "MyExtraButton Color " & Uuid)
                 Else
-                    '普通
+                    'Normal
                     AniStart(AaColor(PanColor, BackgroundProperty, "ColorBrush3", AnimationColorOut), "MyExtraButton Color " & Uuid)
                 End If
 
@@ -198,7 +196,7 @@ Public Class MyExtraButton
     End Sub
 
     ''' <summary>
-    ''' 发出一圈波浪效果提示。
+    ''' Plays a ripple effect as a hint.
     ''' </summary>
     Public Sub Ribble()
         RunInUi(

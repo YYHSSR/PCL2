@@ -1,18 +1,18 @@
 Public Class PageLoginNide
     Private IsFirstLoad As Boolean = True
     ''' <summary>
-    ''' 刷新页面显示的所有信息。
+    ''' Refresh everything shown on this page.
     ''' </summary>
     Public Sub Reload(KeepInput As Boolean)
-        '记住密码
+        'Remember password
         CheckRemember.Checked = Settings.Get(Of Boolean)("LoginRemember")
-        If KeepInput AndAlso Not IsFirstLoad Then '避免第一次就以 KeepInput 的方式加载，导致文本框里没东西
-            '保留输入，只刷新下拉框列表
+        If KeepInput AndAlso Not IsFirstLoad Then 'Skip KeepInput on the first load, or the text box stays empty
+            'Keep the input and only refresh the dropdown list
             Dim Input As String = ComboName.Text
             ComboName.ItemsSource = If(Settings.Get(Of String)("LoginNideEmail") = "", Nothing, Settings.Get(Of String)("LoginNideEmail").ToString.Split("¨"))
             ComboName.Text = Input
         Else
-            '不保留输入，刷新列表后自动选择第一项
+            'Drop the input, refresh the list, and select the first item
             If Settings.Get(Of String)("LoginNideEmail") = "" Then
                 ComboName.ItemsSource = Nothing
             Else
@@ -24,7 +24,7 @@ Public Class PageLoginNide
         IsFirstLoad = False
     End Sub
     ''' <summary>
-    ''' 获取当前页面的登录信息。
+    ''' Get this page's login info.
     ''' </summary>
     Public Shared Function GetLoginData() As McLoginServer
         Dim Server As String = If(IsNothing(McInstanceSelected), Settings.Get(Of String)("CacheNideServer"), Settings.Get(Of String)("VersionServerNide", Instance:=McInstanceSelected))
@@ -35,7 +35,7 @@ Public Class PageLoginNide
         End If
     End Function
     ''' <summary>
-    ''' 当前页面的登录信息是否有效。
+    ''' Whether this page's login info is valid.
     ''' </summary>
     Public Shared Function IsVaild(LoginData As McLoginServer) As String
         If LoginData.UserName = "" Then Return "账号不能为空！"
@@ -46,10 +46,10 @@ Public Class PageLoginNide
         Return IsVaild(GetLoginData())
     End Function
 
-    '保存输入信息
+    'Save the entered info
     Private Sub ComboName_TextChanged(sender As Object, e As TextChangedEventArgs) Handles ComboName.TextChanged
         If sender.Text = "" Then TextPass.Password = ""
-        If AniControlEnabled = 0 Then Settings.Set("CacheNideAccess", "")  '迫使其不进行 Validate
+        If AniControlEnabled = 0 Then Settings.Set("CacheNideAccess", "")  'Force it to skip Validate
     End Sub
     Private Sub TextPass_PasswordChanged(sender As Object, e As RoutedEventArgs) Handles TextPass.PasswordChanged
         If AniControlEnabled = 0 Then Settings.Set("CacheNideAccess", "")
@@ -65,7 +65,7 @@ Public Class PageLoginNide
         If AniControlEnabled = 0 Then Settings.Set(sender.Tag, sender.Checked)
     End Sub
 
-    '链接处理
+    'Link handling
     Private Sub ComboName_TextChanged() Handles ComboName.TextChanged
         BtnLink.Content = If(ComboName.Text = "", "注册账号", "找回密码")
     End Sub

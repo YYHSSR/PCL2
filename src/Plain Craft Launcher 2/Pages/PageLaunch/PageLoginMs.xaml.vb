@@ -1,11 +1,11 @@
 Public Class PageLoginMs
 
     ''' <summary>
-    ''' 刷新页面显示的所有信息。
+    ''' Refresh everything shown on this page.
     ''' </summary>
     Public Sub Reload(KeepInput As Boolean)
         Dim IndexBefore = ComboAccounts.SelectedIndex
-        '刷新下拉框列表
+        'Refresh the dropdown list
         ComboAccounts.Items.Clear()
         ComboAccounts.Items.Add(New MyComboBoxItem With {.Content = "添加新账号"})
         Try
@@ -21,7 +21,7 @@ Public Class PageLoginMs
             Logger.Error(ex, $"微软登录信息出错，登录信息已被重置", LogBehavior.Toast)
             Settings.Set("LoginMsJson", "{}")
         End Try
-        '如果不保留输入，刷新列表后自动选择第一项
+        'If input is not kept, refresh the list and select the first item
         ComboAccounts.SelectedIndex = If(KeepInput, Math.Max(0, IndexBefore), 0)
     End Sub
     Private Sub ComboAccounts_SelectionChanged(sender As Object, e As SelectionChangedEventArgs) Handles ComboAccounts.SelectionChanged
@@ -34,7 +34,7 @@ Public Class PageLoginMs
     End Sub
 
     ''' <summary>
-    ''' 获取当前页面的登录信息。
+    ''' Get this page's login info.
     ''' </summary>
     Public Shared Function GetLoginData() As McLoginMs
         If FrmLoginMs Is Nothing Then Return New McLoginMs With {.OAuthRefreshToken = Settings.Get(Of String)("CacheMsV2OAuthRefresh"), .UserName = Settings.Get(Of String)("CacheMsV2Name")}
@@ -51,7 +51,7 @@ Public Class PageLoginMs
         Return Result
     End Function
     ''' <summary>
-    ''' 当前页面的登录信息是否有效。
+    ''' Whether this page's login info is valid.
     ''' </summary>
     Public Shared Function IsVaild(LoginData As McLoginMs) As String
         If LoginData.OAuthRefreshToken = "" Then

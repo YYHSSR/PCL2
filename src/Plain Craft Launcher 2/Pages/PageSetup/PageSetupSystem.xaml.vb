@@ -3,11 +3,11 @@ Public Class PageSetupSystem
 
     Private Sub PageSetupSystem_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
 
-        '重复加载部分
+        'Runs on every load
         PanBack.ScrollToHome()
 
 
-        '非重复加载部分
+        'Runs only once
         Static IsLoaded As Boolean = False
         If IsLoaded Then Return
         IsLoaded = True
@@ -80,7 +80,7 @@ Public Class PageSetupSystem
         Reload()
     End Sub
 
-    '滑动条
+    'Sliders
     Private Sub SliderLoad()
         SliderDownloadThread.GetHintText = Function(v) v + 1
         SliderDownloadSpeed.GetHintText =

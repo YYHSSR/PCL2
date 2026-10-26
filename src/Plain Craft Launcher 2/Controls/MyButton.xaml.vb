@@ -3,10 +3,10 @@ Imports System.Windows.Markup
 <ContentProperty("Inlines")>
 Public Class MyButton
 
-    '声明
-    Public Event Click(sender As Object, e As MouseButtonEventArgs) '自定义事件
+    'Declarations
+    Public Event Click(sender As Object, e As MouseButtonEventArgs) 'Custom event
 
-    '自定义属性
+    'Custom properties
     Public Uuid As Integer = GetUuid()
     Public ReadOnly Property Inlines As InlineCollection
         Get
@@ -20,7 +20,7 @@ Public Class MyButton
         Set(value As String)
             SetValue(TextProperty, value)
         End Set
-    End Property '显示文本
+    End Property 'Display text
     Public Shared ReadOnly TextProperty As DependencyProperty = DependencyProperty.Register("Text", GetType(String), GetType(MyButton), New PropertyMetadata(New PropertyChangedCallback(
     Sub(sender As DependencyObject, e As DependencyPropertyChangedEventArgs)
         If sender IsNot Nothing Then CType(sender, MyButton).LabText.Text = e.NewValue
@@ -33,7 +33,7 @@ Public Class MyButton
             LabText.Padding = value
         End Set
     End Property
-    Private _ColorType As ColorState = ColorState.Normal  '配色方案
+    Private _ColorType As ColorState = ColorState.Normal  'Color scheme
     Public Property ColorType As ColorState
         Get
             Return _ColorType
@@ -48,7 +48,7 @@ Public Class MyButton
         Highlight = 1
         Red = 2
     End Enum
-    '属性穿透
+    'Property pass-through
     Public Shared Shadows ReadOnly PaddingProperty As DependencyProperty = DependencyProperty.Register("Padding", GetType(Thickness), GetType(MyButton), New PropertyMetadata(New PropertyChangedCallback(
         Sub(sender As MyButton, e As DependencyPropertyChangedEventArgs) If sender IsNot Nothing Then sender.PanFore.Padding = e.NewValue)))
     Public Overloads Property Padding As Thickness
@@ -68,42 +68,42 @@ Public Class MyButton
         End Set
     End Property
 
-    '自定义事件
+    'Custom event
     Private Const AnimationColorIn As Integer = 100
     Private Const AnimationColorOut As Integer = 200
     Private Sub RefreshColor(Optional obj = Nothing, Optional e = Nothing) Handles Me.MouseEnter, Me.MouseLeave, Me.Loaded, Me.IsEnabledChanged
         Try
-            If IsLoaded AndAlso AniControlEnabled = 0 Then '防止默认属性变更触发动画
+            If IsLoaded AndAlso AniControlEnabled = 0 Then 'Prevent default property changes from triggering animations
 
                 If IsEnabled Then
                     Select Case ColorType
                         Case ColorState.Normal
                             If IsMouseOver Then
-                                '指向（Main 3）
+                                'Hover (Main 3)
                                 AniStart({AaColor(PanFore, Border.BorderBrushProperty, "ColorBrush3", AnimationColorIn)}, "MyButton Color " & Uuid)
                             Else
-                                '普通（Main 1）
+                                'Normal (Main 1)
                                 AniStart({AaColor(PanFore, Border.BorderBrushProperty, "ColorBrush1", AnimationColorOut)}, "MyButton Color " & Uuid)
                             End If
                         Case ColorState.Highlight
                             If IsMouseOver Then
-                                '指向（Main 3）
+                                'Hover (Main 3)
                                 AniStart({AaColor(PanFore, Border.BorderBrushProperty, "ColorBrush3", AnimationColorIn)}, "MyButton Color " & Uuid)
                             Else
-                                '高亮（Main 2）
+                                'Highlight (Main 2)
                                 AniStart({AaColor(PanFore, Border.BorderBrushProperty, "ColorBrush2", AnimationColorOut)}, "MyButton Color " & Uuid)
                             End If
                         Case ColorState.Red
                             If IsMouseOver Then
-                                '红色指向
+                                'Red, hover
                                 AniStart({AaColor(PanFore, Border.BorderBrushProperty, "ColorBrushRedLight", AnimationColorIn)}, "MyButton Color " & Uuid)
                             Else
-                                '红色
+                                'Red
                                 AniStart({AaColor(PanFore, Border.BorderBrushProperty, "ColorBrushRedDark", AnimationColorOut)}, "MyButton Color " & Uuid)
                             End If
                     End Select
                 Else
-                    '不可用（Gray 4）
+                    'Disabled (Gray 4)
                     AniStart({AaColor(PanFore, Border.BorderBrushProperty, ColorGray4 - PanFore.BorderBrush, AnimationColorOut)}, "MyButton Color " & Uuid)
                 End If
             Else
@@ -140,13 +140,12 @@ Public Class MyButton
         End Try
     End Sub
 
-    '鼠标点击判定（务必放在点击事件之后，以使得 Button_MouseUp 先于 Button_MouseLeave 执行）
+    'Mouse click detection (must be placed after the click event so that Button_MouseUp runs before Button_MouseLeave)
     Private IsMouseDown As Boolean = False
     Private Sub Button_MouseUp(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseLeftButtonUp
         If Not IsMouseDown Then Return
-        Logger.Info($"按下按钮：{Text}")
         RaiseEvent Click(sender, e)
-        RaiseCustomEvent() '自定义事件
+        RaiseCustomEvent()
     End Sub
     Private Sub Button_MouseDown(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseLeftButtonDown
         IsMouseDown = True

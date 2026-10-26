@@ -3,10 +3,10 @@ Imports System.Windows.Markup
 <ContentProperty("Inlines")>
 Public Class MyExtraTextButton
 
-    '声明
-    Public Event Click(sender As Object, e As MouseButtonEventArgs) '自定义事件
+    'Declarations
+    Public Event Click(sender As Object, e As MouseButtonEventArgs) 'Custom event
 
-    '自定义属性
+    'Custom properties
     Public Uuid As Integer = GetUuid()
     Private _Logo As String = ""
     Public Property Logo As String
@@ -29,7 +29,7 @@ Public Class MyExtraTextButton
             If Path IsNot Nothing Then Path.RenderTransform = New ScaleTransform With {.ScaleX = LogoScale, .ScaleY = LogoScale}
         End Set
     End Property
-    '显示文本
+    'Display text
     Public ReadOnly Property Inlines As InlineCollection
         Get
             Return LabText.Inlines
@@ -48,7 +48,7 @@ Public Class MyExtraTextButton
         If sender IsNot Nothing Then CType(sender, MyExtraTextButton).LabText.Text = e.NewValue
     End Sub)))
 
-    '动画
+    'Animation
     Private _Show As Boolean = False
     Public Property Show As Boolean
         Get
@@ -60,7 +60,7 @@ Public Class MyExtraTextButton
             RunInUi(
             Sub()
                 If value Then
-                    '有了
+                    'Shown
                     Opacity = 0
                     AniStart({
                         AaOpacity(Me, 1 - Opacity, 80, 50),
@@ -68,28 +68,27 @@ Public Class MyExtraTextButton
                         AaScaleTransform(Me, 0.85, 160, 50, New AniEaseOutFluent(AniEasePower.Middle))
                     }, "MyExtraTextButton MainScale " & Uuid)
                 Else
-                    '没了
+                    'Hidden
                     AniStart({
                         AaOpacity(Me, -Opacity, 50, 50),
                         AaScaleTransform(Me, -CType(RenderTransform, ScaleTransform).ScaleX, 100,, New AniEaseInFluent(AniEasePower.Weak))
                     }, "MyExtraTextButton MainScale " & Uuid)
                 End If
-                IsHitTestVisible = value '防止缩放动画中依然可以点进去
+                IsHitTestVisible = value 'Prevent clicking it during the scale animation
             End Sub)
         End Set
     End Property
 
-    '触发点击事件
+    'Raise the click event
     Private Sub Button_LeftMouseUp(sender As Object, e As MouseButtonEventArgs) Handles PanClick.MouseLeftButtonUp
         If Not IsLeftMouseHeld Then Return
-        Logger.Info($"按下附加图标按钮：{Text}")
         RaiseEvent Click(sender, e)
         e.Handled = True
         RaiseCustomEvent()
         Button_LeftMouseUp()
     End Sub
 
-    '鼠标点击判定（务必放在点击事件之后，以使得 Button_MouseUp 先于 Button_MouseLeave 执行）
+    'Mouse click detection (must be placed after the click event so that Button_MouseUp runs before Button_MouseLeave)
     Private IsLeftMouseHeld As Boolean = False
     Private Sub Button_LeftMouseDown(sender As Object, e As MouseButtonEventArgs) Handles PanClick.MouseLeftButtonDown
         If Not IsLeftMouseHeld Then
@@ -106,7 +105,7 @@ Public Class MyExtraTextButton
             AaScaleTransform(PanScale, 1 - CType(PanScale.RenderTransform, ScaleTransform).ScaleX, 300,, New AniEaseOutBack)
         }, "MyExtraTextButton Scale " & Uuid)
         IsLeftMouseHeld = False
-        RefreshColor() '直接刷新颜色以判断是否已触发 MouseLeave
+        RefreshColor() 'Refresh the color directly to determine whether MouseLeave has been raised
     End Sub
     Private Sub Button_RightMouseUp() Handles PanClick.MouseRightButtonUp
         If Not IsLeftMouseHeld Then
@@ -114,32 +113,32 @@ Public Class MyExtraTextButton
                 AaScaleTransform(PanScale, 1 - CType(PanScale.RenderTransform, ScaleTransform).ScaleX, 300,, New AniEaseOutBack)
             }, "MyExtraTextButton Scale " & Uuid)
         End If
-        RefreshColor() '直接刷新颜色以判断是否已触发 MouseLeave
+        RefreshColor() 'Refresh the color directly to determine whether MouseLeave has been raised
     End Sub
     Private Sub Button_MouseLeave() Handles PanClick.MouseLeave
         IsLeftMouseHeld = False
         AniStart({
             AaScaleTransform(PanScale, 1 - CType(PanScale.RenderTransform, ScaleTransform).ScaleX, 500,, New AniEaseOutFluent)
         }, "MyExtraTextButton Scale " & Uuid)
-        RefreshColor() '直接刷新颜色以判断是否已触发 MouseLeave
+        RefreshColor() 'Refresh the color directly to determine whether MouseLeave has been raised
     End Sub
 
-    '自定义事件
-    '务必放在 IsMouseDown 更新之后
+    'Custom event
+    'Must be placed after IsMouseDown is updated
     Private Const AnimationColorIn As Integer = 120
     Private Const AnimationColorOut As Integer = 150
     Public Sub RefreshColor() Handles PanClick.MouseEnter, PanClick.MouseLeave, Me.Loaded, Me.IsEnabledChanged
         Try
-            If IsLoaded AndAlso AniControlEnabled = 0 Then '防止默认属性变更触发动画
+            If IsLoaded AndAlso AniControlEnabled = 0 Then 'Prevent default property changes from triggering animations
 
                 If Not IsEnabled Then
-                    '禁用
+                    'Disabled
                     AniStart(AaColor(PanColor, BackgroundProperty, "ColorBrushGray4", AnimationColorIn), "MyExtraTextButton Color " & Uuid)
                 ElseIf IsMouseOver Then
-                    '指向
+                    'Hover
                     AniStart(AaColor(PanColor, BackgroundProperty, "ColorBrush4", AnimationColorIn), "MyExtraTextButton Color " & Uuid)
                 Else
-                    '普通
+                    'Normal
                     AniStart(AaColor(PanColor, BackgroundProperty, "ColorBrush3", AnimationColorOut), "MyExtraTextButton Color " & Uuid)
                 End If
 

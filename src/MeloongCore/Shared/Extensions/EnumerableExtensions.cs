@@ -1,11 +1,11 @@
 namespace MeloongCore.Extensions;
 public static class EnumerableExtensions {
 
-    #region 查找
+    #region Search
 
     /// <summary>
-    /// 按优先级依次查找，返回首个有匹配结果的条件所匹配的第一个元素。
-    /// 所有条件均无匹配时返回 default。每尝试一个条件都会重新枚举序列。
+    /// Tries each condition in priority order and returns the first element matched by the first condition that has any match.
+    /// Returns default if no condition matches. The sequence is re-enumerated for each condition tried.
     /// </summary>
     public static TSource? FirstOrDefault<TSource>(this IEnumerable<TSource> source, params Func<TSource, bool>[] predicates) {
         foreach (var predicate in predicates) {
@@ -18,11 +18,11 @@ public static class EnumerableExtensions {
 
     #endregion
 
-    #region 去重
+    #region Deduplication
 
     /// <summary>
-    /// 通过比较器进行去重。
-    /// 该方法的效率较低，建议仅在小型列表上使用，或换用 DistinctBy。
+    /// Removes duplicates using a comparer.
+    /// This is inefficient; use it only on small lists, or use DistinctBy instead.
     /// </summary>
     public static IEnumerable<T> Distinct<T>(this IList<T> list, Func<T, T, bool> comparer) {
         var seen = new List<T>();
@@ -34,7 +34,7 @@ public static class EnumerableExtensions {
         }
     }
     /// <summary>
-    /// 按对象的指定值去重。
+    /// Removes duplicates by the specified value of each object.
     /// </summary>
     public static IEnumerable<TSource> DistinctBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector) {
         var seen = new HashSet<TKey>();
@@ -43,7 +43,7 @@ public static class EnumerableExtensions {
         }
     }
     /// <summary>
-    /// 按对象的指定值去重。
+    /// Removes duplicates by the specified value of each object.
     /// </summary>
     public static ParallelQuery<TSource> DistinctBy<TSource, TKey>(this ParallelQuery<TSource> source, Func<TSource, TKey> selector) {
         var seen = new ConcurrentDictionary<TKey, bool>();
@@ -52,11 +52,11 @@ public static class EnumerableExtensions {
 
     #endregion
 
-    #region 最大 / 最小
+    #region Max / Min
 
     /// <summary>
-    /// 选择所有最大值对应的对象。
-    /// 若没有元素则返回空列表。
+    /// Selects all objects that have the maximum value.
+    /// Returns an empty list if there are no elements.
     /// </summary>
     public static List<TSource> MaxByAll<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector) where TKey : IComparable<TKey> {
         var results = new List<TSource>();
@@ -80,8 +80,8 @@ public static class EnumerableExtensions {
         return results;
     }
     /// <summary>
-    /// 选择所有最大值对应的对象。
-    /// 若没有元素则返回空列表。
+    /// Selects all objects that have the maximum value.
+    /// Returns an empty list if there are no elements.
     /// </summary>
     public static List<TSource> MaxByAll<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer) {
         var results = new List<TSource>();
@@ -105,8 +105,8 @@ public static class EnumerableExtensions {
         return results;
     }
     /// <summary>
-    /// 选择所有最小值对应的对象。
-    /// 若没有元素则返回空列表。
+    /// Selects all objects that have the minimum value.
+    /// Returns an empty list if there are no elements.
     /// </summary>
     public static List<TSource> MinByAll<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector) where TKey : IComparable<TKey> {
         var results = new List<TSource>();
@@ -130,8 +130,8 @@ public static class EnumerableExtensions {
         return results;
     }
     /// <summary>
-    /// 选择所有最小值对应的对象。
-    /// 若没有元素则返回空列表。
+    /// Selects all objects that have the minimum value.
+    /// Returns an empty list if there are no elements.
     /// </summary>
     public static List<TSource> MinByAll<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer) {
         var results = new List<TSource>();
@@ -156,8 +156,8 @@ public static class EnumerableExtensions {
     }
 
     /// <summary>
-    /// 选择最大值对应的对象。
-    /// 若没有元素则返回 null。
+    /// Selects the object that has the maximum value.
+    /// Returns null if there are no elements.
     /// </summary>
     public static TSource? MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector) where TKey : IComparable<TKey> {
         using var enumerator = source.GetEnumerator();
@@ -173,8 +173,8 @@ public static class EnumerableExtensions {
         return maxItem;
     }
     /// <summary>
-    /// 选择最大值对应的对象。
-    /// 若没有元素则返回 null。
+    /// Selects the object that has the maximum value.
+    /// Returns null if there are no elements.
     /// </summary>
     public static TSource? MaxBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer) {
         using var enumerator = source.GetEnumerator();
@@ -190,8 +190,8 @@ public static class EnumerableExtensions {
         return maxItem;
     }
     /// <summary>
-    /// 选择最小值对应的对象。
-    /// 若没有元素则返回 null。
+    /// Selects the object that has the minimum value.
+    /// Returns null if there are no elements.
     /// </summary>
     public static TSource? MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector) where TKey : IComparable<TKey> {
         using var enumerator = source.GetEnumerator();
@@ -207,8 +207,8 @@ public static class EnumerableExtensions {
         return minItem;
     }
     /// <summary>
-    /// 选择最小值对应的对象。
-    /// 若没有元素则返回 null。
+    /// Selects the object that has the minimum value.
+    /// Returns null if there are no elements.
     /// </summary>
     public static TSource? MinBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> selector, IComparer<TKey> comparer) {
         using var enumerator = source.GetEnumerator();
@@ -226,16 +226,16 @@ public static class EnumerableExtensions {
 
     #endregion
 
-    #region 排序
+    #region Sorting
 
     /// <summary>
-    /// 使用默认比较器对集合进行排序。顺序为从小到大。
+    /// Sorts the collection in ascending order using the default comparer.
     /// </summary>
     public static IEnumerable<T> Ordered<T>(this IEnumerable<T> source) where T : IComparable<T> 
         => source.OrderBy(x => x);
 
     /// <summary>
-    /// 使用默认比较器对集合进行排序。顺序为从大到小。
+    /// Sorts the collection in descending order using the default comparer.
     /// </summary>
     public static IEnumerable<T> OrderedDescending<T>(this IEnumerable<T> source) where T : IComparable<T> 
         => source.OrderByDescending(x => x);
@@ -245,7 +245,7 @@ public static class EnumerableExtensions {
     #region Join
 
     /// <summary>
-    /// 用指定的分割符将集合连接为字符串。
+    /// Joins the collection into a string with the specified separator.
     /// </summary>
     public static string Join(this IEnumerable list, char split) {
         var builder = new StringBuilder();
@@ -260,7 +260,7 @@ public static class EnumerableExtensions {
         return builder.ToString();
     }
     /// <summary>
-    /// 用指定的分割符将集合连接为字符串。
+    /// Joins the collection into a string with the specified separator.
     /// </summary>
     public static string Join(this IEnumerable list, string split) {
         if (split.IsSingle()) return list.Join(split[0]);
@@ -281,14 +281,14 @@ public static class EnumerableExtensions {
     #region Dictionary
 
     /// <summary>
-    /// 从 <see cref="ConcurrentDictionary{TKey, TValue}"/> 中移除具有指定键的元素。
-    /// 返回是否确实移除了元素。
+    /// Removes the element with the specified key from a <see cref="ConcurrentDictionary{TKey, TValue}"/>.
+    /// Returns whether an element was actually removed.
     /// </summary>
     public static bool Remove<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dict, TKey key) 
         => dict.TryRemove(key, out _);
 
     /// <summary>
-    /// 将二维数组转换为字典。
+    /// Converts a two-dimensional array into a dictionary.
     /// </summary>
     public static Dictionary<T, T> ToDictionary<T>(this T[,] arr) where T : notnull {
         Dictionary<T, T> result = [];
@@ -299,13 +299,13 @@ public static class EnumerableExtensions {
     }
 
     /// <summary>
-    /// 尝试从字典中获取某项，如果该项不存在，则返回默认值。
+    /// Tries to get an item from the dictionary, returning the default value if it does not exist.
     /// </summary>
     public static TValue? GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dict, TKey key, TValue? defaultValue = default) 
         => dict.TryGetValue(key, out var result) ? result : defaultValue;
 
     /// <summary>
-    /// 将值添加到字典的对应项的列表中。
+    /// Adds a value to the list stored under the corresponding key of the dictionary.
     /// </summary>
     public static void AddIntoValueCollection<TKey, TValue>(this IDictionary<TKey, List<TValue>> dict, TKey key, TValue value) {
         if (dict.TryGetValue(key, out var collection)) {
@@ -318,17 +318,17 @@ public static class EnumerableExtensions {
     #endregion
 
     /// <summary>
-    /// 将 <see cref="FlagsAttribute"/> 枚举值解包为它包含的单一 Flag 成员的集合。
-    /// 建议仅对没有极端值的正数枚举使用。
+    /// Unpacks a <see cref="FlagsAttribute"/> enum value into the set of single-flag members it contains.
+    /// Recommended only for positive enums without extreme values.
     /// </summary>
     /// <remarks>
-    /// 会跳过：0、非 2 的幂的值、不在枚举值中的数、组合值、对应同一个枚举项的多个别名。
+    /// Skips: 0, values that are not powers of 2, numbers not defined in the enum, combined values, and multiple aliases of the same member.
     /// </remarks>
     public static IEnumerable<T> Flags<T>(this T value) where T : struct, Enum
         => EnumUtils.GetAllFlags<T>().Where(element => value.HasFlag(element));
 
     /// <summary>
-    /// 从集合中移除满足条件的元素。
+    /// Removes the elements that satisfy the condition from the collection.
     /// </summary>
     public static void RemoveIf<T>(this ICollection<T> source, Func<T, bool> predicate) {
         var itemsToRemove = source.Where(predicate).ToList();
@@ -336,14 +336,14 @@ public static class EnumerableExtensions {
     }
 
     /// <summary>
-    /// 从集合中移除另一个集合中的所有元素。
+    /// Removes all elements of another collection from the collection.
     /// </summary>
     public static void RemoveAll<T>(this ICollection<T> source, IEnumerable<T> itemsToRemove) {
         foreach (var item in itemsToRemove) source.Remove(item);
     }
 
     /// <summary>
-    /// 仅保留满足条件的元素，移除不满足条件的元素。
+    /// Keeps only the elements that satisfy the condition and removes the rest.
     /// </summary>
     public static void KeepIf<T>(this ICollection<T> source, Func<T, bool> predicate) {
         var itemsToRemove = source.Where(item => !predicate(item)).ToList();
@@ -351,14 +351,14 @@ public static class EnumerableExtensions {
     }
 
     /// <summary>
-    /// 从集合中移除指定元素。
+    /// Removes the specified element from the collection.
     /// </summary>
     public static IEnumerable<T> Except<T>(this IEnumerable<T> source, T element)
         => source.Except([element]);
 
     /// <summary>
-    /// 判断集合是否有且仅有一个元素。
-    /// 在输入 null 时返回 false。
+    /// Whether the collection has exactly one element.
+    /// Returns false for null input.
     /// </summary>
     public static bool IsSingle<T>(this IEnumerable<T>? source) {
         if (source is null) return false;
@@ -370,7 +370,7 @@ public static class EnumerableExtensions {
     }
 
     /// <summary>
-    /// 对集合的每个元素执行指定操作。
+    /// Performs the specified action on each element of the collection.
     /// </summary>
     public static IEnumerable<T> ForAll<T>(this IEnumerable<T> source, Action<T> action) {
         foreach (T item in source) action(item);

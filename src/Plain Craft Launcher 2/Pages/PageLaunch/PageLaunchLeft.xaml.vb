@@ -2,28 +2,24 @@ Imports System.Windows.Threading
 
 Public Class PageLaunchLeft
 
-    '加载当前版本
+    'Load the current version
     Private IsLoad As Boolean = False
     Private IsLoadFinished As Boolean = False
     Public Sub PageLaunchLeft_Loaded() Handles Me.Loaded
         If IsLoad Then RefreshPage(True, False)
-
-        AprilPosTrans.X = 0
-        AprilPosTrans.Y = 0
-
         If IsLoad Then Return
         IsLoad = True
         AniControlEnabled += 1
 
-        '开始按钮
+        'Launch button
         AddHandler McInstanceListLoader.LoadingStateChanged, AddressOf RefreshButtonsUI
         AddHandler McFolderListLoader.LoadingStateChanged, AddressOf RefreshButtonsUI
         RefreshButtonsUI()
 
-        '加载版本
+        'Load versions
         RunInNewThread(
         Sub()
-            '自动整合包安装：准备
+            'Auto modpack install: prepare
             Dim PackInstallPath As String = Nothing
             If FileUtils.Exists(Paths.Base & "modpack.zip") Then PackInstallPath = Paths.Base & "modpack.zip"
             If FileUtils.Exists(Paths.Base & "modpack.mrpack") Then PackInstallPath = Paths.Base & "modpack.mrpack"
@@ -32,9 +28,9 @@ Public Class PageLaunchLeft
                 PageSelectLeft.CreateMcFolderInCurrentPath()
                 McFolderListLoader.WaitForExit()
             End If
-            '确认 Minecraft 文件夹存在
+            'Ensure the Minecraft folder exists
             If McFolderSelected = "" OrElse Not DirectoryUtils.Exists(McFolderSelected) Then
-                '无效的文件夹
+                'Invalid folder
                 If McFolderSelected = "" Then
                     Logger.Info("没有已储存的 Minecraft 文件夹")
                 Else
@@ -43,7 +39,7 @@ Public Class PageLaunchLeft
                 McFolderListLoader.WaitForExit(IsForceRestart:=True)
                 McFolderSelected = McFolderList.First.Location
             End If
-            '自动整合包安装
+            'Auto modpack install
             If PackInstallPath IsNot Nothing Then
                 Try
                     Dim InstallLoader = ModpackInstall(PackInstallPath)
@@ -61,11 +57,11 @@ Public Class PageLaunchLeft
                     End If
                 End Try
             End If
-            '确认 Minecraft 版本存在
+            'Ensure the Minecraft version exists
             Dim Selection As String = ReadIni(McFolderSelected & "PCL.ini", "Version")
             Dim Instance As McInstance = If(Selection = "", Nothing, New McInstance(Selection))
             If Instance Is Nothing OrElse Not PathUtils.IsParentOf(McFolderSelected, Instance.PathVersion) OrElse Not Instance.Check() Then
-                '无效的版本
+                'Invalid version
                 Logger.Info($"当前选择的 Minecraft 版本无效：{If(Instance Is Nothing, "null", Instance.PathVersion)}", If(IsNothing(Instance), LogBehavior.None, LogBehavior.ToastIfDebug))
                 If Not McInstanceListLoader.State = LoadState.Finished Then LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\", WaitForExit:=True)
                 If Not McInstanceList.Any() OrElse McInstanceList.First.Value(0).Logo.Contains("RedstoneBlock") Then
@@ -78,12 +74,12 @@ Public Class PageLaunchLeft
             End If
             RunInUi(
             Sub()
-                McInstanceSelected = Instance '绕这一圈是为了避免 McVersionCheck 触发第二次版本改变
+                McInstanceSelected = Instance 'This detour avoids McVersionCheck firing a second version change
                 IsLoadFinished = True
                 RefreshButtonsUI()
-                RefreshPage(False, False) '有可能选择的版本变化了，需要重新刷新
-                If McLoginAble() = "" Then McLoginLoader.Start() '自动登录
-                '用于自动化测试生成的程序是否可以正常运行
+                RefreshPage(False, False) 'The selected version may have changed, so refresh again
+                If McLoginAble() = "" Then McLoginLoader.Start() 'Auto login
+                'Used by automated tests to check that the generated program runs
                 If Environment.CommandLine.Contains("--test") Then
                     RunInThread(
                     Sub()
@@ -104,7 +100,7 @@ Public Class PageLaunchLeft
             End Sub)
         End Sub, "Version Check", ThreadPriority.AboveNormal)
 
-        '改变页面
+        'Change page
         Dim LoginType = Settings.Get(Of McLoginType)("LoginType")
         If LoginType = McLoginType.Legacy OrElse LoginType = McLoginType.Ms Then CType(FindName("RadioLoginType" & LoginType), MyRadioButton).Checked = True
         RefreshPage(False, False)
@@ -112,13 +108,13 @@ Public Class PageLaunchLeft
         AniControlEnabled -= 1
     End Sub
 
-#Region "切换大页面"
+#Region "Switch main page"
 
     ''' <summary>
-    ''' 切换至启动中页面。
+    ''' Switch to the launching page.
     ''' </summary>
     Public Sub PageChangeToLaunching()
-        '修改登陆方式
+        'Update the login method label
         Select Case Settings.Get(Of McLoginType)("LoginType")
             Case McLoginType.Legacy
                 LabLaunchingMethod.Text = "离线登录"
@@ -129,7 +125,7 @@ Public Class PageLaunchLeft
             Case McLoginType.Auth
                 LabLaunchingMethod.Text = "Authlib-Injector"
         End Select
-        '初始化页面
+        'Initialize the page
         LabLaunchingName.Text = McInstanceSelected.Name
         LabLaunchingStage.Text = "初始化"
         LabLaunchingTitle.Text = If(CurrentLaunchOptions?.SaveBatch Is Nothing, "正在启动游戏", "正在导出启动脚本")
@@ -147,18 +143,18 @@ Public Class PageLaunchLeft
         ProgressLaunchingUnfinished.Width = New GridLength(1, GridUnitType.Star)
         PanLaunchingHint.Opacity = 0
         PanLaunchingHint.Visibility = Visibility.Collapsed
-        PanLaunchingInfo.Width = Double.NaN '重置宽度改变动画
+        PanLaunchingInfo.Width = Double.NaN 'Reset the width-change animation
         McLaunchProcess = Nothing
         McLaunchWatcher = Nothing
-        '获取 “你知道吗” 提示
+        'Fetch the “你知道吗” tip
         LabLaunchingHint.Text = "请耐心等待游戏启动。"
-        '初始化其他页面
+        'Initialize the other pages
         PanInput.IsHitTestVisible = False
         PanLaunching.IsHitTestVisible = False
         LoadLaunching.State.LoadingState = MyLoading.MyLoadingState.Run
         PanLaunching.Visibility = Visibility.Visible
         AniStart({
-                AaOpacity(PanInput, 0, 50), '略作延迟，这样如果预检测失败，不会出现奇怪的弹一下的动画
+                AaOpacity(PanInput, 0, 50), 'Short delay so a failed pre-check does not flash a stray animation
                 AaOpacity(PanInput, -PanInput.Opacity, 110, , New AniEaseInFluent, True),
                 AaScaleTransform(PanInput, 1.2 - CType(PanInput.RenderTransform, ScaleTransform).ScaleX, 160),
                 AaOpacity(PanLaunching, 1 - PanLaunching.Opacity, 150, 100),
@@ -167,7 +163,7 @@ Public Class PageLaunchLeft
             }, "Launch State Page")
     End Sub
     ''' <summary>
-    ''' 切换至登录页面。
+    ''' Switch to the login page.
     ''' </summary>
     Public Sub PageChangeToLogin()
         PageGet(PageCurrent).Reload(KeepInput:=False)
@@ -186,7 +182,7 @@ Public Class PageLaunchLeft
 
 #End Region
 
-#Region "切换登录页面"
+#Region "Switch login page"
 
     Private Enum PageType
         None
@@ -199,7 +195,7 @@ Public Class PageLaunchLeft
         MsSkin
     End Enum
     ''' <summary>
-    ''' 当前页面的种类。
+    ''' Kind of the current page.
     ''' </summary>
     Private PageCurrent As PageType = PageType.None
 
@@ -231,28 +227,28 @@ Public Class PageLaunchLeft
         End Select
     End Function
     ''' <summary>
-    ''' 切换现有登录页面种类，返回新页面的实例。
+    ''' Switch the current login page kind and return the new page instance.
     ''' </summary>
-    ''' <param name="Type">新页面的种类。</param>
-    ''' <param name="Anim">是否显示动画。</param>
+    ''' <param name="Type">Kind of the new page.</param>
+    ''' <param name="Anim">Whether to show the animation.</param>
     Private Function PageChange(Type As PageType, Anim As Boolean)
-        Dim PageNew As Object = FrmLoginMs '初始化一个东西，避免在执行时出现异常导致雪崩
+        Dim PageNew As Object = FrmLoginMs 'Seed a value so an exception during the switch does not cascade
         Try
 
-#Region "确定更改的页面实例并实例化"
+#Region "Resolve and instantiate the target page"
             If PageCurrent = Type Then Return PageNew
             PageNew = PageGet(Type)
 #End Region
 
-#Region "切换页面"
+#Region "Switch page"
             AniStop("FrmLogin PageChange")
-            '清除页面关联性
+            'Clear the page parent link
             If Not IsNothing(PageNew) AndAlso Not IsNothing(PageNew.Parent) Then PageNew.SetValue(ContentPresenter.ContentProperty, Nothing)
             If Anim Then
-                '动画
+                'Animated
                 Dispatcher.Invoke(
                 Sub()
-                    '执行动画
+                    'Run the animation
                     AniStart({
                         AaOpacity(PanLogin, -PanLogin.Opacity, 100,, New AniEaseOutFluent),
                         AaCode(
@@ -266,7 +262,7 @@ Public Class PageLaunchLeft
                     }, "FrmLogin PageChange")
                 End Sub, DispatcherPriority.Render)
             Else
-                '无动画
+                'No animation
                 AniControlEnabled += 1
                 PanLogin.Children.Clear()
                 PanLogin.Children.Add(PageNew)
@@ -283,21 +279,21 @@ Public Class PageLaunchLeft
     End Function
 
     ''' <summary>
-    ''' 确认当前显示的子页面正确，并刷新该页面。
+    ''' Ensure the visible subpage is correct and refresh it.
     ''' </summary>
     Public Sub RefreshPage(KeepInput As Boolean, Anim As Boolean)
-        '获取页面的可用种类并回写缓存
+        'Get the available page kind and write it back to the cache
         Dim Type As PageType
         Dim LoginPageType As Integer
         If McInstanceSelected IsNot Nothing Then
             LoginPageType = Settings.Get(Of Integer)("VersionServerLogin", Instance:=McInstanceSelected)
-            '缓存当前版本的页面种类，下一次打开 McInstanceSelected 为空时才能加载出正确的页面
+            'Cache this version's page kind so the next open still loads the right page when McInstanceSelected is empty
             Settings.Set("LoginPageType", LoginPageType)
         Else
             LoginPageType = Settings.Get(Of Integer)("LoginPageType")
         End If
         Select Case LoginPageType
-            Case 0 '正版或离线
+            Case 0 'Microsoft or offline
 UnknownType:
                 If RadioLoginType5.Checked Then
                     If Settings.Get(Of String)("CacheMsV2Access") = "" Then
@@ -314,7 +310,7 @@ UnknownType:
                 PanTypeOne.Visibility = Visibility.Collapsed
                 RadioLoginType5.Visibility = Visibility.Visible
                 RadioLoginType0.Visibility = Visibility.Visible
-            Case 1 '仅正版
+            Case 1 'Microsoft only
                 If Settings.Get(Of String)("CacheMsV2Access") = "" Then
                     Type = PageType.Ms
                 Else
@@ -327,14 +323,14 @@ UnknownType:
                 LabTypeOne.Text = "正版登录"
                 RadioLoginType5.Visibility = Visibility.Visible
                 RadioLoginType0.Visibility = Visibility.Collapsed
-            Case 2 '仅离线
+            Case 2 'Offline only
                 Type = PageType.Legacy
                 Settings.Set("LoginType", McLoginType.Legacy)
                 PanType.Visibility = Visibility.Collapsed
                 PanTypeOne.Visibility = Visibility.Visible
                 PathTypeOne.Data = (New GeometryConverter).ConvertFromString(Logo.IconButtonOffline)
                 LabTypeOne.Text = "离线登录"
-            Case 3 '统一通行证
+            Case 3 'Unified pass
                 If Settings.Get(Of String)("CacheNideAccess") = "" Then
                     Type = PageType.Nide
                 Else
@@ -361,7 +357,7 @@ UnknownType:
                 Logger.Error($"未知的登录页面：{LoginPageType}", LogBehavior.Toast)
                 GoTo UnknownType
         End Select
-        '刷新页面
+        'Refresh the page
         If PageCurrent = Type Then Return
         PageChange(Type, Anim).Reload(KeepInput)
         Dim Control As MyRadioButton = FindName("RadioLoginType" & Settings.Get(Of McLoginType)("LoginType"))
@@ -373,19 +369,19 @@ UnknownType:
 
 #End Region
 
-#Region "皮肤"
+#Region "Skins"
 
-    '微软正版皮肤
+    'Microsoft skin
     Public Shared SkinMs As New LoaderTask(Of (String, String), String)("Loader Skin Ms", AddressOf SkinMsLoad, AddressOf SkinMsInput, ThreadPriority.AboveNormal)
     Private Shared Function SkinMsInput() As (String, String)
-        '获取名称
+        'Get the name
         Return (Settings.Get(Of String)("CacheMsV2Name"), Settings.Get(Of String)("CacheMsV2Uuid"))
     End Function
     Private Shared Sub SkinMsLoad(Data As LoaderTask(Of (String, String), String))
-        '清空已有皮肤
-        '如果在输入时清空皮肤，若输入内容一样则不会执行 Load 方法，导致皮肤不被加载
+        'Clear the existing skin
+        'Clearing the skin while setting input skips Load when the input is unchanged, so the skin never loads
         RunInUi(Sub() If FrmLoginMsSkin IsNot Nothing AndAlso FrmLoginMsSkin.Skin IsNot Nothing Then FrmLoginMsSkin.Skin.Clear())
-        '获取 Url
+        'Get the URL
         Dim UserName As String = Data.Input.Item1
         Dim Uuid As String = Data.Input.Item2
         If UserName = "" Then
@@ -415,11 +411,11 @@ UnknownType:
             End If
         End Try
 Finish:
-        '刷新显示
+        'Refresh the display
         If FrmLoginMsSkin IsNot Nothing Then
             RunInUi(AddressOf FrmLoginMsSkin.Skin.Load)
-        ElseIf Not Data.IsCanceled Then '如果已经中断，Input 也被清空，就不会再次刷新
-            Data.Input = Nothing '清空输入，因为皮肤实际上没有被渲染，如果不清空切换到页面的 Start 会由于输入相同而不渲染
+        ElseIf Not Data.IsCanceled Then 'If already canceled, Input is cleared too, so do not refresh again
+            Data.Input = Nothing 'Clear the input: the skin was not rendered, and Start skips rendering when the input is unchanged
         End If
     End Sub
 
@@ -443,17 +439,17 @@ Finish:
         End If
     End Sub
 
-    '统一通行证皮肤
+    'Unified-pass skin
     Public Shared SkinNide As New LoaderTask(Of (String, String), String)("Loader Skin Nide", AddressOf SkinNideLoad, AddressOf SkinNideInput, ThreadPriority.AboveNormal)
     Private Shared Function SkinNideInput() As (String, String)
-        '获取名称
+        'Get the name
         Return (Settings.Get(Of String)("CacheNideName"), Settings.Get(Of String)("CacheNideUuid"))
     End Function
     Private Shared Sub SkinNideLoad(Data As LoaderTask(Of (String, String), String))
-        '清空已有皮肤
-        '如果在输入时清空皮肤，若输入内容一样则不会执行 Load 方法，导致皮肤不被加载
+        'Clear the existing skin
+        'Clearing the skin while setting input skips Load when the input is unchanged, so the skin never loads
         RunInUi(Sub() If FrmLoginNideSkin IsNot Nothing AndAlso FrmLoginNideSkin.Skin IsNot Nothing Then FrmLoginNideSkin.Skin.Clear())
-        '获取 Url
+        'Get the URL
         Dim UserName As String = Data.Input.Item1
         Dim Uuid As String = Data.Input.Item2
         If UserName = "" Then
@@ -483,25 +479,25 @@ Finish:
             End If
         End Try
 Finish:
-        '刷新显示
+        'Refresh the display
         If FrmLoginNideSkin IsNot Nothing Then
             RunInUi(AddressOf FrmLoginNideSkin.Skin.Load)
-        ElseIf Not Data.IsCanceled Then '如果已经中断，Input 也被清空，就不会再次刷新
-            Data.Input = Nothing '清空输入，因为皮肤实际上没有被渲染，如果不清空切换到页面的 Start 会由于输入相同而不渲染
+        ElseIf Not Data.IsCanceled Then 'If already canceled, Input is cleared too, so do not refresh again
+            Data.Input = Nothing 'Clear the input: the skin was not rendered, and Start skips rendering when the input is unchanged
         End If
     End Sub
 
-    'Authlib-Injector 皮肤
+    'Authlib-Injector skin
     Public Shared SkinAuth As New LoaderTask(Of (String, String), String)("Loader Skin Auth", AddressOf SkinAuthLoad, AddressOf SkinAuthInput, ThreadPriority.AboveNormal)
     Private Shared Function SkinAuthInput() As (String, String)
-        '获取名称
+        'Get the name
         Return (Settings.Get(Of String)("CacheAuthName"), Settings.Get(Of String)("CacheAuthUuid"))
     End Function
     Private Shared Sub SkinAuthLoad(Data As LoaderTask(Of (String, String), String))
-        '清空已有皮肤
-        '如果在输入时清空皮肤，若输入内容一样则不会执行 Load 方法，导致皮肤不被加载
+        'Clear the existing skin
+        'Clearing the skin while setting input skips Load when the input is unchanged, so the skin never loads
         RunInUi(Sub() If FrmLoginAuthSkin IsNot Nothing AndAlso FrmLoginAuthSkin.Skin IsNot Nothing Then FrmLoginAuthSkin.Skin.Clear())
-        '获取 Url
+        'Get the URL
         Dim UserName As String = Data.Input.Item1
         Dim UUID As String = Data.Input.Item2
         If UserName = "" Then
@@ -531,40 +527,30 @@ Finish:
             End If
         End Try
 Finish:
-        '刷新显示
+        'Refresh the display
         If FrmLoginAuthSkin IsNot Nothing Then
             RunInUi(AddressOf FrmLoginAuthSkin.Skin.Load)
-        ElseIf Not Data.IsCanceled Then '如果已经中断，Input 也被清空，就不会再次刷新
-            Data.Input = Nothing '清空输入，因为皮肤实际上没有被渲染，如果不清空切换到页面的 Start 会由于输入相同而不渲染
+        ElseIf Not Data.IsCanceled Then 'If already canceled, Input is cleared too, so do not refresh again
+            Data.Input = Nothing 'Clear the input: the skin was not rendered, and Start skips rendering when the input is unchanged
         End If
     End Sub
 
-    '全部皮肤加载器
-    '需要放在其中元素的后面，否则会因为它提前被加载而莫名其妙变成 Nothing
+    'All skin loaders
+    'Must be declared after its items, or loading it earlier makes it mysteriously become Nothing
     Public Shared SkinLoaders As New List(Of LoaderTask(Of (String, String), String)) From {SkinMs, SkinLegacy, SkinNide, SkinAuth}
 
 #End Region
 
-    '版本选择按钮
+    'Version select button
     Private Sub BtnVersion_Click() Handles BtnVersion.Click
         If McLaunchLoader.State = LoadState.Loading Then Return
         FrmMain.PageChange(FormMain.PageType.InstanceSelect)
     End Sub
-    '启动按钮
+    'Launch button
     Public Sub LaunchButtonClick() Handles BtnLaunch.Click
         If McLaunchLoader.State = LoadState.Loading OrElse Not BtnLaunch.IsEnabled OrElse
             (FrmMain.PageRight IsNot Nothing AndAlso FrmMain.PageRight.PageState <> MyPageRight.PageStates.ContentStay AndAlso FrmMain.PageRight.PageState <> MyPageRight.PageStates.ContentEnter) Then Return
-        '愚人节处理
-        If IsAprilEnabled AndAlso Not IsAprilGiveup Then
-            IsAprilGiveup = True
-            Settings.Set("AprilYear", Date.Now.Year)
-            FrmLaunchLeft.AprilScaleTrans.ScaleX = 1
-            FrmLaunchLeft.AprilScaleTrans.ScaleY = 1
-            FrmLaunchLeft.AprilPosTrans.X = 0
-            FrmLaunchLeft.AprilPosTrans.Y = 0
-            FrmMain.BtnExtraApril.ShowRefresh()
-        End If
-        '实际的启动
+        'Perform the launch
         If BtnLaunch.Text = "启动游戏" Then
             McLaunchStart()
         ElseIf BtnLaunch.Text = "下载游戏" Then
@@ -575,7 +561,7 @@ Finish:
     Private BtnLaunchInstance As McInstance = Nothing
     Public Sub RefreshButtonsUI() Handles BtnLaunch.Loaded
         If Not BtnLaunch.IsLoaded Then Return
-        '获取当前状态
+        'Read the current state
         Dim CurrentState As Integer
         If (Not IsLoadFinished) OrElse McInstanceListLoader.State = LoadState.Loading OrElse McFolderListLoader.State = LoadState.Loading Then
             CurrentState = 0
@@ -586,7 +572,7 @@ Finish:
                 CurrentState = 3
             End If
         End If
-        '更新状态
+        'Update the state
         If CurrentState = BtnLaunchState AndAlso
            If(McInstanceSelected Is Nothing, "", McInstanceSelected.PathVersion) = If(BtnLaunchInstance Is Nothing, "", BtnLaunchInstance.PathVersion) Then GoTo ExitRefresh
         BtnLaunchInstance = McInstanceSelected
@@ -619,7 +605,7 @@ ExitRefresh:
             FrmLaunchLeft.BtnMore.Visibility = FrmLaunchLeft.BtnVersion.Visibility
         End If
     End Sub
-    '取消按钮
+    'Cancel button
     Public Sub BtnCancel_Click() Handles BtnCancel.Click
         If McLaunchLoaderReal IsNot Nothing Then
             McLaunchLoaderReal.Cancel()
@@ -635,7 +621,7 @@ ExitRefresh:
             End Try
         End If
     End Sub
-    '版本设置按钮
+    'Version settings button
     Private Sub BtnMore_Click() Handles BtnMore.Click
         If McLaunchLoader.State = LoadState.Loading Then Return
         If McInstanceLock.IsLocked(McInstanceSelected) Then
@@ -647,13 +633,13 @@ ExitRefresh:
         FrmMain.PageChange(FormMain.PageType.InstanceSetup, 0)
     End Sub
     ''' <summary>
-    ''' 每 0.1s 执行一次，刷新启动的数据 UI 显示。
+    ''' Runs every 0.1s to refresh the launch data UI.
     ''' </summary>
     Public Sub LaunchingRefresh()
         Try
             If McLaunchLoaderReal.State = LoadState.Canceled Then Return
-            '阶段状态获取
-            Dim IsLaunched As Boolean = False '是否已经启动游戏，只是在等待窗口
+            'Read the stage state
+            Dim IsLaunched As Boolean = False 'Whether the game has launched and is only waiting for the window
             Try
                 For Each Loader In McLaunchLoaderReal.GetLoaderList(False)
                     If Loader.State = LoadState.Loading OrElse Loader.State = LoadState.Waiting Then
@@ -670,18 +656,18 @@ ExitRefresh:
             LabLaunchingTitle.Text = If(IsLaunched OrElse McLaunchLoaderReal.State = LoadState.Finished,
                 "已启动游戏",
                 If(CurrentLaunchOptions.SaveBatch Is Nothing, "正在启动游戏", "正在导出启动脚本"))
-            If AniIsRun("Launch State Page") Then IsLaunched = False '等待页面切换动画完成
-            '更新进度
+            If AniIsRun("Launch State Page") Then IsLaunched = False 'Wait for the page-switch animation to finish
+            'Update progress
             Dim ActualProgress = McLaunchLoaderReal.Progress
-            If ActualProgress >= ShowProgress Then ShowProgress += (ActualProgress - ShowProgress) * 0.1 + 0.0025 '向实际进度靠一点
-            If ActualProgress <= ShowProgress Then ShowProgress = ActualProgress '原来或处理后变得比实际进度高，直接回退
-            If IsLaunched Then ShowProgress = 1 '如果已经完成了，就不卖关子了
+            If ActualProgress >= ShowProgress Then ShowProgress += (ActualProgress - ShowProgress) * 0.1 + 0.0025 'Ease a bit toward the actual progress
+            If ActualProgress <= ShowProgress Then ShowProgress = ActualProgress 'If it was or became ahead of the actual progress, snap back
+            If IsLaunched Then ShowProgress = 1 'If already finished, skip the tease and jump to the end
             LabLaunchingProgress.Text = (ShowProgress * 100).ToString("0.00") & " %"
-            '更新下载速度
+            'Update the download speed
             Dim HasLaunchDownloader As Boolean = False
             Try
                 If NetManager.Speed = 0 AndAlso LabLaunchingDownload.Visibility = Visibility.Collapsed Then
-                    '可能只是在检查文件，没有实际下载
+                    'May only be checking files, with no real download
                     HasLaunchDownloader = False
                 Else
                     For Each Loader In NetManager.Tasks
@@ -693,7 +679,7 @@ ExitRefresh:
                 HasLaunchDownloader = False
             End Try
             LabLaunchingDownload.Text = StringUtils.FormatByteSize(NetManager.Speed) & "/s"
-            '进度改变动画
+            'Progress-change animation
             Dim AnimList As New List(Of AniData) From {
                  AaGridLengthWidth(ProgressLaunchingFinished, ShowProgress - ProgressLaunchingFinished.Width.Value, 130,, New AniEaseOutFluent),
                  AaGridLengthWidth(ProgressLaunchingUnfinished, 1 - ShowProgress - ProgressLaunchingUnfinished.Width.Value, 130,, New AniEaseOutFluent)
@@ -729,7 +715,7 @@ ExitRefresh:
         End Try
     End Sub
     Private ShowProgress As Double = 0
-    '尺寸改变动画
+    'Size-change animation
     Private IsWidthAnimating As Boolean = False
     Private ActualUsedWidth As Double
     Private Sub PanLaunchingInfo_SizeChangedW(sender As Object, e As SizeChangedEventArgs) Handles PanLaunchingInfo.SizeChanged

@@ -7,7 +7,7 @@ Public Class PageInstanceOverall
 
     Public InstanceHeaderItem As MyListItem
     ''' <summary>
-    ''' 确保当前页面上的信息已正确显示。
+    ''' Ensure the information on this page is shown correctly.
     ''' </summary>
     Private Sub Reload()
         BtnFolderMods.Visibility = If(PageInstanceLeft.Instance.Modable, Visibility.Visible, Visibility.Collapsed)
@@ -18,9 +18,9 @@ Public Class PageInstanceOverall
         FrmMain.PageNameRefresh()
     End Sub
 
-#Region "卡片：快捷方式"
+#Region "Card: Shortcuts"
 
-    '版本文件夹
+    'Instance folder
     Private Sub BtnFolderVersion_Click() Handles BtnFolderVersion.Click
         OpenInstanceFolder(PageInstanceLeft.Instance)
     End Sub
@@ -28,21 +28,21 @@ Public Class PageInstanceOverall
         OpenExplorer(Instance.PathVersion)
     End Sub
 
-    '存档文件夹
+    'Saves folder
     Private Sub BtnFolderSaves_Click() Handles BtnFolderSaves.Click
         Dim Folder As String = PageInstanceLeft.Instance.PathIndie & "saves\"
         DirectoryUtils.Create(Folder)
         OpenExplorer(Folder)
     End Sub
 
-    'Mod 文件夹
+    'Mods folder
     Private Sub BtnFolderMods_Click() Handles BtnFolderMods.Click
         Dim Folder As String = PageInstanceLeft.Instance.PathIndie & "mods\"
         DirectoryUtils.Create(Folder)
         OpenExplorer(Folder)
     End Sub
 
-    '截图文件夹
+    'Screenshots folder
     Private Sub BtnFolderScreen_Click(sender As Object, e As MouseButtonEventArgs) Handles BtnFolderScreen.Click
         Dim Folder As String = PageInstanceLeft.Instance.PathIndie & "screenshots\"
         DirectoryUtils.Create(Folder)
@@ -51,20 +51,20 @@ Public Class PageInstanceOverall
 
 #End Region
 
-#Region "卡片：管理"
+#Region "Card: Management"
 
-    '导出启动脚本
+    'Export launch script
     Private Sub BtnManageScript_Click() Handles BtnManageScript.Click
         Try
-            '弹窗要求指定脚本的保存位置
+            'Dialog asking where to save the script
             Dim SavePath As String = Dialogs.SaveFile("选择脚本保存位置", "启动 " & PageInstanceLeft.Instance.Name & ".bat", filter:={("bat", "批处理文件")})
             If SavePath Is Nothing Then Return
-            '检查中断（等玩家选完弹窗指不定任务就结束了呢……）
+            'Abort check (the task may already have finished while the player was in the dialog)
             If McLaunchLoader.State = LoadState.Loading Then
                 Hint("请在当前启动任务结束后再试！", HintType.Red)
                 Return
             End If
-            '生成脚本
+            'Generate the script
             If McLaunchStart(New McLaunchOptions With {.SaveBatch = SavePath, .Instance = PageInstanceLeft.Instance}) Then
                 If Settings.Get(Of McLoginType)("LoginType") = McLoginType.Legacy Then
                     Hint("正在导出启动脚本……")
@@ -77,25 +77,24 @@ Public Class PageInstanceOverall
         End Try
     End Sub
 
-    '补全文件
+    'Repair files
     Private Sub BtnManageCheck_Click(sender As Object, e As EventArgs) Handles BtnManageCheck.Click
         Try
             If McInstanceLock.IsLocked(PageInstanceLeft.Instance) Then
                 Hint("该版本正在被修改，请稍后再补全文件！", HintType.Red)
                 Return
             End If
-            '忽略文件检查提示
+            'Hint when file checks are disabled
             If ShouldIgnoreFileCheck(PageInstanceLeft.Instance) Then
                 Hint("请先关闭 [版本设置 → 设置 → 高级启动选项 → 关闭文件校验]，然后再尝试补全文件！", HintType.Blue)
                 Return
             End If
-            '重复任务检查
+            'Duplicate task check
             For Each OngoingLoader In LoaderTaskbar
                 If OngoingLoader.Name <> PageInstanceLeft.Instance.Name & " 文件补全" Then Continue For
                 Hint("正在处理中，请稍候！", HintType.Red)
                 Return
             Next
-            '启动
             Dim Loader As New LoaderCombo(Of String)(PageInstanceLeft.Instance.Name & " 文件补全", DlClientFix(PageInstanceLeft.Instance, True, False))
             Loader.OnStateChanged =
             Sub()
@@ -117,8 +116,8 @@ Public Class PageInstanceOverall
         End Try
     End Sub
 
-    '删除版本
-    '修改此代码时，同时修改 PageSelectRight 中的代码
+    'Delete instance
+    'When changing this code, also change the code in PageSelectRight
     Private Sub BtnManageDelete_Click(sender As Object, e As EventArgs) Handles BtnManageDelete.Click
         Try
             If McInstanceLock.IsLocked(PageInstanceLeft.Instance) Then

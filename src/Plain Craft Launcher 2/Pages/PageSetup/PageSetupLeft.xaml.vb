@@ -8,10 +8,10 @@ Public Class PageSetupLeft
         IsPageSwitched = False
     End Sub
 
-#Region "页面切换"
+#Region "Page switching"
 
     ''' <summary>
-    ''' 当前页面的编号。从左往右从 0 开始计算。
+    ''' Index of the current page, starting at 0 from left to right.
     ''' </summary>
     Public PageID As FormMain.PageSubType
     Public Sub New()
@@ -26,16 +26,16 @@ Public Class PageSetupLeft
     End Sub
 
     ''' <summary>
-    ''' 勾选事件改变页面。
+    ''' Check event that changes the page.
     ''' </summary>
-    Private Sub PageCheck(sender As MyListItem, e As EventArgs) Handles ItemLaunch.Check, ItemSystem.Check, ItemLink.Check
-        '尚未初始化控件属性时，sender.Tag 为 Nothing，会跳过切换，且由于 PageID 默认为 0 而切换到第一个页面
-        '若使用 IsLoaded，则会导致模拟点击不被执行（模拟点击切换页面时，控件的 IsLoaded 为 False）
+    Private Sub PageCheck(sender As MyListItem, e As EventArgs) Handles ItemLaunch.Check, ItemSystem.Check
+        'Before control properties are initialized, sender.Tag is Nothing, so the switch is skipped and PageID defaults to 0 (the first page)
+        'Using IsLoaded would drop simulated clicks (IsLoaded is False when a simulated click switches the page)
         If sender.Tag IsNot Nothing Then PageChange(Val(sender.Tag))
     End Sub
 
     ''' <summary>
-    ''' 获取当前导航指定的右页面。
+    ''' Get the right-hand page selected by the current navigation.
     ''' </summary>
     Public Function PageGet(Optional ID As FormMain.PageSubType = -1)
         If ID = -1 Then ID = PageID
@@ -43,9 +43,6 @@ Public Class PageSetupLeft
             Case FormMain.PageSubType.SetupLaunch
                 If FrmSetupLaunch Is Nothing Then FrmSetupLaunch = New PageSetupLaunch
                 Return FrmSetupLaunch
-            Case FormMain.PageSubType.SetupLink
-                If FrmSetupLink Is Nothing Then FrmSetupLink = New PageSetupLink
-                Return FrmSetupLink
             Case FormMain.PageSubType.SetupSystem
                 If FrmSetupSystem Is Nothing Then FrmSetupSystem = New PageSetupSystem
                 Return FrmSetupSystem
@@ -55,7 +52,7 @@ Public Class PageSetupLeft
     End Function
 
     ''' <summary>
-    ''' 切换现有页面。
+    ''' Switch the current page.
     ''' </summary>
     Public Sub PageChange(ID As FormMain.PageSubType)
         If PageID = ID Then Return
@@ -67,9 +64,6 @@ Public Class PageSetupLeft
                 Case FormMain.PageSubType.SetupLaunch
                     If IsNothing(FrmSetupLaunch) Then FrmSetupLaunch = New PageSetupLaunch
                     PageChangeRun(FrmSetupLaunch)
-                Case FormMain.PageSubType.SetupLink
-                    If IsNothing(FrmSetupLink) Then FrmSetupLink = New PageSetupLink
-                    PageChangeRun(FrmSetupLink)
                 Case FormMain.PageSubType.SetupSystem
                     If IsNothing(FrmSetupSystem) Then FrmSetupSystem = New PageSetupSystem
                     PageChangeRun(FrmSetupSystem)
@@ -85,7 +79,7 @@ Public Class PageSetupLeft
         End Try
     End Sub
     Private Shared Sub PageChangeRun(Target As MyPageRight)
-        AniStop("FrmMain PageChangeRight") '停止主页面的右页面切换动画，防止它与本动画一起触发多次 PageOnEnter
+        AniStop("FrmMain PageChangeRight") 'Stop the main page's right-page switch animation so it does not fire PageOnEnter again with this one
         If Target.Parent IsNot Nothing Then Target.SetValue(ContentPresenter.ContentProperty, Nothing)
         FrmMain.PageRight = Target
         CType(FrmMain.PanMainRight.Child, MyPageRight).PageOnExit()
@@ -98,7 +92,7 @@ Public Class PageSetupLeft
             End Sub, 130),
             AaCode(
             Sub()
-                '延迟触发页面通用动画，以使得在 Loaded 事件中加载的控件得以处理
+                'Delay the shared page animation so controls loaded in the Loaded event can be handled
                 FrmMain.PageRight.Opacity = 1
                 FrmMain.PageRight.PageOnEnter()
             End Sub, 30, True)
@@ -120,12 +114,6 @@ Public Class PageSetupLeft
                     If IsNothing(FrmSetupSystem) Then FrmSetupSystem = New PageSetupSystem
                     FrmSetupSystem.Reset()
                     ItemSystem.Checked = True
-                End If
-            Case FormMain.PageSubType.SetupLink
-                If MyMsgBox("是否要初始化 联机 页面的所有设置？该操作不可撤销。", "初始化确认",, "取消", IsWarn:=True) = 1 Then
-                    If IsNothing(FrmSetupLink) Then FrmSetupLink = New PageSetupLink
-                    FrmSetupLink.Reset()
-                    ItemLink.Checked = True
                 End If
         End Select
     End Sub

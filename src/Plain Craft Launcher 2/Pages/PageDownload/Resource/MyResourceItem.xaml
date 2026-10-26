@@ -33,11 +33,7 @@
         <TextBlock x:Name="LabTitleRaw" TextTrimming="WordEllipsis" FontSize="12" Foreground="{StaticResource ColorBrushGray1}" Opacity="0.4" VerticalAlignment="Bottom" Visibility="Collapsed" />
     </StackPanel>
     <!-- Tag 与 详情 -->
-    <StackPanel x:Name="PanTags" Grid.Row="2" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="-1,0,1,0" Visibility="Collapsed">
-        <!--<Border Background="{DynamicResource ColorBrush6}" Padding="3,1" CornerRadius="3" Margin="0,0,4,0" SnapsToDevicePixels="True" UseLayoutRounding="False">
-            <TextBlock Text="科技" Foreground="{DynamicResource ColorBrush2}" FontSize="11" />
-        </Border>-->
-    </StackPanel>
+    <StackPanel x:Name="PanTags" Grid.Row="2" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="-1,0,1,0" Visibility="Collapsed" />
     <TextBlock x:Name="LabInfo" Grid.Row="2" Grid.Column="4" VerticalAlignment="Bottom" Margin="0,0,3,0.5"
                TextTrimming="CharacterEllipsis" FontSize="12" Foreground="{StaticResource ColorBrushGray3}"
                IsHitTestVisible="True" SnapsToDevicePixels="False" UseLayoutRounding="False"

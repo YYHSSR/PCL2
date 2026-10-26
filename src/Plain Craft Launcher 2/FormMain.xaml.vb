@@ -3,26 +3,26 @@ Imports System.Windows.Interop
 
 Public Class FormMain
 
-#Region "基础"
+#Region "Basics"
 
-    '窗口加载
+    'Window loading
     Private IsWindowLoadFinished As Boolean = False
     Public Sub New()
         ApplicationStartTick = GetTimeMs()
-        '窗体参数初始化
+        'Window parameter initialization
         FrmMain = Me
         FrmLaunchLeft = New PageLaunchLeft
         FrmLaunchRight = New PageLaunchRight
-        '版本号改变
+        'Version changed
         Dim LastVersion As Integer = Settings.Get(Of Integer)("SystemLastVersionReg")
         If LastVersion < VersionCode Then
-            '触发升级
+            'Upgrade
             UpgradeSub(LastVersion)
         ElseIf LastVersion > VersionCode Then
-            '触发降级
+            'Downgrade
             DowngradeSub(LastVersion)
         End If
-        '版本隔离设置迁移
+        'Migrate the version isolation setting
         If Not Settings.HasSaved("LaunchArgumentIndieV2") Then
             If Settings.HasSaved("LaunchArgumentIndie") Then
                 Logger.Info("从老 PCL 迁移版本隔离")
@@ -35,13 +35,13 @@ Public Class FormMain
                 Settings.Set("LaunchArgumentIndieV2", Settings.GetDefault("LaunchArgumentIndieV2"))
             End If
         End If
-        '注册拖拽事件（不能直接加 Handles，否则没用；#6340）
+        'Register drag-and-drop events (Handles does not work here; #6340)
         [AddHandler](DragDrop.DragEnterEvent, New DragEventHandler(AddressOf HandleDrag), handledEventsToo:=True)
         [AddHandler](DragDrop.DragOverEvent, New DragEventHandler(AddressOf HandleDrag), handledEventsToo:=True)
-        '加载 UI
+        'Load the UI
         InitializeComponent()
         Opacity = 0
-        '开启管理员权限下的文件拖拽
+        'Enable file drag-and-drop when running as administrator
         If WindowsUtils.HasAdminRole() Then
             Static Helper As New DragHelper
             AddHandler SourceInitialized,
@@ -53,7 +53,7 @@ Public Class FormMain
             AddHandler Closing, Sub() Helper.RemoveDragHook()
             AddHandler Helper.DragDrop, Sub() FileDrag(Helper.DropFilePaths)
         End If
-        '切换到首页
+        'Switch to the home page
         If Not IsNothing(FrmLaunchLeft.Parent) Then FrmLaunchLeft.SetValue(ContentPresenter.ContentProperty, Nothing)
         If Not IsNothing(FrmLaunchRight.Parent) Then FrmLaunchRight.SetValue(ContentPresenter.ContentProperty, Nothing)
         PanMainLeft.Child = FrmLaunchLeft
@@ -61,24 +61,22 @@ Public Class FormMain
         PanMainRight.Child = FrmLaunchRight
         PageRight = FrmLaunchRight
         FrmLaunchRight.PageState = MyPageRight.PageStates.ContentStay
-        '模式提醒
+        'Mode reminder
         If BuildType = BuildTypes.Debug Then Hint("[开发者模式] PCL 正以开发者模式运行，这可能会造成严重的性能下降，请务必立即向开发者反馈此问题！", HintType.Red)
-        '尽早执行的加载池
-        McFolderListLoader.Start(0) '为了让下载已存在文件检测可以正常运行，必须跑一次；为了让启动按钮尽快可用，需要尽早执行；为了与 PageLaunchLeft 联动，需要为 0 而不是 GetUuid
+        'Loaders that must run as early as possible
+        McFolderListLoader.Start(0) 'Must run once so that the existing-file check for downloads works; must run early so the launch button becomes available quickly; must use 0 instead of GetUuid to work together with PageLaunchLeft
 
         Logger.Info($"第二阶段加载用时：{GetTimeMs() - ApplicationStartTick} ms")
     End Sub
     Private Sub FormMain_Loaded(sender As Object, e As RoutedEventArgs) Handles Me.Loaded
         ApplicationStartTick = GetTimeMs()
         Handle = New WindowInteropHelper(Me).Handle
-        '读取设置
-        '扩展按钮
+        'Read settings
+        'Extra buttons
         BtnExtraDownload.ShowCheck = AddressOf BtnExtraDownload_ShowCheck
         BtnExtraBack.ShowCheck = AddressOf BtnExtraBack_ShowCheck
-        BtnExtraApril.ShowCheck = AddressOf BtnExtraApril_ShowCheck
         BtnExtraShutdown.ShowCheck = AddressOf BtnExtraShutdown_ShowCheck
-        BtnExtraApril.ShowRefresh()
-        '初始化尺寸改变
+        'Initialize size change handling
         Dim Resizer As New MyResizer(Me)
         Resizer.addResizerDown(ResizerB)
         Resizer.addResizerLeft(ResizerL)
@@ -88,25 +86,23 @@ Public Class FormMain
         Resizer.addResizerRightDown(ResizerRB)
         Resizer.addResizerRightUp(ResizerRT)
         Resizer.addResizerUp(ResizerT)
-        'PLC 彩蛋
+        'PLC easter egg
         If RandomInteger(1, 1000) = 233 Then
             ShapeTitleLogo.Data = New GeometryConverter().ConvertFromString("M26,29 v-25 h6 a7,7 180 0 1 0,14 h-6 M83,6.5 a10,11.5 180 1 0 0,18 M48,2.5 v24.5 h13.5")
         End If
-        '加载窗口
+        'Load the window
         ApplyDefaultAppearance()
         Try
             Height = Settings.Get(Of Integer)("WindowHeight")
             Width = Settings.Get(Of Integer)("WindowWidth")
-        Catch ex As Exception '修复 #2019
+        Catch ex As Exception 'Fix #2019
             Logger.Error(ex, "读取窗口默认大小失败", LogBehavior.Toast)
             Height = MinHeight + 100
             Width = MinWidth + 100
         End Try
-        'MinHeight = 50
-        'MinWidth = 50
         Topmost = False
         If FrmStart IsNot Nothing Then FrmStart.Close(New TimeSpan(0, 0, 0, 0, 400 / AniSpeed))
-        '更改窗口
+        'Change the window
         Top = (GetWPFSize(My.Computer.Screen.WorkingArea.Height) - Height) / 2
         Left = (GetWPFSize(My.Computer.Screen.WorkingArea.Width) - Width) / 2
         IsSizeSaveable = True
@@ -125,17 +121,16 @@ Public Class FormMain
                 Logger.Info($"DPI：{DPI}，系统版本：{Environment.OSVersion.VersionString}，PCL 位置：{PathExe}")
             End Sub, , True)
         }, "Form Show")
-        'Timer 启动
+        'Start timers
         AniStart()
         TimerMainStart()
-        '加载池
+        'Loader pool
         RunInNewThread(
         Sub()
-            '启动加载器池
+            'Start the loader pool
             Try
                 JavaInit()
-                Thread.Sleep(100)
-                DlClientListMojangLoader.Start(1) 'PCL 会同时根据这里的加载结果决定是否使用官方源进行下载
+                DlClientListMojangLoader.Start(1) 'PCL also uses this result to decide whether to download from the official source
                 RunCountSub()
                 RunInNewThread(AddressOf TryClearTaskTemp, "TryClearTaskTemp", ThreadPriority.BelowNormal)
             Catch ex As Exception
@@ -145,15 +140,15 @@ Public Class FormMain
 
         Logger.Info($"第三阶段加载用时：{GetTimeMs() - ApplicationStartTick} ms")
     End Sub
-    '根据打开次数触发的事件
+    'Events triggered by launch count
     Private Sub RunCountSub()
         Settings.Set("SystemCount", Settings.Get(Of Integer)("SystemCount") + 1)
     End Sub
-    '升级与降级事件
+    'Upgrade and downgrade events
     Private Sub UpgradeSub(LastVersionCode As Integer)
         Logger.Info($"版本号从 {LastVersionCode} 升高到 {VersionCode}")
         Settings.Set("SystemLastVersionReg", VersionCode)
-        '检查有记录的最高版本号
+        'Check the highest recorded version number
         Dim HighestVersionCode As Integer
         Const SettingKey = If(BuildType = BuildTypes.Snapshot, "SystemHighestAlphaVersionReg", "SystemHighestBetaVersionReg")
         HighestVersionCode = Settings.Get(Of Integer)(SettingKey)
@@ -161,9 +156,9 @@ Public Class FormMain
             Settings.Set(SettingKey, VersionCode)
             Logger.Info($"最高版本号从 {HighestVersionCode} 升高到 {VersionCode}")
         End If
-        '被移除的窗口设置选项
+        'Removed window setting options
         If Settings.Get(Of Integer)("LaunchArgumentWindowType") = 5 Then Settings.Set("LaunchArgumentWindowType", 1)
-        '单向迁移微软登录结果（#4836）
+        'One-way migration of Microsoft login results (#4836)
         If Not Settings.Get(Of Boolean)("CacheMsV2Migrated") Then
             Settings.Set("CacheMsV2Migrated", True)
             Settings.Set("CacheMsV2OAuthRefresh", Settings.Get(Of String)("CacheMsOAuthRefresh"))
@@ -173,18 +168,18 @@ Public Class FormMain
             Settings.Set("CacheMsV2Name", Settings.Get(Of String)("CacheMsName"))
             Logger.Info("已从老版本迁移微软登录结果")
         End If
-        'Mod 命名设置迁移
+        'Migrate the mod naming setting
         If Settings.HasSaved("ToolDownloadTranslate") AndAlso Not Settings.HasSaved("ToolDownloadTranslateV2") Then
             Settings.Set("ToolDownloadTranslateV2", Settings.Get(Of Integer)("ToolDownloadTranslate") + 1)
             Logger.Info("已从老版本迁移 Mod 命名设置")
         End If
-        '重置 JVM 参数设置
+        'Reset JVM argument settings
         If LastVersionCode <= 381 AndAlso Settings.HasSaved("LaunchAdvanceJvm") AndAlso
            Settings.Get(Of String)("LaunchAdvanceJvm").ToString.Replace("-XX:+UseG1GC ", "").Replace("-XX:-UseAdaptiveSizePolicy ", "").Trim = Settings.GetDefault("LaunchAdvanceJvm") Then
             Settings.Reset("LaunchAdvanceJvm")
             Logger.Info("已重置 JVM 参数设置")
         End If
-        '输出更新日志
+        'Output the changelog
         If LastVersionCode <= 0 Then Return
         If HighestVersionCode >= VersionCode Then Return
         Logger.Info($"本地版本已切换至 {VersionDisplay}。")
@@ -196,19 +191,19 @@ Public Class FormMain
 
 #End Region
 
-#Region "自定义窗口"
+#Region "Custom window"
 
-    '关闭
+    'Close
     Private Sub FormMain_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
         EndProgram(True)
         e.Cancel = True
     End Sub
     ''' <summary>
-    ''' 正常关闭程序。程序将在执行此方法后约 0.3s 退出。
+    ''' Closes the program normally. The program exits about 0.3 s after this method is called.
     ''' </summary>
-    ''' <param name="SendWarning">是否在还有下载任务未完成时发出警告。</param>
+    ''' <param name="SendWarning">Whether to warn if there are unfinished download tasks.</param>
     Public Sub EndProgram(SendWarning As Boolean)
-        '强行结束下载任务？
+        'Force-stop download tasks?
         If HasDownloadingTask() Then
             If SendWarning AndAlso MyMsgBox("还有下载任务尚未完成，是否确定退出？", "提示", "确定", "取消") = 2 Then Return
             RunInNewThread(
@@ -219,9 +214,7 @@ Public Class FormMain
                 Next
             End Sub, "强行停止下载任务")
         End If
-        '关闭联机？
-        If FrmLinkMain?.TryExit(Not SendWarning, True) Then Return
-        '关闭
+        'Close
         RunInUiWait(
         Sub()
             IsHitTestVisible = False
@@ -263,9 +256,9 @@ Public Class FormMain
                 WriteDiagnostics()
                 Logger.Info("请保留本地日志，用于诊断启动器问题。")
                 IsLogShown = True
-                StartProcess(Paths.Base & "PCL\Log1.txt")
+                StartProcess(Paths.BaseThenName & "Log1.txt")
             End If
-            Thread.Sleep(500) '防止 PCL 在记事本打开前就被掐掉
+            Thread.Sleep(500) 'Prevent PCL from being killed before Notepad opens
         End If
         Logger.Info($"程序已退出，返回值：{ReturnCode}")
         ConfigUtils.SaveAll()
@@ -277,15 +270,15 @@ Public Class FormMain
         EndProgram(True)
     End Sub
 
-    '移动
+    'Move
     Private Sub FormDragMove(sender As Object, e As MouseButtonEventArgs) Handles PanTitle.MouseLeftButtonDown, PanMsg.MouseLeftButtonDown
         On Error Resume Next
         If sender.IsMouseDirectlyOver Then DragMove()
     End Sub
 
-    '改变大小
+    'Resize
     ''' <summary>
-    ''' 是否可以向注册表储存尺寸改变信息。以此避免初始化时误储存。
+    ''' Whether size changes may be saved to the registry. Prevents saving by mistake during initialization.
     ''' </summary>
     Public IsSizeSaveable As Boolean = False
     Private Sub FormMain_SizeChanged() Handles Me.SizeChanged, Me.Loaded
@@ -298,10 +291,10 @@ Public Class FormMain
         PanForm.Height = BorderForm.ActualHeight + 0.001
         PanMain.Width = PanForm.Width
         PanMain.Height = Math.Max(0, PanForm.Height - PanTitle.ActualHeight)
-        If WindowState = WindowState.Maximized Then WindowState = WindowState.Normal '修复 #1938
+        If WindowState = WindowState.Maximized Then WindowState = WindowState.Normal 'Fix #1938
     End Sub
 
-    '最小化
+    'Minimize
     Private Sub BtnTitleMin_Click() Handles BtnTitleMin.Click
         WindowState = WindowState.Minimized
     End Sub
@@ -309,14 +302,14 @@ Public Class FormMain
 
 #End Region
 
-#Region "窗体事件"
+#Region "Window events"
 
-    '按键事件
+    'Key events
     Private Sub FormMain_KeyDown(sender As Object, e As KeyEventArgs) Handles Me.KeyDown
         If e.IsRepeat Then Return
-        '修复按下 Alt 后误认为弹出系统菜单导致的冻结
+        'Fix the freeze caused by Alt being mistaken for opening the system menu
         If e.SystemKey = Key.LeftAlt OrElse e.SystemKey = Key.RightAlt Then e.Handled = True
-        '在有弹窗时：回车选择第一个，Esc 选择最后一个
+        'When a dialog is open: Enter selects the first option, Esc selects the last
         If PanMsg.Children.Any Then
             If e.Key = Key.Enter Then
                 CType(PanMsg.Children(0), Object).Btn1_Click()
@@ -334,10 +327,10 @@ Public Class FormMain
         End If
 
         '==========================
-        ' 在没有弹窗时：继续检查……
+        'When no dialog is open: keep checking...
         '==========================
 
-        '按 ESC 取消启动，或返回上一级
+        'Press Esc to cancel the launch or go back
         If e.Key = Key.Escape Then
             If PageCurrent = FormMain.PageType.Launch AndAlso McLaunchLoader.State = LoadState.Loading Then
                 FrmLaunchLeft.BtnCancel_Click()
@@ -345,30 +338,24 @@ Public Class FormMain
             End If
             TriggerPageBack()
         End If
-        '更改隐藏版本可见性
+        'Toggle visibility of hidden versions
         If e.Key = Key.F11 AndAlso PageCurrent = FormMain.PageType.InstanceSelect Then
             FrmSelectRight.ShowHidden = Not FrmSelectRight.ShowHidden
             LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.ForceRun, MaxDepth:=1, ExtraPath:="versions\")
             Return
         End If
-        '按 F5 刷新页面
+        'Press F5 to refresh the page
         If e.Key = Key.F5 Then
             If TypeOf PageLeft Is IRefreshable Then CType(PageLeft, IRefreshable).Refresh()
             If TypeOf PageRight Is IRefreshable Then CType(PageRight, IRefreshable).Refresh()
             Return
         End If
-        '调用启动游戏
-        If e.Key = Key.Enter AndAlso PageCurrent = FormMain.PageType.Launch Then
-            If IsAprilEnabled AndAlso Not IsAprilGiveup Then
-                Hint("木大！")
-            Else
-                FrmLaunchLeft.LaunchButtonClick()
-            End If
-        End If
+        'Launch the game
+        If e.Key = Key.Enter AndAlso PageCurrent = FormMain.PageType.Launch Then FrmLaunchLeft.LaunchButtonClick()
     End Sub
     Private Sub FormMain_MouseDown(sender As Object, e As MouseButtonEventArgs) Handles Me.MouseDown
-        '鼠标侧键返回上一级
-        If FrmMain.PanMsg.Children.Count > 0 OrElse WaitingMyMsgBox.Any Then Return '弹窗中（#5513）
+        'Mouse side button goes back
+        If FrmMain.PanMsg.Children.Count > 0 OrElse WaitingMyMsgBox.Any Then Return 'A dialog is open (#5513)
         If e.ChangedButton = MouseButton.XButton1 OrElse e.ChangedButton = MouseButton.XButton2 Then TriggerPageBack()
     End Sub
     Private Sub TriggerPageBack()
@@ -379,54 +366,37 @@ Public Class FormMain
         End If
     End Sub
 
-    '切回窗口
+    'Window reactivated
     Private Sub FormMain_Activated() Handles Me.Activated
-        '切回窗口时自动刷新
+        'Auto refresh when the window is reactivated
         Try
             If PageCurrent = PageType.InstanceSetup AndAlso PageCurrentSub = PageSubType.InstanceMod Then
-                'Mod 管理
+                'Mod management
                 FrmInstanceMod.ReloadModList()
             ElseIf PageCurrent = PageType.InstanceSetup AndAlso (PageCurrentSub = PageSubType.InstanceSetup OrElse PageCurrentSub = PageSubType.InstanceExport) Then
-                '更新当前选用的 Java
+                'Update the currently selected Java
                 PageInstanceLeft.ReloadCurrentJava()
             ElseIf PageCurrent = PageType.InstanceSelect Then
-                '版本选择
+                'Version selection
                 LoaderFolderRun(McInstanceListLoader, McFolderSelected, LoaderFolderRunType.RunOnUpdated, MaxDepth:=1, ExtraPath:="versions\")
             End If
         Catch ex As Exception
             Logger.Error(ex, "切回窗口时出错")
         End Try
-        '读取剪贴板，自动加入联机房间
-        Return 'TODO: 联机复活赛
-        If PageLinkMain.LinkState <> PageLinkMain.LinkStates.Waiting Then Return '已启动联机
-        If PageCurrent = PageType.Link Then Return '已在联机界面
-        Dim Code = ClipboardGetText() : If Code Is Nothing Then Return '剪贴板无文本
-        If Settings.Get(Of String)("LinkLastAutoJoinInviteCode") = Code Then Return
-        If PageLinkMain.ValidateCodeFormat(Code) IsNot Nothing Then Return '不是邀请码
-        Settings.Set("LinkLastAutoJoinInviteCode", Code)
-        RunInThread(
-        Sub()
-            If MyMsgBox("嘿，是否使用复制的邀请码加入房间？", "加入联机房间", "加入", "取消") = 2 Then Return '防止弹窗阻碍主线程，所以必须放在工作线程
-            RunInUi(
-            Sub()
-                PageLinkMain.Join(Code)
-                ClipboardSet(Nothing, False)
-            End Sub)
-        End Sub)
     End Sub
 
-    '文件拖放
+    'File drag-and-drop
     Private Sub HandleDrag(sender As Object, e As DragEventArgs)
         Try
             If e.Handled AndAlso (e.Effects <> DragDropEffects.None) Then Return
             e.Handled = True
-            '缓存
+            'Cache
             Static PrevData As IDataObject, PrevEffects As DragDropEffects
             If e.Data Is PrevData Then
                 e.Effects = PrevEffects
                 Return
             End If
-            '确定拖放效果
+            'Determine the drop effect
             e.Effects = DragDropEffects.None
             If e.Data.GetDataPresent(DataFormats.Text) Then
                 Dim Str As String = e.Data.GetData(DataFormats.Text)
@@ -452,12 +422,12 @@ Public Class FormMain
         Try
             ShowWindowToTop()
             If e.Data.GetDataPresent(DataFormats.Text) Then
-                '获取文本
+                'Get the text
                 Try
                     Dim Str As String = e.Data.GetData(DataFormats.Text)
                     Logger.Info($"接受文本拖拽：{Str}")
                     If Str.StartsWithF("authlib-injector:yggdrasil-server:") Then
-                        'Authlib 拖拽
+                        'Authlib drag-and-drop
                         e.Handled = True
                         e.Effects = DragDropEffects.Copy
                         Dim AuthlibServer As String = StringUtils.FormUrlUnescape(Str.Substring("authlib-injector:yggdrasil-server:".Length))
@@ -482,7 +452,7 @@ Public Class FormMain
                             Settings.Set("VersionServerAuthRegister", "https://littleskin.cn/auth/register", Instance:=Target)
                             Settings.Set("VersionServerAuthName", "LittleSkin 登录", Instance:=Target)
                         Else
-                            '第三方 Authlib 服务器
+                            'Third-party Authlib server
                             If MyMsgBox($"是否要在版本 {Target.Name} 中开启第三方登录？" & vbCrLf &
                                         $"登录服务器：{AuthlibServer}" & vbCrLf & vbCrLf &
                                         "你可以在 版本设置 → 设置 → 服务器选项 中修改登录方式。", "第三方登录开启确认", "确定", "取消") = 2 Then
@@ -494,14 +464,14 @@ Public Class FormMain
                             Settings.Set("VersionServerAuthName", "", Instance:=Target)
                         End If
                         If PageCurrent = PageType.InstanceSetup AndAlso PageCurrentSub = PageSubType.InstanceSetup Then
-                            '正在服务器选项页，需要刷新设置项显示
+                            'On the server options page, refresh the settings display
                             FrmInstanceSetup.Reload()
                         ElseIf PageCurrent = PageType.Launch Then
-                            '正在主页，需要刷新左边栏
+                            'On the home page, refresh the left panel
                             FrmLaunchLeft.RefreshPage(True, False)
                         End If
                     ElseIf Str.StartsWithF("file:///") Then
-                        '文件拖拽（例如从浏览器下载窗口拖入）
+                        'File drag-and-drop (e.g. dragged from a browser download window)
                         Dim FilePath = Net.WebUtility.UrlDecode(Str).Substring("file:///".Length).Replace("/", "\")
                         e.Handled = True
                         e.Effects = DragDropEffects.Copy
@@ -512,7 +482,7 @@ Public Class FormMain
                     Return
                 End Try
             ElseIf e.Data.GetDataPresent(DataFormats.FileDrop) Then
-                '获取文件并检查
+                'Get the files and check them
                 Dim FilePathRaw = e.Data.GetData(DataFormats.FileDrop)
                 If FilePathRaw Is Nothing Then '#2690
                     Hint("请将文件解压后再拖入！", HintType.Red)
@@ -531,7 +501,7 @@ Public Class FormMain
         Sub()
             Dim FilePath As String = FilePathList.First
             Logger.Warn($"接受文件拖拽：{FilePath}{If(FilePathList.Any, $" 等 {FilePathList.Count} 个文件", "")}")
-            '基础检查
+            'Basic checks
             If DirectoryUtils.Exists(FilePathList.First) AndAlso Not FileUtils.Exists(FilePathList.First) Then
                 Hint("请拖入一个文件，而非文件夹！", HintType.Red)
                 Return
@@ -539,10 +509,10 @@ Public Class FormMain
                 Hint("拖入的文件不存在：" & FilePathList.First, HintType.Red)
                 Return
             End If
-            '多文件拖拽
+            'Multiple files dropped
             Dim PathList As List(Of String) = FilePathList.ToList()
             If FilePathList.Count > 1 Then
-                '必须要求全部为 jar 文件
+                'All of them must be jar files
                 For Each File In PathList
                     If Not {"jar", "litemod", "disabled", "old"}.Contains(PathUtils.GetExtension(File)) Then
                         Hint("一次请只拖入一个文件！", HintType.Red)
@@ -550,12 +520,12 @@ Public Class FormMain
                     End If
                 Next
             End If
-            '主页
+            'Home page
             Dim Extension As String = PathUtils.GetExtension(FilePath)
-            '安装 Mod
+            'Install mods
             If PageInstanceMod.InstallMods(PathList) Then Return
-            '安装整合包
-            If {"zip", "rar", "mrpack"}.Any(Function(t) t = Extension) Then '部分压缩包是 zip 格式但后缀为 rar，总之试一试
+            'Install modpack
+            If {"zip", "rar", "mrpack"}.Any(Function(t) t = Extension) Then 'Some archives are zip files with a rar extension, so just try
                 Hint("正在读取压缩包……")
                 Try
                     Logger.Info("文件为压缩包，尝试作为整合包安装")
@@ -564,15 +534,15 @@ Public Class FormMain
                     Return
                 Catch ex As Exception
                     If ex.IsCanceled Then Return
-                    '安装失败，继续往后尝试
+                    'Installation failed, keep trying the next option
                 End Try
             End If
-            'RAR 处理
+            'RAR handling
             If Extension = "rar" Then
                 Hint("PCL 无法处理 rar 格式的压缩包，请在解压后重新压缩为 zip 格式再试！", HintType.Red)
                 Return
             End If
-            '错误报告分析
+            'Crash report analysis
             Try
                 Logger.Info("尝试进行错误报告分析")
                 Dim Analyzer As New CrashAnalyzer
@@ -584,12 +554,12 @@ Public Class FormMain
             Catch ex As Exception
                 Logger.Error(ex, "自主错误报告分析失败")
             End Try
-            '未知操作
+            'Unknown action
             Hint("PCL 无法确定适合的操作……", HintType.Red)
         End Sub, "文件拖拽")
     End Sub
 
-    '接受到 Windows 窗体事件
+    'Received a Windows message
     Public IsSystemTimeChanged As Boolean = False
     Private Function WndProc(hwnd As IntPtr, msg As Integer, wParam As IntPtr, lParam As IntPtr, ByRef handled As Boolean) As IntPtr
         If msg = 30 Then
@@ -613,7 +583,7 @@ Public Class FormMain
         Return IntPtr.Zero
     End Function
 
-    '窗口隐藏与置顶
+    'Window hiding and bringing to front
     Private _Hidden As Boolean = False
     Public Property Hidden As Boolean
         Get
@@ -623,30 +593,30 @@ Public Class FormMain
             If _Hidden = value Then Return
             _Hidden = value
             If value Then
-                '隐藏
+                'Hide
                 Left -= 10000
                 ShowInTaskbar = False
                 Visibility = Visibility.Hidden
                 Logger.Info($"窗口已隐藏，位置：({Left},{Top})")
             Else
-                '取消隐藏
+                'Unhide
                 If Left < -2000 Then Left += 10000
                 ShowWindowToTop()
             End If
         End Set
     End Property
     ''' <summary>
-    ''' 把当前窗口拖到最前面。
+    ''' Brings the current window to the front.
     ''' </summary>
     Public Sub ShowWindowToTop()
         RunInUi(
         Sub()
-            '这一坨乱七八糟的，别改，改了指不定就炸了，自己电脑还复现不出来
+            'This mess is fragile; do not change it, it may break and cannot be reproduced locally
             Visibility = Visibility.Visible
             ShowInTaskbar = True
             WindowState = WindowState.Normal
             Hidden = False
-            Topmost = True '偶尔 SetForegroundWindow 失效
+            Topmost = True 'SetForegroundWindow occasionally fails
             Topmost = False
             SetForegroundWindow(Handle)
             Focus()
@@ -656,50 +626,46 @@ Public Class FormMain
 
 #End Region
 
-#Region "切换页面"
+#Region "Page switching"
 
-    '页面种类与属性
+    'Page types and properties
     ''' <summary>
-    ''' 页面种类。
-    ''' 该枚举在自定义事件中使用，是公开 API 的一部分。
+    ''' Page type.
+    ''' This enum is used in custom events and is part of the public API.
     ''' </summary>
     Public Enum PageType
         ''' <summary>
-        ''' 启动。
+        ''' Launch.
         ''' </summary>
         Launch = 0
         ''' <summary>
-        ''' 下载。
+        ''' Download.
         ''' </summary>
         Download = 1
         ''' <summary>
-        ''' 联机。
-        ''' </summary>
-        Link = 2
-        ''' <summary>
-        ''' 设置。
+        ''' Settings.
         ''' </summary>
         Setup = 3
         ''' <summary>
-        ''' 版本选择。这是一个副页面。
+        ''' Version selection. This is a secondary page.
         ''' </summary>
         InstanceSelect = 5
         ''' <summary>
-        ''' 任务管理。这是一个副页面。
+        ''' Task manager. This is a secondary page.
         ''' </summary>
         TaskManager = 6
         ''' <summary>
-        ''' 版本设置。这是一个副页面。
+        ''' Version settings. This is a secondary page.
         ''' </summary>
         InstanceSetup = 7
         ''' <summary>
-        ''' 社区资源详情。这是一个副页面。
+        ''' Community resource details. This is a secondary page.
         ''' </summary>
         ResourceDetail = 8
     End Enum
     ''' <summary>
-    ''' 次要页面种类。其数值必须与 StackPanel 中的下标一致。
-    ''' 该枚举在自定义事件中使用，是公开 API 的一部分。
+    ''' Sub-page type. Its values must match the indices in the StackPanel.
+    ''' This enum is used in custom events and is part of the public API.
     ''' </summary>
     Public Enum PageSubType
         [Default] = 0
@@ -710,9 +676,7 @@ Public Class FormMain
         DownloadResourcePack = 5
         DownloadShader = 6
         SetupLaunch = 0
-        SetupLink = 1
         SetupSystem = 3
-        LinkMain = 0
         InstanceOverall = 0
         InstanceSetup = 1
         InstanceModify = 2
@@ -721,7 +685,7 @@ Public Class FormMain
         InstanceExport = 5
     End Enum
     ''' <summary>
-    ''' 获取次级页面的名称。若并非次级页面则返回空字符串，故可以以此判断是否为次级页面。
+    ''' Gets the name of a secondary page. Returns an empty string if it is not a secondary page, so it can be used to check for one.
     ''' </summary>
     Private Function PageNameGet(Stack As PageStackData) As String
         Select Case Stack.Page
@@ -738,29 +702,29 @@ Public Class FormMain
         End Select
     End Function
     ''' <summary>
-    ''' 刷新次级页面的名称。
+    ''' Refreshes the name of the secondary page.
     ''' </summary>
     Public Sub PageNameRefresh(Type As PageStackData)
         LabTitleInner.Text = PageNameGet(Type)
     End Sub
     ''' <summary>
-    ''' 刷新次级页面的名称。
+    ''' Refreshes the name of the secondary page.
     ''' </summary>
     Public Sub PageNameRefresh()
         PageNameRefresh(PageCurrent)
     End Sub
 
-    '页面状态存储
+    'Page state storage
     ''' <summary>
-    ''' 当前的主页面。
+    ''' The current main page.
     ''' </summary>
     Public PageCurrent As PageStackData = PageType.Launch
     ''' <summary>
-    ''' 上一个主页面。
+    ''' The previous main page.
     ''' </summary>
     Public PageLast As PageStackData = PageType.Launch
     ''' <summary>
-    ''' 当前的子页面。
+    ''' The current sub-page.
     ''' </summary>
     Public ReadOnly Property PageCurrentSub As PageSubType
         Get
@@ -775,12 +739,12 @@ Public Class FormMain
                     If FrmInstanceLeft Is Nothing Then FrmInstanceLeft = New PageInstanceLeft
                     Return FrmInstanceLeft.PageID
                 Case Else
-                    Return 0 '没有子页面
+                    Return 0 'No sub-page
             End Select
         End Get
     End Property
     ''' <summary>
-    ''' 上层页面的编号堆栈，用于返回。
+    ''' Stack of parent page IDs, used for going back.
     ''' </summary>
     Public PageStack As New List(Of PageStackData)
     Public Class PageStackData
@@ -820,18 +784,18 @@ Public Class FormMain
     End Class
     Public PageLeft As MyPageLeft, PageRight As MyPageRight
 
-    '引发实际页面切换的入口
+    'Entry points that actually trigger page switching
     Private IsChangingPage As Boolean = False
     ''' <summary>
-    ''' 切换页面，并引起对应选择 UI 的改变。
+    ''' Switches the page and updates the corresponding selection UI.
     ''' </summary>
     Public Sub PageChange(Stack As PageStackData, Optional SubType As PageSubType = PageSubType.Default)
         If Not [Enum].IsDefined(GetType(PageType), Stack.Page) Then Throw New ArgumentOutOfRangeException(NameOf(Stack))
         If PageNameGet(Stack) = "" Then
-            '切换到主页面
+            'Switch to a main page
             PageChangeExit()
-            IsChangingPage = True '防止下面的勾选直接触发了 PageChangeActual
-            CType(PanTitleSelect.Children(Stack), MyRadioButton).SetChecked(True, True, PageNameGet(PageCurrent) = "")
+            IsChangingPage = True 'Prevent the check below from directly triggering PageChangeActual
+            PanTitleSelect.Children.OfType(Of MyRadioButton).First(Function(b) Val(b.Tag) = Stack.Page).SetChecked(True, True, PageNameGet(PageCurrent) = "")
             IsChangingPage = False
             Select Case Stack.Page
                 Case PageType.Download
@@ -843,7 +807,7 @@ Public Class FormMain
             End Select
             PageChangeActual(Stack, SubType)
         Else
-            '切换到次页面
+            'Switch to a secondary page
             Select Case Stack.Page
                 Case PageType.InstanceSetup
                     If FrmInstanceLeft Is Nothing Then FrmInstanceLeft = New PageInstanceLeft
@@ -853,14 +817,14 @@ Public Class FormMain
         End If
     End Sub
     ''' <summary>
-    ''' 通过点击导航栏改变页面。
+    ''' Changes the page by clicking the navigation bar.
     ''' </summary>
-    Private Sub BtnTitleSelect_Click(sender As MyRadioButton, raiseByMouse As Boolean) Handles BtnTitleSelect0.Check, BtnTitleSelect1.Check, BtnTitleSelect2.Check, BtnTitleSelect3.Check
+    Private Sub BtnTitleSelect_Click(sender As MyRadioButton, raiseByMouse As Boolean) Handles BtnTitleSelect0.Check, BtnTitleSelect1.Check, BtnTitleSelect3.Check
         If IsChangingPage Then Return
         PageChangeActual(Val(sender.Tag))
     End Sub
     ''' <summary>
-    ''' 通过点击返回按钮或手动触发返回来改变页面。
+    ''' Changes the page by clicking the back button or triggering back manually.
     ''' </summary>
     Public Sub PageBack() Handles BtnTitleInner.Click
         If PageStack.Any() Then
@@ -870,9 +834,9 @@ Public Class FormMain
         End If
     End Sub
 
-    '实际处理页面切换
+    'Actual page switching
     ''' <summary>
-    ''' 切换现有页面的实际方法。
+    ''' The actual method that switches the current page.
     ''' </summary>
     Private Sub PageChangeActual(Stack As PageStackData, Optional SubType As PageSubType = -1)
         If PageCurrent = Stack AndAlso (PageCurrentSub = SubType OrElse SubType = -1) Then Return
@@ -883,31 +847,31 @@ Public Class FormMain
         AniControlEnabled += 1
         Try
 
-#Region "子页面处理"
+#Region "Sub-page handling"
             Dim PageName As String = PageNameGet(Stack)
             If PageName = "" Then
-                '即将切换到一个顶级页面
+                'About to switch to a top-level page
                 PageChangeExit()
             Else
-                '即将切换到一个子页面
+                'About to switch to a sub-page
                 If PageStack.Any Then
-                    '子页面 → 另一个子页面，更新
+                    'Sub-page to another sub-page: update
                     AniStart({
                         AaOpacity(LabTitleInner, -LabTitleInner.Opacity, 130),
                         AaCode(Sub() LabTitleInner.Text = PageName,, True),
                         AaOpacity(LabTitleInner, 1, 150, 30)
                     }, "FrmMain Titlebar SubLayer")
                     If PageStack.Contains(Stack) Then
-                        '返回到更上层的子页面
+                        'Go back to a higher-level sub-page
                         Do While PageStack.Contains(Stack)
                             PageStack.RemoveAt(0)
                         Loop
                     Else
-                        '进入更深层的子页面
+                        'Enter a deeper sub-page
                         PageStack.Insert(0, PageCurrent)
                     End If
                 Else
-                    '主页面 → 子页面，进入
+                    'Main page to sub-page: enter
                     PanTitleInner.Visibility = Visibility.Visible
                     PanTitleMain.IsHitTestVisible = False
                     PanTitleInner.IsHitTestVisible = True
@@ -924,42 +888,38 @@ Public Class FormMain
             End If
 #End Region
 
-#Region "实际更改页面框架 UI"
+#Region "Update the page frame UI"
             PageLast = PageCurrent
             PageCurrent = Stack
             Select Case Stack.Page
-                Case PageType.Launch '启动
+                Case PageType.Launch
                     PageChangeAnim(FrmLaunchLeft, FrmLaunchRight)
-                Case PageType.Download '下载
+                Case PageType.Download
                     If FrmDownloadLeft Is Nothing Then FrmDownloadLeft = New PageDownloadLeft
-                    'PageGet 方法会在未设置 SubType 时指定默认值，并建立相关页面的实例
+                    'PageGet assigns a default when SubType is not set and creates the relevant page instance
                     PageChangeAnim(FrmDownloadLeft, FrmDownloadLeft.PageGet(SubType))
-                Case PageType.Link '联机
-                    If FrmLinkMain Is Nothing Then FrmLinkMain = New PageLinkMain
-                    PageChangeAnim(New MyPageLeft, FrmLinkMain)
-                Case PageType.Setup '设置
+                Case PageType.Setup
                     If FrmSetupLeft Is Nothing Then FrmSetupLeft = New PageSetupLeft
                     PageChangeAnim(FrmSetupLeft, FrmSetupLeft.PageGet(SubType))
-                Case PageType.InstanceSelect '版本选择
+                Case PageType.InstanceSelect
                     If FrmSelectLeft Is Nothing Then FrmSelectLeft = New PageSelectLeft
                     If FrmSelectRight Is Nothing Then FrmSelectRight = New PageSelectRight
                     PageChangeAnim(FrmSelectLeft, FrmSelectRight)
-                Case PageType.TaskManager '任务管理
+                Case PageType.TaskManager
                     If FrmSpeedLeft Is Nothing Then FrmSpeedLeft = New PageSpeedLeft
                     If FrmSpeedRight Is Nothing Then FrmSpeedRight = New PageSpeedRight
                     PageChangeAnim(FrmSpeedLeft, FrmSpeedRight)
-                Case PageType.InstanceSetup '版本设置
+                Case PageType.InstanceSetup
                     If FrmInstanceLeft Is Nothing Then FrmInstanceLeft = New PageInstanceLeft
                     PageChangeAnim(FrmInstanceLeft, FrmInstanceLeft.PageGet(SubType))
-                Case PageType.ResourceDetail '社区资源详情
+                Case PageType.ResourceDetail
                     If FrmDownloadResourceDetail Is Nothing Then FrmDownloadResourceDetail = New PageDownloadResourceDetail
                     PageChangeAnim(New MyPageLeft, FrmDownloadResourceDetail)
             End Select
 #End Region
 
-#Region "设置为最新状态"
+#Region "Set to the latest state"
             BtnExtraDownload.ShowRefresh()
-            BtnExtraApril.ShowRefresh()
 #End Region
 
             Logger.Info($"切换主要页面：{Stack.Page}, {SubType}")
@@ -971,23 +931,23 @@ Public Class FormMain
     End Sub
     Private Sub PageChangeAnim(TargetLeft As FrameworkElement, TargetRight As FrameworkElement)
         AniStop("FrmMain LeftChange")
-        AniStop("PageLeft PageChange") '停止左边栏变更导致的右页面切换动画，防止它与本动画一起触发多次 PageOnEnter
+        AniStop("PageLeft PageChange") 'Stop the right page transition animation caused by the left panel change, so it does not trigger PageOnEnter multiple times together with this animation
         AniControlEnabled += 1
-        '清除新页面关联性
+        'Clear the new page's associations
         If TargetLeft.Parent IsNot Nothing Then TargetLeft.SetValue(ContentPresenter.ContentProperty, Nothing)
         If TargetRight IsNot Nothing AndAlso TargetRight.Parent IsNot Nothing Then TargetRight.SetValue(ContentPresenter.ContentProperty, Nothing)
         PageLeft = TargetLeft
         PageRight = TargetRight
-        '触发页面通用动画
+        'Trigger the common page animation
         CType(PanMainLeft.Child, MyPageLeft).TriggerHideAnimation()
         CType(PanMainRight.Child, MyPageRight).PageOnExit()
         AniControlEnabled -= 1
-        '执行动画
+        'Run the animation
         AniStart({
             AaCode(
             Sub()
                 AniControlEnabled += 1
-                '把新页面添加进容器
+                'Add the new page to the container
                 PanMainLeft.Child = PageLeft
                 PageLeft.Opacity = 0
                 PanMainLeft.Background = Nothing
@@ -996,7 +956,7 @@ Public Class FormMain
             End Sub, 110),
             AaCode(
             Sub()
-                '延迟触发页面通用动画，以使得在 Loaded 事件中加载的控件得以处理
+                'Delay the common page animation so that controls loaded in the Loaded event are handled
                 PageLeft.Opacity = 1
                 PageLeft.TriggerShowAnimation()
             End Sub, 30, True)
@@ -1006,7 +966,7 @@ Public Class FormMain
             Sub()
                 AniControlEnabled += 1
                 CType(PanMainRight.Child, MyPageRight).PageOnForceExit()
-                '把新页面添加进容器
+                'Add the new page to the container
                 PanMainRight.Child = PageRight
                 PageRight.Opacity = 0
                 PanMainRight.Background = Nothing
@@ -1015,18 +975,18 @@ Public Class FormMain
             End Sub, 110),
             AaCode(
             Sub()
-                '延迟触发页面通用动画，以使得在 Loaded 事件中加载的控件得以处理
+                'Delay the common page animation so that controls loaded in the Loaded event are handled
                 PageRight.Opacity = 1
                 PageRight.PageOnEnter()
             End Sub, 30, True)
         }, "FrmMain PageChangeRight")
     End Sub
     ''' <summary>
-    ''' 退出子界面。
+    ''' Exits the sub-page.
     ''' </summary>
     Private Sub PageChangeExit()
         If PageStack.Any Then
-            '子页面 → 主页面，退出
+            'Sub-page to main page: exit
             PanTitleMain.Visibility = Visibility.Visible
             PanTitleMain.IsHitTestVisible = True
             PanTitleInner.IsHitTestVisible = False
@@ -1039,11 +999,11 @@ Public Class FormMain
             }, "FrmMain Titlebar FirstLayer")
             PageStack.Clear()
         Else
-            '主页面 → 主页面，无事发生
+            'Main page to main page: nothing happens
         End If
     End Sub
 
-    '左边栏改变
+    'Left panel change
     Private Sub PanMainLeft_SizeChanged(sender As Object, e As SizeChangedEventArgs) Handles PanMainLeft.SizeChanged
         If Not e.WidthChanged Then Return
         PanMainLeft_Resize(e.NewSize.Width)
@@ -1051,16 +1011,16 @@ Public Class FormMain
     Private Sub PanMainLeft_Resize(NewWidth As Double)
         Dim Delta As Double = NewWidth - RectLeftBackground.Width
         If Math.Abs(Delta) > 0.1 AndAlso AniControlEnabled = 0 Then
-            If PanMain.Opacity < 0.1 Then PanMainLeft.IsHitTestVisible = False '避免左边栏指向背景未能完美覆盖左边栏
+            If PanMain.Opacity < 0.1 Then PanMainLeft.IsHitTestVisible = False 'Prevents the left panel hover background from not fully covering the left panel
             If NewWidth > 0 Then
-                '宽度足够，显示
+                'Wide enough, show
                 AniStart({
                     AaWidth(RectLeftBackground, NewWidth - RectLeftBackground.Width, 180,, New AniEaseOutFluent(AniEasePower.ExtraStrong)),
                     AaOpacity(RectLeftShadow, 1 - RectLeftShadow.Opacity, 180),
                     AaCode(Sub() PanMainLeft.IsHitTestVisible = True, 150)
                 }, "FrmMain LeftChange", True)
             Else
-                '宽度不足，隐藏
+                'Not wide enough, hide
                 AniStart({
                     AaWidth(RectLeftBackground, -RectLeftBackground.Width, 180,, New AniEaseOutFluent),
                     AaOpacity(RectLeftShadow, -RectLeftShadow.Opacity, 180),
@@ -1076,16 +1036,16 @@ Public Class FormMain
 
 #End Region
 
-#Region "控件拖动"
+#Region "Control dragging"
 
-    '在时钟中调用，使得即使鼠标在窗口外松开，也可以释放控件
+    'Called from the timer so the control is released even if the mouse is released outside the window
     Public Sub DragTick()
         If DragControl Is Nothing Then Return
         If Not Mouse.LeftButton = MouseButtonState.Pressed Then
             DragStop()
         End If
     End Sub
-    '在鼠标移动时调用，以改变 Slider 位置
+    'Called on mouse move to update the Slider position
     Public Sub DragDoing() Handles PanBack.MouseMove
         If DragControl Is Nothing Then Return
         If Mouse.LeftButton = MouseButtonState.Pressed Then
@@ -1095,22 +1055,20 @@ Public Class FormMain
         End If
     End Sub
     Public Sub DragStop()
-        '存在其他线程调用的可能性，因此需要确保在 UI 线程运行
+        'May be called from other threads, so make sure it runs on the UI thread
         RunInUi(Sub()
                     If DragControl Is Nothing Then Return
                     Dim Control = DragControl
                     DragControl = Nothing
-                    Control.DragStop() '控件会在该事件中判断 DragControl，所以得放在后面
+                    Control.DragStop() 'The control checks DragControl in this event, so it must come after
                 End Sub)
     End Sub
 
 #End Region
 
-#Region "附加按钮"
+#Region "Extra buttons"
 
-    '音乐
-
-    '任务管理
+    'Task manager
     Private Sub BtnExtraDownload_Click(sender As Object, e As EventArgs) Handles BtnExtraDownload.Click
         PageChange(PageType.TaskManager)
     End Sub
@@ -1118,21 +1076,7 @@ Public Class FormMain
         Return HasDownloadingTask() AndAlso Not PageCurrent = PageType.TaskManager
     End Function
 
-    '投降
-    Public Sub AprilGiveup() Handles BtnExtraApril.Click
-        If IsAprilEnabled AndAlso Not IsAprilGiveup Then
-            Hint("=D", HintType.Green)
-            IsAprilGiveup = True
-            FrmLaunchLeft.AprilScaleTrans.ScaleX = 1
-            FrmLaunchLeft.AprilScaleTrans.ScaleY = 1
-            BtnExtraApril.ShowRefresh()
-        End If
-    End Sub
-    Public Function BtnExtraApril_ShowCheck() As Boolean
-        Return IsAprilEnabled AndAlso Not IsAprilGiveup AndAlso PageCurrent = PageType.Launch
-    End Function
-
-    '关闭 Minecraft
+    'Close Minecraft
     Public Sub BtnExtraShutdown_Click() Handles BtnExtraShutdown.Click
         Try
             If McLaunchLoaderReal IsNot Nothing Then McLaunchLoaderReal.Cancel()
@@ -1149,7 +1093,7 @@ Public Class FormMain
     End Function
 
     ''' <summary>
-    ''' 返回顶部。
+    ''' Scrolls back to the top.
     ''' </summary>
     Public Sub BackToTop() Handles BtnExtraBack.Click
         Dim RealScroll As MyScrollViewer = BtnExtraBack_GetRealChild()
@@ -1170,11 +1114,5 @@ Public Class FormMain
     End Function
 
 #End Region
-
-    '愚人节鼠标位置
-    Public lastMouseArg As MouseEventArgs = Nothing
-    Private Sub FormMain_MouseMove(sender As Object, e As MouseEventArgs) Handles Me.MouseMove
-        lastMouseArg = e
-    End Sub
 
 End Class

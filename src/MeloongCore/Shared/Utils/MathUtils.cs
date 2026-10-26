@@ -3,21 +3,21 @@ using System.Numerics;
 namespace MeloongCore;
 public static class MathUtils {
 
-    #region 进制转换
+    #region Base conversion
 
     /// <summary>
-    /// 将字符串作为数字，转换为指定进制的形式。
-    /// 进制数需在 2 到 86 之间，且输入字符串中的每个字符都必须在该进制的字符集中。
-    /// 进制参考：含大写字母 36，含大小写字母 62，含大小写字母和特殊符号 86。
+    /// Treats the string as a number and converts it to the specified base.
+    /// The base must be between 2 and 86, and every character of the input must be in that base's character set.
+    /// Base reference: 36 includes upper-case letters, 62 includes both cases, 86 includes both cases and special symbols.
     /// </summary>
     public static string ConvertRadix(this string input, int fromRadix, int toRadix) {
         const string digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/+=!?@#$%^&*()[]{}<>;:',";
         if (fromRadix < 2 || fromRadix > digits.Length) throw new ArgumentOutOfRangeException(nameof(fromRadix), $"{nameof(fromRadix)} must be between 2 and 86.");
-        // 零与负数的预处理
+        // Handle zero and negative numbers
         if (string.IsNullOrEmpty(input)) return "0";
         bool isNegative = input.StartsWithF("-");
         if (isNegative) input = input.TrimStart('-');
-        // 转换为十进制
+        // Convert to decimal
         BigInteger realNum = 0;
         foreach (char c in input) {
             int digit = digits.IndexOf(c);
@@ -27,40 +27,40 @@ public static class MathUtils {
         return (realNum * (isNegative ? -1 : 1)).ConvertRadix(toRadix);
     }
     /// <summary>
-    /// 转换为 2 到 86 进制的字符串。
-    /// 进制参考：含大写字母 36，含大小写字母 62，含大小写字母和特殊符号 86。
+    /// Converts to a base-2 to base-86 string.
+    /// Base reference: 36 includes upper-case letters, 62 includes both cases, 86 includes both cases and special symbols.
     /// </summary>
     public static string ConvertRadix(this long input, int toRadix)
         => ConvertRadix((BigInteger) input, toRadix);
     /// <summary>
-    /// 转换为 2 到 86 进制的字符串。
-    /// 进制参考：含大写字母 36，含大小写字母 62，含大小写字母和特殊符号 86。
+    /// Converts to a base-2 to base-86 string.
+    /// Base reference: 36 includes upper-case letters, 62 includes both cases, 86 includes both cases and special symbols.
     /// </summary>
     public static string ConvertRadix(this ulong input, int toRadix)
         => ConvertRadix((BigInteger) input, toRadix);
     /// <summary>
-    /// 转换为 2 到 86 进制的字符串。
-    /// 进制参考：含大写字母 36，含大小写字母 62，含大小写字母和特殊符号 86。
+    /// Converts to a base-2 to base-86 string.
+    /// Base reference: 36 includes upper-case letters, 62 includes both cases, 86 includes both cases and special symbols.
     /// </summary>
     public static string ConvertRadix(this int input, int toRadix) 
         => ConvertRadix((BigInteger) input, toRadix);
     /// <summary>
-    /// 转换为 2 到 86 进制的字符串。
-    /// 进制参考：含大写字母 36，含大小写字母 62，含大小写字母和特殊符号 86。
+    /// Converts to a base-2 to base-86 string.
+    /// Base reference: 36 includes upper-case letters, 62 includes both cases, 86 includes both cases and special symbols.
     /// </summary>
     public static string ConvertRadix(this byte input, int toRadix) 
         => ConvertRadix((BigInteger) input, toRadix);
     /// <summary>
-    /// 转换为 2 到 86 进制的字符串。
-    /// 进制参考：含大写字母 36，含大小写字母 62，含大小写字母和特殊符号 86。
+    /// Converts to a base-2 to base-86 string.
+    /// Base reference: 36 includes upper-case letters, 62 includes both cases, 86 includes both cases and special symbols.
     /// </summary>
     public static string ConvertRadix(this BigInteger input, int toRadix) {
         const string digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/+=!?@#$%^&*()[]{}<>;:',";
         if (toRadix < 2 || toRadix > digits.Length) throw new ArgumentOutOfRangeException(nameof(toRadix), $"{nameof(toRadix)} must be between 2 and 86.");
-        // 零与负数的预处理
+        // Handle zero and negative numbers
         if (input == 0) return "0";
         bool isNegative = input < 0;
-        // 转换为指定进制
+        // Convert to the target base
         var results = new List<char>();
         BigInteger remaining = BigInteger.Abs(input);
         BigInteger bigRadix = toRadix;
@@ -68,7 +68,7 @@ public static class MathUtils {
             remaining = BigInteger.DivRem(remaining, bigRadix, out BigInteger remainder);
             results.Add(digits[(int) remainder]);
         }
-        // 负数的结束处理与返回
+        // Finish negative numbers and return
         if (isNegative) results.Add('-');
         results.Reverse();
         return new([..results]);
@@ -77,7 +77,7 @@ public static class MathUtils {
     #endregion
 
     /// <summary>
-    /// 将值限制在指定范围内。
+    /// Clamps the value to the specified range.
     /// </summary>
     public static T Clamp<T>(this T value, T min, T max) where T : IComparable<T> {
         if (value.CompareTo(min) < 0) return min;
@@ -86,14 +86,14 @@ public static class MathUtils {
     }
 
     /// <summary>
-    /// 在一个范围中进行线性插值。
-    /// 返回值将被舍入到小数点后 7 位，以解决浮点数误差问题。
+    /// Linearly interpolates within a range.
+    /// The result is rounded to 7 decimal places to avoid floating-point errors.
     /// </summary>
     public static double Lerp(double start, double end, double percentage)
         => Math.Round(start + (end - start) * percentage, 7);
 
     /// <summary>
-    /// 计算二阶贝塞尔曲线。
+    /// Computes a quadratic Bezier curve.
     /// </summary>
     public static double Bezier(double t, double x1, double y1, double x2, double y2, double accuracy = 0.01) {
         if (t < 0.0000001 || double.IsNaN(t)) return 0;
@@ -110,14 +110,14 @@ public static class MathUtils {
     }
     
     /// <summary>
-    /// 判断其是否近似等于目标值。
+    /// Whether it is approximately equal to the target value.
     /// </summary>
-    /// <param name="tolerance">允许的最大容差，默认为 1e-6。</param>
+    /// <param name="tolerance">Maximum allowed tolerance, 1e-6 by default.</param>
     public static bool IsNear(this double value, double target, double tolerance = 1e-6) 
         => Math.Abs(value - target) < tolerance;
 
     /// <summary>
-    /// 对质数进行分解。
+    /// Prime factorization.
     /// </summary>
     public static IEnumerable<int> GetPrimeFactors(int num) {
         num = Math.Abs(num);
@@ -139,7 +139,7 @@ public static class MathUtils {
     }
 
     /// <summary>
-    /// 计算最大公约数。例如 12 和 16 的结果是 4。
+    /// Computes the greatest common divisor. For example, the result for 12 and 16 is 4.
     /// </summary>
     public static int Gcd(int a, int b) {
         a = Math.Abs(a);
@@ -152,7 +152,7 @@ public static class MathUtils {
         return a;
     }
     /// <summary>
-    /// 计算最大公约数。例如 12 和 16 的结果是 4。
+    /// Computes the greatest common divisor. For example, the result for 12 and 16 is 4.
     /// </summary>
     public static int Gcd(double a, int b)
         => Gcd((int) Math.Round(a), b);

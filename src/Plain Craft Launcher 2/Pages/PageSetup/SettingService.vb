@@ -1,9 +1,9 @@
 Public Class SettingService
 
-#Region "属性"
+#Region "Properties"
 
     ''' <summary>
-    ''' 指定该控件所对应的设置项。
+    ''' Setting key bound to this control.
     ''' </summary>
     Public Shared Function GetKey(obj As DependencyObject) As String
         If obj Is Nothing Then Return Nothing
@@ -16,7 +16,7 @@ Public Class SettingService
         DependencyProperty.RegisterAttached("Key", GetType(String), GetType(SettingService), New PropertyMetadata(Nothing))
 
     ''' <summary>
-    ''' 指定该控件所对应的设置值。
+    ''' Setting value bound to this control.
     ''' </summary>
     Public Shared Function GetValue(obj As DependencyObject) As String
         If obj Is Nothing Then Return Nothing
@@ -31,20 +31,20 @@ Public Class SettingService
 #End Region
 
     ''' <summary>
-    ''' 重置该控件以及它所有的子控件的设置值。
+    ''' Reset this control and all of its children.
     ''' </summary>
     Public Shared Sub ResetSettings(Target As DependencyObject)
-        LogicalTreeHelper.GetChildren(Target).OfType(Of DependencyObject)().ForAll(Sub(c) ResetSettings(c)) '处理子控件
+        LogicalTreeHelper.GetChildren(Target).OfType(Of DependencyObject)().ForAll(Sub(c) ResetSettings(c)) 'Handle child controls
         Dim Key = GetKey(Target)
         If Key Is Nothing Then Return
         Settings.Reset(Key, Instance:=PageInstanceLeft.Instance)
     End Sub
 
     ''' <summary>
-    ''' 更新该控件以及它所有的子控件当前显示的设置值。
+    ''' Refresh the displayed setting on this control and all of its children.
     ''' </summary>
     Public Shared Sub RefreshSettings(Target As DependencyObject)
-        LogicalTreeHelper.GetChildren(Target).OfType(Of DependencyObject)().ForAll(Sub(c) RefreshSettings(c)) '处理子控件
+        LogicalTreeHelper.GetChildren(Target).OfType(Of DependencyObject)().ForAll(Sub(c) RefreshSettings(c)) 'Handle child controls
         Dim Key = GetKey(Target)
         If Key Is Nothing Then Return
         Dim NewValue = Settings.Get(Key, Instance:=PageInstanceLeft.Instance)
@@ -52,7 +52,7 @@ Public Class SettingService
     End Sub
 
     ''' <summary>
-    ''' 当控件对应的设置改变时，将内容保存到设置中。
+    ''' When the control's setting changes, save it.
     ''' </summary>
     Public Shared Sub SaveSetting(sender As Object)
         If AniControlEnabled <> 0 Then Return
@@ -69,12 +69,12 @@ End Class
 Public Interface ISettingControl
 
     ''' <summary>
-    ''' 更新该控件当前所显示的设置值。
+    ''' Refresh the setting currently shown by this control.
     ''' </summary>
     Sub RefreshSetting(NewValue As String)
     ''' <summary>
-    ''' 获取该控件当前设定的设置值。
-    ''' 若不应当关联该设置值，则返回 Nothing。
+    ''' Get the setting value currently set on this control.
+    ''' Return Nothing when this value should not be linked.
     ''' </summary>
     Function GetCurrentSetting() As String
 
