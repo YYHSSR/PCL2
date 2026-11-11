@@ -356,7 +356,7 @@ Public Class Settings
     Private Shared ReadOnly desInitialVector As Byte() = Encoding.UTF8.GetBytes("95168702")
 
     ''' <summary>
-    ''' Encrypt a string with the DES symmetric algorithm.
+    ''' Prefix of setting values protected with DPAPI for the current Windows user.
     ''' </summary>
     Private Const ProtectedSettingPrefix As String = "dpapi:v1:"
 

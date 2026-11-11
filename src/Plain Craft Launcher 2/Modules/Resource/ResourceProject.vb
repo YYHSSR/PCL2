@@ -680,7 +680,7 @@ NoSubtitle:
         If TranslatedName = Project.TranslatedName OrElse
            RawName = Project.RawName OrElse Description = Project.Description OrElse
            GetRaw(Slug) = GetRaw(Project.Slug) Then
-            Logger.Info($"将 {RawName} ({Slug}) 与 {Project.RawName} ({Project.Slug}) 认定为相似工程")
+            Logger.Trace(Function() $"将 {RawName} ({Slug}) 与 {Project.RawName} ({Project.Slug}) 认定为相似工程")
             'If only one has a DatabaseEntry, assign it to the other
             If WikiEntry Is Nothing AndAlso Project.WikiEntry IsNot Nothing Then WikiEntry = Project.WikiEntry
             If WikiEntry IsNot Nothing AndAlso Project.WikiEntry Is Nothing Then Project.WikiEntry = WikiEntry
