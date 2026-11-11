@@ -1,0 +1,10 @@
+#Wed Aug 05 10:46:22 CST 2026
+shadowDistance=96.0
+SHADOW_VPS=false
+shadowMapResolution=1024
+VL=false
+ENTITY_SHADOWS=false
+WATER_PARALLAX=false
+INFO=0
+ENVIRONMENT_REFLECTIONS=false
+SHADOW_COLOR=false
