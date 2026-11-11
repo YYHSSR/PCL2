@@ -758,23 +758,28 @@ Public Module ModBase
     ''' Sets a timeout for a Task, throwing TimeoutException on timeout.
     ''' </summary>
     <Extension> Public Function GetResultWithTimeout(Of T)(TargetTask As Task(Of T), TokenSource As CancellationTokenSource, TimeoutMs As Integer) As T
-        Dim DelayTask = Task.Delay(TimeoutMs)
-        If Task.WhenAny(TargetTask, DelayTask).ConfigureAwait(False).GetAwaiter().GetResult() Is DelayTask Then
-            TokenSource.Cancel()
-            Throw New TimeoutException($"任务超时（{TimeoutMs} ms）")
-        End If
+        WaitWithTimeout(TargetTask, TokenSource, TimeoutMs)
         Return TargetTask.Run()
     End Function
     ''' <summary>
     ''' Sets a timeout for a Task, throwing TimeoutException on timeout.
     ''' </summary>
     <Extension> Public Sub GetResultWithTimeout(TargetTask As Task, TokenSource As CancellationTokenSource, TimeoutMs As Integer)
-        Dim DelayTask = Task.Delay(TimeoutMs)
-        If Task.WhenAny(TargetTask, DelayTask).ConfigureAwait(False).GetAwaiter().GetResult() Is DelayTask Then
-            TokenSource.Cancel()
-            Throw New TimeoutException($"任务超时（{TimeoutMs} ms）")
-        End If
+        WaitWithTimeout(TargetTask, TokenSource, TimeoutMs)
         TargetTask.Run()
+    End Sub
+    Private Sub WaitWithTimeout(TargetTask As Task, TokenSource As CancellationTokenSource, TimeoutMs As Integer)
+        If TargetTask.IsCompleted Then Return 'Buffered stream reads often complete synchronously; no timer needed
+        'The delay is canceled as soon as the task finishes; otherwise every call (one per 16 KB read while downloading) leaves a timer alive for TimeoutMs
+        Using DelayCancel As New CancellationTokenSource
+            Dim DelayTask = Task.Delay(TimeoutMs, DelayCancel.Token)
+            Dim Finished = Task.WhenAny(TargetTask, DelayTask).ConfigureAwait(False).GetAwaiter().GetResult()
+            DelayCancel.Cancel()
+            If Finished Is DelayTask Then
+                TokenSource.Cancel()
+                Throw New TimeoutException($"任务超时（{TimeoutMs} ms）")
+            End If
+        End Using
     End Sub
 
     ''' <summary>

@@ -1655,9 +1655,14 @@ FinishExCatch:
         Public AllFiles As New ConcurrentDictionary(Of String, NetFile)
 
         ''' <summary>
-        ''' All current download tasks.
+        ''' All current download tasks. Finished tasks are pruned by the manager thread.
         ''' </summary>
-        Public Tasks As New ConcurrentBag(Of LoaderDownload)
+        Public ReadOnly Property Tasks As ICollection(Of LoaderDownload)
+            Get
+                Return TaskSet.Keys
+            End Get
+        End Property
+        Private ReadOnly TaskSet As New ConcurrentDictionary(Of LoaderDownload, Byte)
 
         ''' <summary>
         ''' Size downloaded so far.
@@ -1712,8 +1717,10 @@ FinishExCatch:
                 End If
 #End Region
 #Region "Refresh Download Task Properties"
-                For Each Task In Tasks
+                For Each Task In TaskSet.Keys
                     Task.RefreshStat()
+                    'Drop finished tasks so the set does not grow for the whole session; a restarted task is added again by Start
+                    If Task.State >= LoadState.Finished Then TaskSet.TryRemove(Task, Nothing)
                 Next
 #End Region
             Catch ex As Exception
@@ -1725,10 +1732,31 @@ FinishExCatch:
         ''' <summary>
         ''' Starts the monitoring thread used to add download threads.
         ''' </summary>
+        Private ManagerStarted As Integer = 0
+        ''' <summary>
+        ''' Wake-up signals for the manager threads: 0 and 1 are the thread starters, 2 is the stat refresher.
+        ''' Each thread resets only its own signal, so a wake-up meant for one thread is never cleared by another.
+        ''' </summary>
+        Private ReadOnly ManagerSignals As ManualResetEventSlim() = {New ManualResetEventSlim(True), New ManualResetEventSlim(True), New ManualResetEventSlim(True)}
+        Private Sub WakeManager()
+            For Each Signal In ManagerSignals
+                Signal.Set()
+            Next
+        End Sub
+        ''' <summary>
+        ''' Blocks the calling manager thread until new work arrives, if it is still idle after resetting its signal.
+        ''' Resetting first and checking again afterwards guarantees that a Start racing with this call is not missed.
+        ''' </summary>
+        Private Sub WaitForWork(Id As Integer, IsIdle As Func(Of Boolean))
+            ManagerSignals(Id).Reset()
+            If IsIdle() Then ManagerSignals(Id).Wait()
+        End Sub
+        Private Function HasPendingFile(Id As Integer) As Boolean
+            Return AllFiles.Values.Any(Function(f) f.Uuid Mod 2 <> Id AndAlso f.State < NetState.Merging)
+        End Function
         Private Sub StartManager()
-            Static IsStarted As Boolean = False
-            If IsStarted Then Return
-            IsStarted = True
+            'Several download tasks may start at the same moment, so the check and the set must be atomic
+            If Interlocked.CompareExchange(ManagerStarted, 1, 0) <> 0 Then Return
             Dim ThreadStarter =
             Sub(Id As Integer) '0 or 1
                 Try
@@ -1746,6 +1774,11 @@ FinishExCatch:
                                 OngoingFiles.Add(File)
                             End If
                         Next
+                        'Nothing to do: sleep until a new download task arrives instead of polling every 20 ms
+                        If WaitingFiles.Count = 0 AndAlso OngoingFiles.Count = 0 AndAlso FileRemain <= 0 Then
+                            WaitForWork(Id, Function() FileRemain <= 0 AndAlso Not HasPendingFile(Id))
+                            Continue While
+                        End If
                         'Start threads for waiting files
                         For Each File As NetFile In WaitingFiles
                             If NetTaskThreadCount >= NetTaskThreadLimit Then Continue While 'Maximum thread count check
@@ -1784,10 +1817,19 @@ FinishExCatch:
                 Try
                     Dim NextTick As Long = GetTimeMs()
                     While True
-                        'Increase the speed limit allowance
-                        If NetTaskSpeedLimitHigh > 0 Then Interlocked.Add(NetTaskSpeedLimitLeft, CLng(NetTaskSpeedLimitHigh / 10))
+                        'Increase the speed limit allowance, capped at one second of transfer so idle time cannot build up a burst
+                        Dim SpeedLimitHigh = NetTaskSpeedLimitHigh
+                        If SpeedLimitHigh > 0 AndAlso Interlocked.Add(NetTaskSpeedLimitLeft, CLng(SpeedLimitHigh / 10)) > SpeedLimitHigh Then
+                            Interlocked.Exchange(NetTaskSpeedLimitLeft, SpeedLimitHigh)
+                        End If
                         'Refresh the public properties
                         RefreshStat()
+                        'Nothing downloading and the displayed speed has decayed to 0: sleep until a new download task arrives
+                        If FileRemain <= 0 AndAlso Speed = 0 AndAlso TaskSet.IsEmpty Then
+                            WaitForWork(2, Function() FileRemain <= 0 AndAlso TaskSet.IsEmpty)
+                            NextTick = GetTimeMs()
+                            Continue While
+                        End If
                         'Wait 100 ms
                         NextTick += 100
                         Dim SleepTime = NextTick - GetTimeMs()
@@ -1844,7 +1886,8 @@ FinishExCatch:
                 File.Tasks.Add(Task)
             Next
             Task.Files = New ConcurrentQueue(Of NetFile)(NewFilesList)
-            Tasks.Add(Task)
+            TaskSet(Task) = 0
+            WakeManager()
             Return NewFiles
         End Function
 

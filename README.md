@@ -1,74 +1,94 @@
 # PCL YYH
 
-> **This is YYH's slimmed-down, modified personal-use build of the official PCL2 launcher.**
-> It is not an official PCL release. Commercial use is prohibited; non-commercial modification and further development are allowed (see [License](#license)).
+> **这是 YYH 基于官方 PCL2 精简、修改的个人自用版本，并非 PCL 官方发布。**
+> 禁止商用；允许非商业的修改与二次开发，详见[许可协议](#许可协议)。
 
-Maintainer: **YYH**
+面向 Windows 的 Minecraft: Java Edition 启动器，提供实例管理、Java 检测、账号登录、资源下载、Mod 管理和整合包安装。本分支基于 PCL 2.14.0.0 源码继续开发。
 
-A Minecraft: Java Edition launcher for Windows with instance management, Java detection, account login, resource downloads, mod management and modpack installation. This fork continues from the PCL 2.14.0.0 source code.
+## 使用
 
-## Usage
+直接运行 `PCL-YYH.exe` 即可：无需解压，也不用在旁边放任何项目 DLL。内置资源按需释放，缓存和配置文件在运行时生成。
 
-Run `PCL-YYH.exe`. There is no ZIP to extract and no project DLLs to place next to it; built-in resources are extracted on demand, and cache and configuration files are created at runtime.
+| 项目 | 说明 |
+| :--- | :--- |
+| 系统 | 64 位 Windows，需 .NET Framework 4.8 |
+| 游戏 | 与目标 Minecraft 版本兼容的 Java；启动器可自动检测和管理 Java |
+| 微软登录 | 为启动器进程设置你自己的 `PCL_MS_CLIENT_ID` 环境变量后重启 |
+| CurseForge | 在「设置 → 其他 → 社区资源」保存你自己的 API Key，或设置 `PCL_CURSEFORGE_API_KEY`（环境变量优先）。保存的 Key 用 DPAPI 加密。Modrinth 无需 Key |
 
-- System: 64-bit Windows with .NET Framework 4.8.
-- Game: a Java version compatible with the target Minecraft version; the launcher can detect and manage Java installations.
-- Microsoft login: set your own `PCL_MS_CLIENT_ID` for the launcher process and restart it.
-- CurseForge: save your own valid API key under Settings → Other → Community Resources, or set `PCL_CURSEFORGE_API_KEY` (the environment variable takes precedence). The saved key is encrypted with DPAPI. Modrinth works without any key.
+配置使用 `PCL2Local` 标识，账号凭据通过 DPAPI 绑定到当前 Windows 用户。把程序复制给其他 Windows 用户时，账号凭据不会跟着迁移。
 
-Configuration uses the `PCL2Local` identifier, and credentials are protected with DPAPI for the current Windows user. Copying the program does not migrate account credentials to another Windows user.
+## 与官方 PCL2 的区别
 
-## Differences from official PCL2
-
-- The UI is fixed to Simplified Chinese; there is no language switch.
-- The top bar only has Launch, Download and Settings. The "More" page with help, about, feedback, voting and the toolbox has been removed.
-- Multiplayer (Link) has been removed completely, including its pages, settings, invite-code handling and the "join room" custom event.
-- Personalization has been removed: theme switching, custom homepage, background images, background music and feature hiding. The UI uses a fixed style.
-- The "Other" settings page only keeps Download and Community Resources. Accessibility, launcher and debug options, auto-update, announcements, settings import/export, telemetry and the April Fools feature have been removed.
-- The "always verify certificates" option has been removed; HTTPS always uses the default .NET certificate validation.
+- 界面固定为简体中文，没有语言切换。
+- 顶栏只保留「启动」「下载」「设置」；移除了「更多」页（帮助、关于、反馈、投票、百宝箱）。
+- 完全移除联机（Link）：相关页面、设置、邀请码处理以及「加入房间」自定义事件。
+- 移除个性化：主题切换、自定义主页、背景图片、背景音乐和功能隐藏，界面使用固定样式。
+- 「其他」设置页只保留「下载」和「社区资源」；移除无障碍、启动器与调试选项、自动更新、公告、设置导入导出、遥测和愚人节功能。
+- 移除「始终校验证书」开关，HTTPS 始终使用 .NET 默认的证书校验。
 
 ## Minecraft 1.20.1 + Forge
 
-64-bit Java 17 is preferred. The global Java list is ordered by compatibility, and a Java forced in the per-instance settings takes precedence. G1 is on by default; G1 pause-target tuning, heap pre-touch and string deduplication are off by default. Options you saved manually are not reset by upgrades.
+优先使用 64 位 Java 17。全局 Java 列表按兼容性排序，实例设置中强制指定的 Java 优先。默认开启 G1；G1 停顿目标调优、堆预触和字符串去重默认关闭。你手动保存过的选项不会因升级被重置。
 
-On a PC with 24 GB of RAM, start with about 6 GB for a medium mod setup and try 8 GB for heavier modpacks based on actual usage, leaving headroom for Windows and the game's off-heap memory. More memory does not guarantee smoother gameplay.
+24 GB 内存的电脑，中等规模 Mod 建议先分配约 6 GB，重型整合包可按实际情况尝试 8 GB，并给 Windows 和游戏的堆外内存留出余量。内存给得越多不代表越流畅。
 
-Animations run on render frames and stop when idle, list viewport checks are batched, the memory settings page stops refreshing when hidden, and mod counts come from a background snapshot.
+## 性能与稳定性
 
-## Repository layout
+- 动画跟随渲染帧运行，空闲时停止；列表视口检测批量进行；内存设置页隐藏时停止刷新；Mod 数量来自后台快照。
+- 下载管理线程在没有任务时休眠，有新任务时才唤醒，不再空转轮询。
+- 下载读取的超时计时器在读取完成后立即释放，大文件下载不会堆积计时器。
+- 已结束的下载任务会被及时清理，长时间浏览资源页不再导致内存持续增长。
+- 限速额度最多累积 1 秒，空闲后恢复下载不会突破限速；下载管理器只会启动一次。
+- 启动时获取的 Minecraft 版本列表会被下载页复用，不再重复请求。
+
+## 目录结构
 
 ```text
-SKILL/                          Development conventions
-src/Plain Craft Launcher 2/     Main program (VB.NET / WPF)
-src/PCLCS/                      C# business models and helpers
-src/MeloongCore/                Base library source
-src/Tests/                      Smoke tests and performance tool
-src/Plain Craft Launcher 2.sln  Solution
-src/build.ps1                   Build entry point
-README.md                       This file
-LICENSE                         YYH Non-Commercial Derivative License
+SKILL/                          开发约定
+src/Plain Craft Launcher 2/     主程序（VB.NET / WPF）
+src/PCLCS/                      C# 业务模型与辅助代码
+src/MeloongCore/                基础库源码
+src/Tests/                      冒烟测试与性能工具
+src/Plain Craft Launcher 2.sln  解决方案
+src/build.ps1                   构建入口
+PCL-YYH.exe                     打包好的启动器
+README.md                       本文件
+LICENSE                         YYH 非商业衍生许可协议
 ```
 
-## Building
+## 构建
 
-Install the .NET 9 SDK and run from the repository root:
+安装 .NET 9 SDK，在仓库根目录运行：
 
 ```powershell
 & ./src/build.ps1 -Configuration Release -RunTests -LaunchCheck
 ```
 
-- `-DotnetPath` selects a specific `dotnet.exe`.
-- `-RunTests` runs the smoke tests.
-- `-LaunchCheck` starts the built EXE in an isolated profile and fails if the window does not appear or the process exits within a few seconds.
+| 参数 | 作用 |
+| :--- | :--- |
+| `-DotnetPath` | 指定 `dotnet.exe`，例如便携安装的 `E:\dotnet-sdk\dotnet.exe` |
+| `-RunTests` | 运行冒烟测试 |
+| `-LaunchCheck` | 在隔离的配置下启动构建出的 EXE；窗口未出现或几秒内退出即判定失败 |
 
-The main program targets .NET Framework 4.8; reference assemblies and other NuGet packages are restored automatically. Development tools do not need to be shipped to end users.
+主程序目标框架为 .NET Framework 4.8，引用程序集和其他 NuGet 包会自动还原，开发工具不需要分发给最终用户。
 
-The build output is in `src/Plain Craft Launcher 2/bin/`. For distribution, copy the main EXE and rename it to `PCL-YYH.exe`. All project dependencies are embedded in the EXE; only the system .NET Framework and the game's Java are external.
+构建产物位于 `src/Plain Craft Launcher 2/bin/`。分发时复制主 EXE 并重命名为 `PCL-YYH.exe`。所有项目依赖都已嵌入 EXE，外部只依赖系统的 .NET Framework 和游戏用的 Java。
 
-## License
+## 贡献者
 
-YYH's additions and modifications may be studied, used non-commercially, modified and further developed. **Commercial use without authorization is prohibited.** Redistributions must keep YYH's attribution, a description of the changes and this license, and must not relicense these modifications under terms that allow commercial use. See [LICENSE](LICENSE) for the full terms.
+| 贡献者 | 角色 |
+| :--- | :--- |
+| **YYH** | 维护者：分支方向、功能取舍、测试与发布 |
+| **[Claude](https://www.anthropic.com/claude)**（Anthropic） | AI 协作开发：代码审查、下载引擎的性能与并发修复 |
+| **[ChatGPT](https://openai.com/chatgpt)**（OpenAI） | AI 协作开发 |
 
-The original PCL source code and third-party components remain under their own licenses. YYH's license does not change their ownership and does not grant any commercial rights to them. Upstream license: [PCL license](https://github.com/Meloong-Git/PCL/blob/5ef81e490ae46b1100d61e33d0183094c7a80ca8/LICENCE); base library license: [MeloongCore license](https://github.com/Meloong-Git/MeloongCore/blob/c774ae4c85fd94e0eaa171db21e78a65870df19b/LICENSE.txt).
+同时感谢官方 [PCL](https://github.com/Meloong-Git/PCL) 及 [MeloongCore](https://github.com/Meloong-Git/MeloongCore) 的作者与贡献者，本项目建立在他们的工作之上。
 
-This project is not an official Minecraft product and is not affiliated with or endorsed by Mojang or Microsoft.
+## 许可协议
+
+YYH 的新增和修改内容允许学习、非商业使用、修改和二次开发，**未经授权禁止商用**。再分发时须保留 YYH 的署名、修改说明和本许可协议，且不得以允许商用的条款重新授权这些修改。完整条款见 [LICENSE](LICENSE)。
+
+官方 PCL 源码和第三方组件仍遵循各自的许可协议。YYH 的许可协议不改变其归属，也不授予任何商业权利。上游许可：[PCL 许可协议](https://github.com/Meloong-Git/PCL/blob/5ef81e490ae46b1100d61e33d0183094c7a80ca8/LICENCE)；基础库许可：[MeloongCore 许可协议](https://github.com/Meloong-Git/MeloongCore/blob/c774ae4c85fd94e0eaa171db21e78a65870df19b/LICENSE.txt)。
+
+本项目不是 Minecraft 官方产品，与 Mojang 或 Microsoft 无关，也未获得其认可。

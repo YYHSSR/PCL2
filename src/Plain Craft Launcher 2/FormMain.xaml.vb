@@ -130,7 +130,9 @@ Public Class FormMain
             'Start the loader pool
             Try
                 JavaInit()
-                DlClientListMojangLoader.Start(1) 'PCL also uses this result to decide whether to download from the official source
+                'PCL also uses this result to decide whether to download from the official source
+                'No input, matching what DlClientListLoader passes, so the download page reuses this result instead of requesting the list again
+                DlClientListMojangLoader.Start()
                 RunCountSub()
                 RunInNewThread(AddressOf TryClearTaskTemp, "TryClearTaskTemp", ThreadPriority.BelowNormal)
             Catch ex As Exception
