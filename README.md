@@ -52,6 +52,7 @@ src/MeloongCore/                基础库源码
 src/Tests/                      冒烟测试与性能工具
 src/Plain Craft Launcher 2.sln  解决方案
 src/build.ps1                   构建入口
+ysm/                            YSM（Yes Steve Model）玩家模型文件
 PCL-YYH.exe                     打包好的启动器
 README.md                       本文件
 LICENSE                         YYH 非商业衍生许可协议
@@ -81,7 +82,7 @@ LICENSE                         YYH 非商业衍生许可协议
 | :--- | :--- |
 | **YYH** | 维护者：分支方向、功能取舍、测试与发布 |
 | **[Claude](https://www.anthropic.com/claude)**（Anthropic） | AI 协作开发：代码审查、下载引擎的性能与并发修复 |
-| **[ChatGPT](https://openai.com/chatgpt)**（OpenAI） | AI 协作开发 |
+| **[ChatGPT / Codex](https://openai.com/codex)**（OpenAI） | AI 协作开发 |
 
 同时感谢官方 [PCL](https://github.com/Meloong-Git/PCL) 及 [MeloongCore](https://github.com/Meloong-Git/MeloongCore) 的作者与贡献者，本项目建立在他们的工作之上。
 
