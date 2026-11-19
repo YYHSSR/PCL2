@@ -49,7 +49,7 @@ Public Class PageSpeedLeft
                 Dim PredictText As String = Math.Floor(RawPercent * 100) & "." & Math.Floor((RawPercent * 100 - Math.Floor(RawPercent * 100)) * 100).ToString.EnsureLength("0", 2) & " %"
                 LabProgress.Text = If(RawPercent > 0.999999, "100 %", PredictText)
                 LabSpeed.Text = StringUtils.FormatByteSize(NetManager.Speed) & "/s"
-                LabFile.Text = If(NetManager.FileRemain < 0, "0*", NetManager.FileRemain)
+                LabFile.Text = NetManager.FileRemain.ToString()
                 LabThread.Text = NetTaskThreadCount & " / " & NetTaskThreadLimit
             End If
 #End Region

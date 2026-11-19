@@ -3,11 +3,14 @@ Imports System.Windows.Threading
 
 Public Class Application
 
+    Friend Shared IsLaunchCheck As Boolean
+
     'Startup
     Private Sub Application_Startup(sender As Object, e As StartupEventArgs) Handles Me.Startup
         Try
             'Core initialization
-            MeloongCore.Main.Init("PCL2Local")
+            IsLaunchCheck = e.Args.Contains("--launch-check") AndAlso RegFolder <> DefaultSettingsProfile
+            MeloongCore.Main.Init(RegFolder)
             MeloongCore.Wpf.Main.Init()
             If Not e.Args.Contains("--gpu") Then 'When invoked from the command line, skip the single-instance check and log rotation (#9137)
                 WaitingMutex(e)
@@ -59,11 +62,11 @@ RetryCacheCheck:
                 DirectoryUtils.Create(PathTemp)
                 CheckPermissionWithException(PathTemp)
             Catch ex As Exception
-                If PathUtils.IsSame(PathTemp, Path.GetTempPath() & "PCL2Local\") Then
+                If PathUtils.IsSame(PathTemp, DefaultCachePath) Then
                     MyMsgBox("PCL 无法访问缓存文件夹，可能导致程序出错或无法正常使用！" & vbCrLf & vbCrLf & "错误原因：" & ex.GetDisplay(True), "缓存文件夹不可用")
                 Else
                     MyMsgBox("手动设置的缓存文件夹不可用，PCL 将使用默认缓存文件夹。" & vbCrLf & vbCrLf & "错误原因：" & ex.GetDisplay(True), "缓存文件夹不可用")
-                    PathTemp = Path.GetTempPath() & "PCL2Local\"
+                    PathTemp = DefaultCachePath
                     GoTo RetryCacheCheck
                 End If
             End Try
@@ -122,7 +125,7 @@ RetryCacheCheck:
         If BuildType = BuildTypes.Debug Then Return
         Try
             Dim MutexCreatedNew As Boolean
-            PclMutex = New Mutex(True, "PCL2Local_SingletonMutex", MutexCreatedNew)
+            PclMutex = New Mutex(True, $"{RegFolder}_SingletonMutex", MutexCreatedNew)
             If MutexCreatedNew Then Return
             Logger.Warn("已有一个 PCL 实例正在运行")
             'Wait for the existing PCL to exit
@@ -134,11 +137,12 @@ RetryCacheCheck:
                 End Try
             End If
             'Bring the existing PCL window to the front
-            Dim WindowHwnd As IntPtr = FindWindow(Nothing, "Plain Craft Launcher　")
-            If WindowHwnd = IntPtr.Zero Then WindowHwnd = FindWindow(Nothing, "Plain Craft Launcher 2　")
-            If WindowHwnd <> IntPtr.Zero Then ShowWindowToTop(WindowHwnd)
-            'Play a sound and exit
-            Beep()
+            If RegFolder = DefaultSettingsProfile Then
+                Dim WindowHwnd As IntPtr = FindWindow(Nothing, "Plain Craft Launcher　")
+                If WindowHwnd = IntPtr.Zero Then WindowHwnd = FindWindow(Nothing, "Plain Craft Launcher 2　")
+                If WindowHwnd <> IntPtr.Zero Then ShowWindowToTop(WindowHwnd)
+                Beep()
+            End If
             Environment.[Exit](ProcessReturnValues.Cancel)
         Catch ex As Exception
             Logger.Warn(ex, "单例检查失败")

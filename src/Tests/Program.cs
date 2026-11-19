@@ -124,6 +124,37 @@ internal static class Program {
                 Check(OnWorker(() => PCL.ModNet.NetRequestByClientMultiple(server.Url + "post", HttpMethod.Post, ThreadCount: 3, Content: "test", Timeout: 2500)) == "ok", "POST failed");
                 Check(server.PostRequests == 1, "POST was sent more than once");
             });
+            Run("Invalid download initialization leaves the queue usable", () => {
+                string target = Path.Combine(temp, "retry.bin");
+                var loader = new PCL.ModNet.LoaderDownload("retry", [new PCL.ModNet.NetFile(["invalid-url"], target)]);
+                loader.Start();
+                Check(SpinWait.SpinUntil(() => loader.State == PCL.ModBase.LoadState.Failed, 5000), "Invalid input did not fail");
+                Check(PCL.ModNet.NetManager.FileRemain == 0, "Unregistered file affected the download queue");
+                OnWorker(() => {
+                    loader.WaitForExitTime(5000, Input: new List<PCL.ModNet.NetFile> { new([server.Url + "ok"], target) });
+                    return true;
+                });
+                Check(File.ReadAllText(target) == "ok" && PCL.ModNet.NetManager.FileRemain == 0, "Retry did not complete");
+            });
+            Run("Concurrent requests share a destination and survive a subscriber canceling", () => {
+                string target = Path.Combine(temp, "shared.bin");
+                var first = new PCL.ModNet.LoaderDownload("shared one", [new PCL.ModNet.NetFile([server.Url + "shared"], target)]);
+                var second = new PCL.ModNet.LoaderDownload("shared two", [new PCL.ModNet.NetFile([server.Url + "shared"], Path.Combine(temp, "SHARED.bin"))]);
+                var remaining = new PCL.ModNet.LoaderDownload("shared three", [new PCL.ModNet.NetFile([server.Url + "shared"], target)]);
+                try {
+                    Parallel.Invoke(() => first.Start(), () => second.Start(), () => remaining.Start());
+                    Check(SpinWait.SpinUntil(() => ReferenceEquals(first.Files.Single(), second.Files.Single()) &&
+                        ReferenceEquals(first.Files.Single(), remaining.Files.Single()) && Volatile.Read(ref server.SharedRequests) > 0, 5000),
+                        "The requests did not share a file");
+                    first.Cancel();
+                } finally {
+                    server.ReleaseShared.TrySetResult(true);
+                }
+                Check(SpinWait.SpinUntil(() => second.State == PCL.ModBase.LoadState.Finished &&
+                    remaining.State == PCL.ModBase.LoadState.Finished, 5000), "A remaining subscriber did not finish");
+                Check(first.State == PCL.ModBase.LoadState.Canceled && server.SharedRequests == 1 &&
+                    File.ReadAllText(target) == "ok" && PCL.ModNet.NetManager.FileRemain == 0, "Unexpected cancellation or duplicate download");
+            });
             Run("ZIP path traversal is rejected", () => {
                 Directory.CreateDirectory(temp);
                 string archive = Path.Combine(temp, "invalid.zip");
@@ -311,6 +342,7 @@ internal static class Program {
                     var json = OnWorker(() => new PCL.ModMinecraft.McInstance("A").JsonObject);
                     Check(json != null, "Instance JSON was not loaded");
                 } finally { PCL.ModMinecraft.McFolderSelected = saved; }
+                Check(PCL.ModMinecraft.McFolderSelected == saved, "The original Minecraft folder was not restored");
             });
             Run("Removed pages, routes, events and settings are absent", () => {
                 var assembly = typeof(PCL.Application).Assembly;
@@ -319,6 +351,8 @@ internal static class Program {
                 Check(!Enum.IsDefined(typeof(PCL.CustomEvent.EventType), 23), "Removed multiplayer event is still available");
                 Check((int)PCL.FormMain.PageType.Setup == 3 && (int)PCL.FormMain.PageType.InstanceSelect == 5, "Existing route IDs changed");
                 Check((int)PCL.CustomEvent.EventType.执行命令 == 4, "Existing event IDs changed");
+                Check(!PCL.Settings.Entries.ContainsKey("SystemCount") && !PCL.Settings.Entries.ContainsKey("SystemLaunchCount"), "Launch count settings remain");
+                Check(typeof(PCL.FormMain).GetMethod("RunCountSub", BindingFlags.NonPublic | BindingFlags.Instance) == null, "Launch count logic remains");
                 foreach (string key in PCL.Settings.Entries.Keys)
                     Check(!key.StartsWith("SystemDebug") && !key.StartsWith("UiHiddenOther") && !key.StartsWith("ToolUpdate") && !key.StartsWith("Link") && key != "ToolHelpChinese" && key != "SystemSystemCache" && key != "UiHiddenPageOther", "Removed setting remains: " + key);
                 Check(new System.Resources.ResourceManager("PCL.Resources", assembly).GetObject("Help") == null, "Help archive remains embedded");
@@ -388,6 +422,8 @@ internal static class Program {
         private readonly HttpListener listener = new();
         private int raceRequests;
         public int PostRequests;
+        public int SharedRequests;
+        public readonly TaskCompletionSource<bool> ReleaseShared = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public readonly string Url;
         public LocalServer() {
             var port = new TcpListener(IPAddress.Loopback, 0);
@@ -408,6 +444,10 @@ internal static class Program {
                             if (path == "/fail") ctx.Response.StatusCode = 500;
                             if (path == "/slow") await Task.Delay(1800);
                             if (path == "/post") { Interlocked.Increment(ref PostRequests); await Task.Delay(700); }
+                            if (path == "/shared") {
+                                Interlocked.Increment(ref SharedRequests);
+                                await ReleaseShared.Task;
+                            }
                             if (path == "/race") {
                                 int index = Interlocked.Increment(ref raceRequests);
                                 await Task.Delay(index == 1 ? 900 : 25);

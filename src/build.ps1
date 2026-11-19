@@ -20,31 +20,47 @@ try {
     if ($LaunchCheck) {
         # Starts the real EXE in an isolated folder and settings profile; the window must appear and stay alive.
         $profile = 'PCL2LaunchCheck_' + [guid]::NewGuid().ToString('N')
-        $folder = Join-Path ([IO.Path]::GetTempPath()) $profile
-        New-Item -ItemType Directory -Path $folder | Out-Null
+        $localData = [Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)
+        $roamingData = [Environment]::GetFolderPath([Environment+SpecialFolder]::ApplicationData)
+        $folder = [IO.Path]::GetFullPath((Join-Path $localData $profile))
+        $appDataFolder = [IO.Path]::GetFullPath((Join-Path $roamingData $profile))
+        if ((Split-Path -Parent $folder) -ne $localData -or
+            (Split-Path -Parent $appDataFolder) -ne $roamingData -or
+            (Test-Path -LiteralPath $folder) -or (Test-Path -LiteralPath $appDataFolder)) {
+            throw 'Could not reserve isolated launch-check directories.'
+        }
         $exe = Join-Path $folder 'PCL-YYH.exe'
-        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Plain Craft Launcher 2/bin/Plain Craft Launcher 2.exe') -Destination $exe
-        $env:PCL_SETTINGS_PROFILE = $profile
-        $env:PCL_CACHE_PATH = Join-Path $folder 'Cache'
+        $previousProfile = $env:PCL_SETTINGS_PROFILE
+        $previousCache = $env:PCL_CACHE_PATH
+        $process = $null
         try {
-            $process = Start-Process -FilePath $exe -WorkingDirectory $folder -PassThru
+            New-Item -ItemType Directory -Path $folder | Out-Null
+            Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Plain Craft Launcher 2/bin/Plain Craft Launcher 2.exe') -Destination $exe
+            $env:PCL_SETTINGS_PROFILE = $profile
+            $env:PCL_CACHE_PATH = Join-Path $folder 'Cache'
+            $process = Start-Process -FilePath $exe -ArgumentList '--launch-check' -WorkingDirectory $folder -PassThru
             $timer = [Diagnostics.Stopwatch]::StartNew()
+            $mainWindowFound = $false
             while ($timer.ElapsedMilliseconds -lt 15000 -and -not $process.HasExited) {
                 $process.Refresh()
-                if ($process.MainWindowHandle -ne [IntPtr]::Zero) { break }
+                if ($process.MainWindowHandle -ne [IntPtr]::Zero -and $process.MainWindowTitle -match '^Plain Craft Launcher(?: 2)?\s*$') {
+                    $mainWindowFound = $true
+                    break
+                }
                 Start-Sleep -Milliseconds 100
             }
             if ($process.HasExited) { throw ('Launcher exited during startup with code 0x{0:X}.' -f $process.ExitCode) }
-            if ($process.MainWindowHandle -eq [IntPtr]::Zero) { throw 'Launcher window did not appear within 15 seconds.' }
+            if (-not $mainWindowFound) { throw 'Launcher main window did not appear within 15 seconds.' }
             Write-Host "Launcher window appeared after $($timer.ElapsedMilliseconds) ms."
             Start-Sleep -Seconds 8
             if ($process.HasExited) { throw ('Launcher exited after startup with code 0x{0:X}.' -f $process.ExitCode) }
             Write-Host 'Launch check passed.'
         } finally {
             if ($process -and -not $process.HasExited) { Stop-Process -Id $process.Id -Force; $process.WaitForExit(5000) | Out-Null }
-            Remove-Item Env:\PCL_SETTINGS_PROFILE, Env:\PCL_CACHE_PATH -ErrorAction SilentlyContinue
+            $env:PCL_SETTINGS_PROFILE = $previousProfile
+            $env:PCL_CACHE_PATH = $previousCache
             Remove-Item -LiteralPath "HKCU:\Software\$profile" -Recurse -ErrorAction SilentlyContinue
-            Remove-Item -LiteralPath $folder -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $folder, $appDataFolder -Recurse -Force -ErrorAction SilentlyContinue
         }
     }
 } finally { Pop-Location }

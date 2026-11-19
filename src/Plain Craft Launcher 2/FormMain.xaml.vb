@@ -133,7 +133,6 @@ Public Class FormMain
                 'PCL also uses this result to decide whether to download from the official source
                 'No input, matching what DlClientListLoader passes, so the download page reuses this result instead of requesting the list again
                 DlClientListMojangLoader.Start()
-                RunCountSub()
                 RunInNewThread(AddressOf TryClearTaskTemp, "TryClearTaskTemp", ThreadPriority.BelowNormal)
             Catch ex As Exception
                 Logger.Error(ex, "初始化加载池运行失败")
@@ -141,10 +140,6 @@ Public Class FormMain
         End Sub, "初始化", ThreadPriority.Lowest)
 
         Logger.Info($"第三阶段加载用时：{GetTimeMs() - ApplicationStartTick} ms")
-    End Sub
-    'Events triggered by launch count
-    Private Sub RunCountSub()
-        Settings.Set("SystemCount", Settings.Get(Of Integer)("SystemCount") + 1)
     End Sub
     'Upgrade and downgrade events
     Private Sub UpgradeSub(LastVersionCode As Integer)

@@ -591,7 +591,7 @@ Retry:
         ''' <summary>
         ''' The file list task this belongs to.
         ''' </summary>
-        Public Tasks As New ConcurrentList(Of LoaderDownload)
+        Private ReadOnly Tasks As New ConcurrentDictionary(Of LoaderDownload, Integer)
         ''' <summary>
         ''' All download sources.
         ''' </summary>
@@ -809,6 +809,25 @@ Retry:
             Me.LocalName = PathUtils.GetLastPart(LocalPath)
         End Sub
 
+        Friend Function NewRequest() As NetFile
+            Return New NetFile(Sources.Select(Function(Source) Source.Url), LocalPath, Check, SimulateBrowserHeaders)
+        End Function
+
+        Friend Function TryAttach(Task As LoaderDownload, RunId As Integer, ByRef StartsFile As Boolean) As Boolean
+            SyncLock LockState
+                If State >= NetState.Finished Then Return False
+                StartsFile = Tasks.IsEmpty
+                Tasks(Task) = RunId
+                Return True
+            End SyncLock
+        End Function
+
+        Friend Sub QueueForDownload()
+            SyncLock LockState
+                If State = NetState.WaitingToCheck Then State = NetState.WaitingToDownload
+            End SyncLock
+        End Sub
+
         ''' <summary>
         ''' Tries to start a new download thread.
         ''' Returns Nothing on failure.
@@ -835,10 +854,14 @@ Retry:
                         If SourcesOnce.First.SingleThread IsNot Nothing AndAlso SourcesOnce.First.SingleThread.State <> NetState.Canceled Then Return Nothing
 StartSingleThreadDownload:
                         Reset()
-                        State = NetState.Reading
+                        SyncLock LockState
+                            If State >= NetState.Merging Then Return Nothing
+                            State = NetState.Reading
+                        End SyncLock
                     End If
                 End SyncLock
                 SyncLock LockChain
+                    If State >= NetState.Merging Then Return Nothing
                     'First start point
                     If Threads Is Nothing Then
                         StartPosition = 0
@@ -875,8 +898,9 @@ StartThread:
                     If (StartPosition > FileSize AndAlso FileSize >= 0 AndAlso Not IsUnknownSize) OrElse StartPosition < 0 OrElse IsNothing(StartSource) Then Return Nothing
                     'Build the thread
                     Dim ThreadUuid As Integer = GetUuid()
-                    If Not Tasks.Any() Then Return Nothing 'No task is available anymore due to an abort
-                    Th = New Thread(AddressOf Thread) With {.Name = $"下载 {Tasks(0).Uuid}/{Uuid}/{ThreadUuid}#", .Priority = ThreadPriority.BelowNormal}
+                    Dim Owner = Tasks.Keys.FirstOrDefault()
+                    If Owner Is Nothing Then Return Nothing 'No task is available anymore due to an abort
+                    Th = New Thread(AddressOf Thread) With {.Name = $"下载 {Owner.Uuid}/{Uuid}/{ThreadUuid}#", .Priority = ThreadPriority.BelowNormal}
                     ThreadInfo = New NetThread With {.Uuid = ThreadUuid, .DownloadStart = StartPosition, .Thread = Th, .Source = StartSource, .Task = Me, .State = NetState.WaitingToDownload}
                     'Linked list handling
                     If ThreadInfo.IsFirstThread OrElse Threads Is Nothing Then
@@ -1002,6 +1026,7 @@ NotSupportRange:
                             HttpDataCount > 0 AndAlso Not IsProgramEnding AndAlso State < NetState.Merging AndAlso (Not Th.Source.IsFailed OrElse Th.Source.SingleThread = Th)
                     'Speed limit
                     While NetTaskSpeedLimitHigh > 0 AndAlso NetTaskSpeedLimitLeft <= 0
+                        If IsProgramEnding OrElse State >= NetState.Merging Then GoTo SourceBreak
                         Threading.Thread.Sleep(16)
                     End While
                     Dim RealDataCount As Integer = If(IsUnknownSize, HttpDataCount, Math.Min(HttpDataCount, Th.DownloadUndone))
@@ -1021,7 +1046,7 @@ NotSupportRange:
                         End If
                         Th.Source.FailCount = 0
                         For Each Task In Tasks
-                            Task.FailCount = 0
+                            Task.Key.FailCount = 0
                         Next
                         Interlocked.Add(NetManager.DownloadDone, RealDataCount)
                         Interlocked.Add(DownloadDone, RealDataCount)
@@ -1081,7 +1106,7 @@ SourceBreak:
             'State change
             Interlocked.Increment(Th.Source.FailCount)
             For Each Task In Tasks
-                Interlocked.Increment(Task.FailCount)
+                Interlocked.Increment(Task.Key.FailCount)
             Next
             Th.State = NetState.Canceled
             Th.Source.Ex = ex
@@ -1126,13 +1151,13 @@ SourceBreak:
                         End SyncLock
                         Reset()
                         SyncLock LockState
-                            State = NetState.WaitingToDownload
+                            If State < NetState.Finished Then State = NetState.WaitingToDownload
                         End SyncLock
                     ElseIf HasAvailableSource() AndAlso IsMergeFailure Then
                         'Merge failed and a single source failed: continue with the next source
                         Reset()
                         SyncLock LockState
-                            State = NetState.WaitingToDownload
+                            If State < NetState.Finished Then State = NetState.WaitingToDownload
                         End SyncLock
                     Else
                         'Failed
@@ -1182,10 +1207,10 @@ SourceBreak:
             Dim RetryCount As Integer = 0
             Try
 Retry:
-                'Create the folder
-                DirectoryUtils.Create(PathUtils.RemoveLastPart(LocalPath))
-                FileUtils.Delete(LocalPath)
                 SyncLock LockChain
+                    If State <> NetState.Merging Then Return
+                    DirectoryUtils.Create(PathUtils.RemoveLastPart(LocalPath))
+                    FileUtils.Delete(LocalPath)
                     'Merge the files
                     If IsNoSplit Then
                         'Only one thread, write out from memory
@@ -1237,8 +1262,8 @@ Retry:
                             If Thread.Temp IsNot Nothing Then FileUtils.Delete(Thread.Temp)
                         Next
                     End If
-                    Finish()
                 End SyncLock
+                Finish()
             Catch ex As Exception
                 RetryCount += 1
                 If State > NetState.Merging Then Return 'Usually because it was aborted during merging
@@ -1250,7 +1275,10 @@ Retry:
                 End If
                 'Failed: disable the current source and restart the download
                 Try
-                    FileUtils.Delete(LocalPath)
+                    SyncLock LockChain
+                        If State <> NetState.Merging Then Return
+                        FileUtils.Delete(LocalPath)
+                    End SyncLock
                 Catch exx As Exception
                     Logger.Warn(ex, $"删除合并失败的文件出错（{LocalPath}）")
                 End Try
@@ -1272,18 +1300,15 @@ Retry:
             End SyncLock
             CancelInternal()
             For Each Task In Tasks
-                Task.OnFileFail(Me)
+                Task.Key.OnFileFail(Me, Task.Value)
             Next
         End Sub
         ''' <summary>
         ''' Cancels the download.
         ''' </summary>
         Public Sub Cancel(CanceledTask As LoaderDownload)
-            'Remove it from the given task; if it still belongs to other tasks, keep downloading
-            Tasks.Remove(CanceledTask)
-            If Tasks.Any Then Return
-            'Confirm the abort
             SyncLock LockState
+                If Not Tasks.TryRemove(CanceledTask, Nothing) OrElse Not Tasks.IsEmpty Then Return
                 If State >= NetState.Finished Then Return
                 Logger.Info($"{LocalName}：已中断，当前状态 {State}")
                 State = NetState.Canceled
@@ -1291,9 +1316,13 @@ Retry:
             CancelInternal()
         End Sub
         Private Sub CancelInternal()
-            On Error Resume Next
-            Reset()
-            Interlocked.Decrement(NetManager.FileRemain)
+            Try
+                Reset()
+            Catch ex As Exception
+                Logger.Warn(ex, $"清理下载缓存失败（{LocalName}）")
+            Finally
+                NetManager.RemoveFile(Me)
+            End Try
         End Sub
 
         'State change interface
@@ -1305,10 +1334,10 @@ Retry:
                 If State >= NetState.Finished Then Return
                 State = NetState.Finished
             End SyncLock
-            Interlocked.Decrement(NetManager.FileRemain)
+            NetManager.RemoveFile(Me)
             If PrintLog Then Logger.Info($"{LocalName}：已完成")
             For Each Task In Tasks
-                Task.OnFileFinish(Me)
+                Task.Key.OnFileFinish(Task.Value)
             Next
         End Sub
 
@@ -1335,7 +1364,7 @@ Retry:
         ''' Number of remaining unfinished files. (Used to reduce contention on FilesLock)
         ''' </summary>
         Private FileRemain As Integer
-        Private ReadOnly FileRemainLock As New Object
+        Private RunId As Integer
 
         ''' <summary>
         ''' Percentage progress for display.
@@ -1408,25 +1437,36 @@ FinishExCatch:
             Files = New ConcurrentQueue(Of NetFile)(FileTasks)
         End Sub
         Public Overrides Sub Start(Optional Input As Object = Nothing, Optional IsForceRestart As Boolean = False)
-            If Input IsNot Nothing Then Files = New ConcurrentQueue(Of NetFile)(CType(Input, IEnumerable(Of NetFile)))
-            'Deduplicate
-            Files = New ConcurrentQueue(Of NetFile)(Files.DistinctBy(Function(a) PathUtils.ForCompare(a.LocalPath).Lower()))
-            'Set the remaining file count
-            SyncLock FileRemainLock
-                FileRemain += Files.Where(Function(f) f.State <> NetState.Finished).Count
+            Dim RequestedFiles As NetFile(), CurrentRun As Integer
+            SyncLock LockState
+                If State = LoadState.Loading Then Return
+                RequestedFiles = If(Input Is Nothing, Files.AsEnumerable(), CType(Input, IEnumerable(Of NetFile))).
+                    Select(Function(File) If(File IsNot Nothing AndAlso File.State >= NetState.Finished, File.NewRequest(), File)).ToArray()
+                Files = New ConcurrentQueue(Of NetFile)(RequestedFiles)
+                RunId += 1
+                CurrentRun = RunId
+                FileRemain = RequestedFiles.Length
+                _Progress = 0
+                _FailCount = 0
+                State = LoadState.Loading
             End SyncLock
-            State = LoadState.Loading
             'Start execution
             RunInNewThread(
             Sub()
                 Try
                     'Input checks
-                    If Not Files.Any() Then
-                        OnFinish()
+                    If RequestedFiles.Length = 0 Then
+                        OnFinish(CurrentRun)
                         Return
                     End If
-                    For Each File As NetFile In Files
+                    Dim UniqueFiles As New Dictionary(Of String, NetFile)(StringComparer.OrdinalIgnoreCase)
+                    For Each File As NetFile In RequestedFiles
                         If File Is Nothing Then Throw New ArgumentException("存在空文件请求！")
+                        Dim LocalPath = File.LocalPath.Replace("/", "\")
+                        If Not LocalPath.Contains(":\") Then Throw New ArgumentException("输入的本地文件地址不正确：" & LocalPath)
+                        If LocalPath.EndsWithF("\") Then Throw New ArgumentException("请输入含文件名的完整文件路径：" & LocalPath)
+                        LocalPath = PathUtils.ForCompare(LocalPath)
+                        If UniqueFiles.ContainsKey(LocalPath) Then Continue For
                         For Each Source As NetSource In File.Sources
                             If Not (Source.Url.StartsWithF("https://", True) OrElse Source.Url.StartsWithF("http://", True)) Then
                                 Source.Ex = New ArgumentException("输入的下载链接不正确：" & Source.Url)
@@ -1434,13 +1474,18 @@ FinishExCatch:
                             End If
                         Next
                         If Not File.HasAvailableSource() Then Throw New ArgumentException("输入的下载链接不正确！")
-                        File.LocalPath = File.LocalPath.Replace("/", "\")
-                        If Not File.LocalPath.Contains(":\") Then Throw New ArgumentException("输入的本地文件地址不正确：" & File.LocalPath)
-                        If File.LocalPath.EndsWithF("\") Then Throw New ArgumentException("请输入含文件名的完整文件路径：" & File.LocalPath)
-                        DirectoryUtils.Create(PathUtils.RemoveLastPart(File.LocalPath)) 'Create the target folder
+                        File.LocalPath = LocalPath
+                        DirectoryUtils.Create(PathUtils.RemoveLastPart(LocalPath))
+                        UniqueFiles.Add(LocalPath, File)
                     Next
                     'Hook into the download manager and get the list of newly started files
-                    Dim NewFiles = NetManager.Start(Me)
+                    Dim NewFiles As List(Of NetFile)
+                    SyncLock LockState
+                        If State <> LoadState.Loading OrElse RunId <> CurrentRun Then Return
+                        Files = New ConcurrentQueue(Of NetFile)(UniqueFiles.Values)
+                        FileRemain = Files.Count
+                        NewFiles = NetManager.Start(Me, CurrentRun)
+                    End SyncLock
 
 
                     '====================================
@@ -1453,10 +1498,7 @@ FinishExCatch:
                         If File.Check IsNot Nothing Then
                             FilesToCheck.Add(File)
                         Else 'No validation info, start downloading directly
-                            SyncLock LockState
-                                File.State = NetState.WaitingToDownload
-                                File.IsCopy = False
-                            End SyncLock
+                            File.QueueForDownload()
                         End If
                     Next
                     If Not FilesToCheck.Any Then Return
@@ -1481,7 +1523,7 @@ FinishExCatch:
                         Next
                     End If
                 Catch ex As Exception
-                    OnFail(New List(Of Exception) From {New Exception("下载初始化失败", ex)})
+                    OnFail(New List(Of Exception) From {New Exception("下载初始化失败", ex)}, ExpectedRun:=CurrentRun)
                 End Try
             End Sub, "L/下载 " & Uuid)
         End Sub
@@ -1499,25 +1541,26 @@ FinishExCatch:
                 For Each File As NetFile In Files
                     Dim Target As String = CheckExistingFile(FolderList, VersionFolders, File)
                     Logger.Trace(Function() $"本地文件匹配：{File.LocalName} → {If(Target, "无匹配")}，当前状态 {File.State}")
-                    If File.State >= NetState.WaitingToDownload Then Continue For 'Aborted
-                    'Found an identical file
-                    If Target IsNot Nothing Then
-                        File.IsCopy = True
-                        Try
-                            FileUtils.Copy(Target, File.LocalPath)
-                            File.Finish(False)
-                            Continue For
-                        Catch
-                        End Try
-                    End If
-                    'Fall back to downloading
-                    SyncLock LockState
-                        File.State = NetState.WaitingToDownload
-                        File.IsCopy = False
+                    Dim Copied = False
+                    SyncLock File.LockState
+                        If File.State <> NetState.WaitingToCheck Then Continue For
+                        If Target IsNot Nothing Then
+                            Try
+                                FileUtils.Copy(Target, File.LocalPath)
+                                Copied = True
+                            Catch
+                            End Try
+                        End If
+                        File.IsCopy = Copied
+                        File.State = If(Copied, NetState.Merging, NetState.WaitingToDownload)
                     End SyncLock
+                    If Copied Then File.Finish(False)
                 Next
             Catch ex As Exception
-                OnFail(New List(Of Exception) From {New Exception("下载已存在文件查找失败", ex)})
+                Logger.Warn(ex, "下载已存在文件查找失败，将从下载源获取")
+                For Each File As NetFile In Files
+                    File.QueueForDownload()
+                Next
             End Try
         End Sub
         Private Function CheckExistingFile(FolderList As List(Of String), VersionFolders As List(Of String), File As NetFile) As String
@@ -1576,41 +1619,40 @@ FinishExCatch:
             Return Nothing
         End Function
 
-        Public Sub OnFileFinish(File As NetFile)
+        Friend Sub OnFileFinish(ExpectedRun As Integer)
             'Require all files to finish
-            SyncLock FileRemainLock
+            SyncLock LockState
+                If State <> LoadState.Loading OrElse RunId <> ExpectedRun Then Return
                 FileRemain -= 1
                 If FileRemain > 0 Then Return
             End SyncLock
-            OnFinish()
+            OnFinish(ExpectedRun)
         End Sub
-        Public Sub OnFinish()
+        Private Sub OnFinish(ExpectedRun As Integer)
+            If State <> LoadState.Loading OrElse RunId <> ExpectedRun Then Return
             RaisePreviewFinish()
             SyncLock LockState
-                If State > LoadState.Loading Then Return
+                If State <> LoadState.Loading OrElse RunId <> ExpectedRun Then Return
                 State = LoadState.Finished
             End SyncLock
         End Sub
-        Public Sub OnFileFail(File As NetFile)
-            'Add the source errors to the main error list
-            For Each Source In File.Sources
-                If Not IsNothing(Source.Ex) Then File.Ex.Add(Source.Ex)
-            Next
-            OnFail(File.Ex)
+        Friend Sub OnFileFail(File As NetFile, ExpectedRun As Integer)
+            Dim Errors = File.Ex.Concat(File.Sources.Select(Function(Source) Source.Ex).Where(Function(ex) ex IsNot Nothing)).ToList()
+            OnFail(Errors, ExpectedRun)
         End Sub
         Public Overrides Sub Failed(Ex As Exception)
             OnFail(New List(Of Exception) From {Ex})
         End Sub
-        Public Sub OnFail(ExList As List(Of Exception))
+        Private Sub OnFail(ExList As List(Of Exception), Optional ExpectedRun As Integer? = Nothing)
             SyncLock LockState
-                If State >= LoadState.Finished Then Return
+                If State >= LoadState.Finished OrElse (ExpectedRun.HasValue AndAlso RunId <> ExpectedRun.Value) Then Return
                 If ExList Is Nothing OrElse Not ExList.Any() Then ExList = New List(Of Exception) From {New Exception("未知错误！")}
                 'Find a meaningful error message
                 Dim UsefulExs = ExList.Where(Function(e) Not e.IsCanceled AndAlso TypeOf e IsNot TimeoutException).ToList
                 [Error] = If(UsefulExs.FirstOrDefault, ExList.FirstOrDefault)
                 'Get the files that actually failed
                 For Each File In Files
-                    If File.State <> NetState.Canceled Then Continue For
+                    If File Is Nothing OrElse File.State <> NetState.Canceled Then Continue For
                     If File.Sources.All(Function(s) s.Ex.IsCanceled OrElse TypeOf s.Ex Is TimeoutException) Then Continue For
                     Dim Detail As String = File.Sources.Select(Function(s) $"{If(s.Ex Is Nothing, "无错误信息。", s.Ex.GetDisplay(False))}（{s.Url}）").Join(vbCrLf)
                     [Error] = New Exception("文件下载失败：" & File.LocalPath & vbCrLf &
@@ -1619,11 +1661,10 @@ FinishExCatch:
                 Next
                 'Change to failed only after setting the Error object, so WaitForExit can catch the error
                 State = LoadState.Failed
+                For Each TaskFile In Files
+                    TaskFile?.Cancel(Me)
+                Next
             End SyncLock
-            'Abort all files
-            For Each TaskFile In Files
-                TaskFile.Cancel(Me)
-            Next
             'Write logs only after leaving the sync lock
             Logger.Error(New AggregateException(ExList), "下载加载器失败", LogBehavior.None)
         End Sub
@@ -1631,12 +1672,11 @@ FinishExCatch:
             SyncLock LockState
                 If State >= LoadState.Finished Then Return
                 State = LoadState.Canceled
+                For Each TaskFile In Files
+                    TaskFile?.Cancel(Me)
+                Next
             End SyncLock
             Logger.Info($"{Name} 已取消！")
-            'Abort all files
-            For Each TaskFile In Files
-                TaskFile.Cancel(Me)
-            Next
         End Sub
 
     End Class
@@ -1652,7 +1692,7 @@ FinishExCatch:
         ''' <summary>
         ''' Files to download, as "local path - file object" key-value pairs.
         ''' </summary>
-        Public AllFiles As New ConcurrentDictionary(Of String, NetFile)
+        Private ReadOnly AllFiles As New ConcurrentDictionary(Of String, NetFile)(StringComparer.OrdinalIgnoreCase)
 
         ''' <summary>
         ''' All current download tasks. Finished tasks are pruned by the manager thread.
@@ -1672,7 +1712,11 @@ FinishExCatch:
         ''' <summary>
         ''' Number of files not yet downloaded.
         ''' </summary>
-        Public FileRemain As Integer = 0
+        Public ReadOnly Property FileRemain As Integer
+            Get
+                Return AllFiles.Count
+            End Get
+        End Property
 
         'These properties are refreshed by RefreshStat
         ''' <summary>
@@ -1720,7 +1764,9 @@ FinishExCatch:
                 For Each Task In TaskSet.Keys
                     Task.RefreshStat()
                     'Drop finished tasks so the set does not grow for the whole session; a restarted task is added again by Start
-                    If Task.State >= LoadState.Finished Then TaskSet.TryRemove(Task, Nothing)
+                    SyncLock Task.LockState
+                        If Task.State >= LoadState.Finished Then TaskSet.TryRemove(Task, Nothing)
+                    End SyncLock
                 Next
 #End Region
             Catch ex As Exception
@@ -1751,9 +1797,6 @@ FinishExCatch:
             ManagerSignals(Id).Reset()
             If IsIdle() Then ManagerSignals(Id).Wait()
         End Sub
-        Private Function HasPendingFile(Id As Integer) As Boolean
-            Return AllFiles.Values.Any(Function(f) f.Uuid Mod 2 <> Id AndAlso f.State < NetState.Merging)
-        End Function
         Private Sub StartManager()
             'Several download tasks may start at the same moment, so the check and the set must be atomic
             If Interlocked.CompareExchange(ManagerStarted, 1, 0) <> 0 Then Return
@@ -1765,8 +1808,8 @@ FinishExCatch:
                         'Get the file list
                         Dim WaitingFiles As New List(Of NetFile)
                         Dim OngoingFiles As New List(Of NetFile)
-                        If Id = 0 AndAlso FileRemain = 0 Then AllFiles.Clear() 'Clear if finished
-                        For Each File As NetFile In AllFiles.Values
+                        For Each Entry In AllFiles
+                            Dim File = Entry.Value
                             If File.Uuid Mod 2 = Id Then Continue For
                             If File.State = NetState.WaitingToDownload Then
                                 WaitingFiles.Add(File)
@@ -1775,8 +1818,8 @@ FinishExCatch:
                             End If
                         Next
                         'Nothing to do: sleep until a new download task arrives instead of polling every 20 ms
-                        If WaitingFiles.Count = 0 AndAlso OngoingFiles.Count = 0 AndAlso FileRemain <= 0 Then
-                            WaitForWork(Id, Function() FileRemain <= 0 AndAlso Not HasPendingFile(Id))
+                        If WaitingFiles.Count = 0 AndAlso OngoingFiles.Count = 0 AndAlso AllFiles.IsEmpty Then
+                            WaitForWork(Id, Function() AllFiles.IsEmpty)
                             Continue While
                         End If
                         'Start threads for waiting files
@@ -1810,8 +1853,8 @@ FinishExCatch:
                     Logger.Error(ex, $"下载管理启动线程 {Id} 出错", LogBehavior.AlertThenCrash)
                 End Try
             End Sub
-            RunInNewThread(Sub() ThreadStarter(0), "NetManager ThreadStarter 0")
-            RunInNewThread(Sub() ThreadStarter(1), "NetManager ThreadStarter 1")
+            RunInNewThread(Sub() ThreadStarter(0), "NetManager ThreadStarter 0", IsBackground:=True)
+            RunInNewThread(Sub() ThreadStarter(1), "NetManager ThreadStarter 1", IsBackground:=True)
             RunInNewThread(
             Sub()
                 Try
@@ -1825,8 +1868,8 @@ FinishExCatch:
                         'Refresh the public properties
                         RefreshStat()
                         'Nothing downloading and the displayed speed has decayed to 0: sleep until a new download task arrives
-                        If FileRemain <= 0 AndAlso Speed = 0 AndAlso TaskSet.IsEmpty Then
-                            WaitForWork(2, Function() FileRemain <= 0 AndAlso TaskSet.IsEmpty)
+                        If AllFiles.IsEmpty AndAlso Speed = 0 AndAlso TaskSet.IsEmpty Then
+                            WaitForWork(2, Function() AllFiles.IsEmpty AndAlso TaskSet.IsEmpty)
                             NextTick = GetTimeMs()
                             Continue While
                         End If
@@ -1842,7 +1885,7 @@ FinishExCatch:
                 Catch ex As Exception
                     Logger.Error(ex, "下载管理刷新线程出错", LogBehavior.AlertThenCrash)
                 End Try
-            End Sub, "NetManager StatRefresher")
+            End Sub, "NetManager StatRefresher", IsBackground:=True)
         End Sub
 
         Private DownloadCacheLock As New Object
@@ -1850,7 +1893,7 @@ FinishExCatch:
         ''' <summary>
         ''' Starts a download task.
         ''' </summary>
-        Public Function Start(Task As LoaderDownload) As List(Of NetFile)
+        Friend Function Start(Task As LoaderDownload, RunId As Integer) As List(Of NetFile)
             StartManager()
             'Clean the cache
             SyncLock DownloadCacheLock 'Prevent cleaning repeatedly when multiple download tasks start at the same time
@@ -1868,28 +1911,35 @@ FinishExCatch:
             'Add each file
             Dim NewFiles As New List(Of NetFile)
             Dim NewFilesList As New List(Of NetFile)
-            For Each File In Task.Files
-                Dim OngoingFile As NetFile = Nothing
-                If AllFiles.TryGetValue(File.LocalPath, OngoingFile) AndAlso OngoingFile.State < NetState.Finished Then
-                    'This file is being downloaded by another task
-                    Logger.Trace(Function() $"{File.LocalName}：无需开始，该文件已在下载中，目标 {File.LocalPath}")
-                    File = OngoingFile 'Replace the file in the list with the one being downloaded, so both tasks point to the same file; discard the current File object
-                Else
-                    'Normal case (the file may already have finished in another task, which does not matter)
-                    Logger.Trace(Function() $"{File.LocalName}：开始，目标 {File.LocalPath}")
-                    'The counter must be incremented before adding to the list, or the manager thread may clear it between the two steps
-                    Interlocked.Increment(FileRemain)
-                    AllFiles(File.LocalPath) = File
-                    NewFiles.Add(File)
-                End If
+            For Each RequestedFile In Task.Files
+                Dim StartsFile As Boolean
+                Dim File = RegisterFile(RequestedFile, Task, RunId, StartsFile)
+                If StartsFile Then NewFiles.Add(File)
                 NewFilesList.Add(File)
-                File.Tasks.Add(Task)
             Next
             Task.Files = New ConcurrentQueue(Of NetFile)(NewFilesList)
             TaskSet(Task) = 0
             WakeManager()
             Return NewFiles
         End Function
+
+        Private Function RegisterFile(Request As NetFile, Task As LoaderDownload, RunId As Integer, ByRef StartsFile As Boolean) As NetFile
+            Do
+                Dim File = AllFiles.GetOrAdd(Request.LocalPath, Request)
+                If File.TryAttach(Task, RunId, StartsFile) Then Return File
+                'A canceled merge must stop writing before another request replaces the entry.
+                SyncLock File.LockChain
+                    RemoveFile(File)
+                End SyncLock
+                If File Is Request Then Request = Request.NewRequest()
+            Loop
+        End Function
+
+        Friend Sub RemoveFile(File As NetFile)
+            'Remove only this entry; a retry for the same path may already have registered.
+            DirectCast(AllFiles, ICollection(Of KeyValuePair(Of String, NetFile))).
+                Remove(New KeyValuePair(Of String, NetFile)(File.LocalPath, File))
+        End Sub
 
     End Class
 

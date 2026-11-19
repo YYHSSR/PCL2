@@ -47,7 +47,8 @@ Public Module ModBase
     ''' <summary>
     ''' Path of the program's cache folder, ending with \.
     ''' </summary>
-    Public PathTemp As String = PathUtils.AddSlashSuffix(If(Environment.GetEnvironmentVariable("PCL_CACHE_PATH"), Path.GetTempPath() & "PCL2Local\").Replace("/", "\"))
+    Public ReadOnly DefaultCachePath As String = PathUtils.AddSlashSuffix(Path.Combine(Path.GetTempPath(), RegFolder))
+    Public PathTemp As String = PathUtils.AddSlashSuffix(If(Environment.GetEnvironmentVariable("PCL_CACHE_PATH"), DefaultCachePath).Replace("/", "\"))
     ''' <summary>
     ''' Stopwatch started when the program opened.
     ''' </summary>
@@ -893,7 +894,8 @@ Public Module ModBase
     ''' <summary>
     ''' Runs code in a new worker thread.
     ''' </summary>
-    Public Function RunInNewThread(Action As Action, Optional Name As String = Nothing, Optional Priority As ThreadPriority = ThreadPriority.Normal) As Thread
+    Public Function RunInNewThread(Action As Action, Optional Name As String = Nothing, Optional Priority As ThreadPriority = ThreadPriority.Normal,
+                                   Optional IsBackground As Boolean = False) As Thread
         Dim th As New Thread(
         Sub()
             Try
@@ -901,7 +903,7 @@ Public Module ModBase
             Catch ex As Exception
                 Logger.Error(ex, $"{Name}：线程执行失败")
             End Try
-        End Sub) With {.Name = If(Name, "Runtime New Invoke " & GetUuid() & "#"), .Priority = Priority}
+        End Sub) With {.Name = If(Name, "Runtime New Invoke " & GetUuid() & "#"), .Priority = Priority, .IsBackground = IsBackground}
         th.Start()
         Return th
     End Function

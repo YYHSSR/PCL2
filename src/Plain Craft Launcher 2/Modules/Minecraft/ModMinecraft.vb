@@ -15,10 +15,10 @@ Public Module ModMinecraft
         End Set
     End Property
     Private Sub SetMcFolder(Value As String) 'Equivalent to McFolderSelected.Set
-        If PathUtils.IsSame(_McFolderSelected, Value.Replace("$", Paths.Base)) Then Return
-        _McFolderSelected = Value.Replace("$", Paths.Base)
-        _McFolderSelected = PathUtils.AddSlashSuffix(PathUtils.ForCompare(_McFolderSelected))
-        Settings.Set("LaunchFolderSelect", Value.Replace(Paths.Base, "$"))
+        Dim Folder = If(Value, "").Replace("$", Paths.Base)
+        If PathUtils.IsSame(_McFolderSelected, Folder) Then Return
+        _McFolderSelected = If(Folder = "", Nothing, PathUtils.AddSlashSuffix(PathUtils.ForCompare(Folder)))
+        Settings.Set("LaunchFolderSelect", Folder.Replace(Paths.Base, "$"))
         Logger.Info($"当前选择的 Minecraft 文件夹：{_McFolderSelected}")
     End Sub
     Private _McFolderSelected As String
@@ -76,7 +76,8 @@ Public Module ModMinecraft
 
             'Scan the official launcher folder
             Dim MojangPath As String = Paths.AppData & ".minecraft\"
-            If (Not CacheMcFolderList.Any OrElse Not PathUtils.IsSame(MojangPath, CacheMcFolderList(0).Location)) AndAlso 'The current folder is not the official launcher folder
+            If Not Application.IsLaunchCheck AndAlso
+                (Not CacheMcFolderList.Any OrElse Not PathUtils.IsSame(MojangPath, CacheMcFolderList(0).Location)) AndAlso 'The current folder is not the official launcher folder
                 DirectoryUtils.Exists(MojangPath & "versions\") Then 'Has permission and the versions folder exists
                 CacheMcFolderList.Add(New McFolder With {.Name = "官方启动器文件夹", .Location = MojangPath, .Type = McFolder.Types.Vanilla})
             End If

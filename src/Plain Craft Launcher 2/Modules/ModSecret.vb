@@ -3,6 +3,7 @@ Friend Module ModSecret
     'Marks the different PCL branches; used only for replacement markers
     Public Const VersionBranchMain As String = "Local"
     'Keep the old dev build settings path to support account cache migration
+    Friend Const DefaultSettingsProfile As String = "PCL2Local"
     Public ReadOnly RegFolder As String = GetSettingsProfile()
     'ClientId used for Microsoft login
     Public OAuthClientId As String = If(Environment.GetEnvironmentVariable("PCL_MS_CLIENT_ID"), "")
@@ -65,7 +66,7 @@ Friend Module ModSecret
 #Region "Compatibility Interfaces"
     Private Function GetSettingsProfile() As String
         Dim Profile = Environment.GetEnvironmentVariable("PCL_SETTINGS_PROFILE")
-        If String.IsNullOrWhiteSpace(Profile) Then Return "PCL2Local"
+        If String.IsNullOrWhiteSpace(Profile) Then Return DefaultSettingsProfile
         If Not System.Text.RegularExpressions.Regex.IsMatch(Profile, "^[A-Za-z0-9_-]{1,64}$") Then Throw New ArgumentException("Invalid PCL_SETTINGS_PROFILE")
         Return Profile
     End Function

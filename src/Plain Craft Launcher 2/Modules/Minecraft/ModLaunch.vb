@@ -200,32 +200,19 @@ NextInner:
         Dim CheckResult As String = ""
         RunInUiWait(Sub() CheckResult = McLoginAble(McLoginInput()))
         If CheckResult <> "" Then Throw New ArgumentException(CheckResult)
-        'Prompt to buy the official game
-        If CurrentLaunchOptions?.SaveBatch Is Nothing AndAlso 'No prompt when saving a script
-           Not Settings.Get(Of Boolean)("HintBuy") AndAlso Settings.Get(Of McLoginType)("LoginType") <> McLoginType.Ms Then
-            If Globalization.CultureInfo.CurrentCulture.Name.StartsWithF("zh") OrElse Globalization.CultureInfo.CurrentUICulture.Name.StartsWithF("zh") Then 'Chinese locale?
-                RunInNewThread(
-                Sub()
-                    Select Case Settings.Get(Of Integer)("SystemLaunchCount")
-                        Case 3, 8, 15, 30, 50, 70, 90, 110, 130, 180, 220, 280, 330, 380, 450, 550, 660, 750, 880, 950, 1100, 1300, 1500, 1700, 1900
-                            If MyMsgBox("你已经启动了 " & Settings.Get(Of Integer)("SystemLaunchCount") & " 次 Minecraft 啦！" & vbCrLf &
-                                "如果觉得 Minecraft 还不错，可以购买正版支持一下，毕竟开发游戏也真的很不容易……不要一直白嫖啦。" & vbCrLf & vbCrLf &
-                                "在登录一次正版账号后，就不会再出现这个提示了！",
-                                "考虑一下正版？", "支持正版游戏！", "下次一定") = 1 Then
-                                OpenWebsite("https://www.xbox.com/zh-cn/games/store/minecraft-java-bedrock-edition-for-pc/9nxp44l49shj")
-                            End If
-                    End Select
-                End Sub, "Buy Minecraft")
-            ElseIf Settings.Get(Of McLoginType)("LoginType") = McLoginType.Legacy Then
-                Select Case MyMsgBox("你必须先登录正版账号，才能进行离线登录！", "正版验证", "购买正版", "试玩", "返回",
-                    Button1Action:=Sub() OpenWebsite("https://www.xbox.com/zh-cn/games/store/minecraft-java-bedrock-edition-for-pc/9nxp44l49shj"))
-                    Case 2
-                        Hint("游戏将以试玩模式启动！", HintType.Red)
-                        CurrentLaunchOptions.ExtraGameArgs.Add("--demo")
-                    Case 3
-                        Throw New OperationCanceledException
-                End Select
-            End If
+        'Offline account validation for non-Chinese locales
+        If CurrentLaunchOptions?.SaveBatch Is Nothing AndAlso
+           Not Settings.Get(Of Boolean)("HintBuy") AndAlso Settings.Get(Of McLoginType)("LoginType") = McLoginType.Legacy AndAlso
+           Not Globalization.CultureInfo.CurrentCulture.Name.StartsWithF("zh") AndAlso
+           Not Globalization.CultureInfo.CurrentUICulture.Name.StartsWithF("zh") Then
+            Select Case MyMsgBox("你必须先登录正版账号，才能进行离线登录！", "正版验证", "购买正版", "试玩", "返回",
+                Button1Action:=Sub() OpenWebsite("https://www.xbox.com/zh-cn/games/store/minecraft-java-bedrock-edition-for-pc/9nxp44l49shj"))
+                Case 2
+                    Hint("游戏将以试玩模式启动！", HintType.Red)
+                    CurrentLaunchOptions.ExtraGameArgs.Add("--demo")
+                Case 3
+                    Throw New OperationCanceledException
+            End Select
         End If
     End Sub
 
@@ -537,7 +524,7 @@ Relogin:
         Data.Output = New McLoginResult With {.AccessToken = LoginResult.AccessToken, .Name = Result.UserName, .Uuid = Result.UUID, .Type = "Microsoft", .ClientToken = Result.UUID, .ProfileJson = Result.ProfileJson}
 SkipLogin:
         McLaunchLog($"微软登录结束，AccessToken 将在 {DateTimeOffset.FromUnixTimeSeconds(ExpiresAt).LocalDateTime} 过期")
-        Settings.Set("HintBuy", True) 'Disable the buy-the-game prompt
+        Settings.Set("HintBuy", True) 'Record that an official account has signed in
     End Sub
     Private Sub McLoginServerStart(Data As LoaderTask(Of McLoginServer, McLoginResult))
         Dim Input As McLoginServer = Data.Input
@@ -1991,9 +1978,6 @@ NextInstance:
             Case 5
                 'Do nothing
         End Select
-
-        'Launch count
-        Settings.Set("SystemLaunchCount", Settings.Get(Of Integer)("SystemLaunchCount") + 1)
 
     End Sub
 

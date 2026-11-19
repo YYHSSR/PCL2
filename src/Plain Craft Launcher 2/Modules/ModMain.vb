@@ -516,6 +516,11 @@ EndHint:
 
     Private ReadOnly TaskTempLock As New Object
     Private IsTaskTempCleared As Boolean = False
+    Private ReadOnly Property FallbackTaskTemp As String
+        Get
+            Return $"{OsDrive}ProgramData\{RegFolder}\TaskTemp\"
+        End Get
+    End Property
 
     ''' <summary>
     ''' Tries to clean up the task cache folder.
@@ -527,7 +532,7 @@ EndHint:
             IsTaskTempCleared = True
             Try
                 Logger.Info("开始清理任务缓存文件夹")
-                DirectoryUtils.Delete($"{OsDrive}ProgramData\PCL2Local\TaskTemp\")
+                If Not Application.IsLaunchCheck Then DirectoryUtils.Delete(FallbackTaskTemp)
                 DirectoryUtils.Delete($"{PathTemp}TaskTemp\")
                 Logger.Info("已清理任务缓存文件夹")
             Catch ex As Exception
@@ -553,7 +558,8 @@ EndHint:
         Catch
         End Try
         'Use a fallback path
-        ResultFolder = $"{OsDrive}ProgramData\PCL2Local\TaskTemp\{GetUuid()}-{RandomInteger(0, 1000000)}\"
+        If Application.IsLaunchCheck Then Throw New IOException("无法在启动检查的隔离缓存中创建任务文件夹。")
+        ResultFolder = $"{FallbackTaskTemp}{GetUuid()}-{RandomInteger(0, 1000000)}\"
         DirectoryUtils.Create(ResultFolder)
         CheckPermission(ResultFolder)
         Return ResultFolder
