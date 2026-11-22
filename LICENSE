@@ -1,41 +1,221 @@
-YYH Non-Commercial Derivative License 1.0
+# PCL-YYH 个人游玩分支许可协议 1.0
 
-Copyright (c) 2026 YYH
-Scope: the code, documentation and other content that YYH added to or modified in this fork and has the right to license ("the Covered Content").
+**PCL-YYH Personal Play Branch License 1.0**
 
-1. Permitted Use
+版权所有 © 2026 YYH（仅就 YYH 新增内容）  
+上游版权归 **龙腾猫跃（LTCat）** 及 PCL / MeloongCore 贡献者所有
 
-Subject to this license and any applicable third-party licenses, anyone may, free of charge:
-1. Read, study, run and copy the Covered Content for personal, educational, research and other non-commercial purposes.
-2. Modify, fix and extend the Covered Content, and continue developing on top of it.
-3. Redistribute the original or modified Covered Content and the corresponding programs on a non-commercial basis.
+- 本分支：<https://github.com/YYHSSR/PCL2>
+- 上游 PCL：<https://github.com/Meloong-Git/PCL>
+- 上游基础库：<https://github.com/Meloong-Git/MeloongCore>
 
-2. No Commercial Use
+> 本许可证只许可 YYH 在本分支中新增或修改、且有权许可的内容，**不是对上游 PCL2 的重新授权**。  
+> 本分支是个人游玩分支，**不是 PCL 官方版本**。
 
-Without separate written permission from YYH, the Covered Content and any derivative work that contains it may not be used for commercial purposes.
-Commercial use includes, but is not limited to: selling, renting, paid licensing, paid downloads or subscriptions, monetization through advertising or promotion, use in paid services,
-and integration into for-profit products, business operations or commercial services. This restriction may not be circumvented by not charging for the software itself.
+---
 
-3. Conditions for Further Development and Redistribution
+## 前言
 
-1. Keep YYH's attribution, this license and the rights notices contained in the Covered Content.
-2. Clearly mark modified versions with who modified them and what was changed, and do not imply official endorsement by YYH.
-3. Redistributed Covered Content and modifications of it remain subject to the non-commercial restriction of this license; no commercial rights to this content may be granted separately.
-4. Do not remove or circumvent any third-party attribution, license, trademark or other rights notice that must be retained.
+1. 本分支（**PCL-YYH**）由 YYH 基于龙腾猫跃（LTCat）的 **Plain Craft Launcher 2（PCL2）** 源代码制作，用于个人学习、游玩和非商业分享。
+2. 本分支不是 PCL 官方发行版，也未获得龙腾猫跃、PCL 团队或 MeloongCore 作者的官方认可或背书。名称中的 “PCL” 仅用于说明上游来源。
+3. 上游代码、MeloongCore、Minecraft 相关内容、第三方库、图标、文档及其他第三方材料，仍归其各自权利人所有，并继续适用其原有协议。
+4. 本许可证仅覆盖 YYH 在本分支中新增或修改、且有权许可的内容（下称 **“YYH 新增内容”**）。本许可证不改变、不替代、不豁免、不撤销上游或第三方的任何权利。
+5. 使用、修改、分发本分支，必须**同时**遵守本许可证与所有适用的上游/第三方协议。就上游内容而言，上游协议优先；本许可证不减少上游协议要求的任何义务。
 
-4. Third-Party Content
+## 第一条 定义
 
-The original upstream PCL source code, MeloongCore, Minecraft-related content and other third-party components do not become YYH's property under this license.
-They are owned by their respective rights holders and remain subject to their own licenses and terms.
-This license does not replace, relax, revoke or re-grant any rights to such third-party content.
-Where any part of the content is outside what YYH has the right to license, the license applicable to that part prevails; use of the combined work must satisfy all applicable terms at the same time.
+1.1 **“本分支”** 指 YYH 维护的 PCL-YYH 仓库、源代码、文档、发布包及可执行程序，包括 `PCL-YYH.exe` 及其后续版本。
 
-5. Disclaimer
+1.2 **“上游”** 指龙腾猫跃（LTCat）及其维护的 PCL / PCL2 项目，以及 MeloongCore 等相关基础项目。
 
-To the extent permitted by applicable law, the Covered Content is provided "as is", without warranties of merchantability, fitness for a particular purpose or non-infringement.
-Users bear all risks arising from running, modifying and distributing it. This section does not exclude or limit any liability that cannot be excluded or limited by law.
+1.3 **“上游内容”** 指本分支中包含或衍生的 PCL / PCL2 源代码、资源、文档、界面设计、MeloongCore 代码，以及其他第三方材料。
 
-6. Violation
+1.4 **“YYH 新增内容”** 指 YYH 在本分支中原创添加或修改，且有权许可的代码、文档、配置、脚本、界面调整、问题修复和其他材料；不包括上游内容。
 
-Any violation of this license terminates the rights granted under it, unless the law provides otherwise or the rights holder agrees otherwise in writing.
-All rights not expressly granted by this license are reserved by their respective rights holders.
+1.5 **“贡献者”** 指向本分支提交代码、文档、测试、素材、问题反馈或其他贡献的个人或工具，包括上游作者与上游贡献者。
+
+1.6 **“传播”** 指以出售、赠与、交换、上传、提供下载、分发、转交或其他方式向第三方提供本分支或二创作品。
+
+1.7 **“商业目的”** 指以直接或间接获取商业利益、金钱报酬或其他经济利益为主要目的或动机的使用，具体范围见第六条。
+
+## 第二条 上游协议与效力
+
+2.1 上游 PCL / PCL2 源代码适用龙腾猫跃发布的 **《PCL 分发有限许可》** 与 **《PCL 存储库合理使用指南》**。这两个文件独立于本许可证，继续约束上游内容的使用与分发。
+
+2.2 MeloongCore 适用 **Apache License 2.0**。其他第三方组件适用其随附的许可协议或权利声明。
+
+2.3 本许可证**不替代、不修改、不豁免、不撤销**任何上游或第三方协议，也不对上游内容重新授权。
+
+2.4 本许可证与上游协议发生冲突时：
+
+- 就上游内容，以上游协议为准；
+- 就 YYH 新增内容，以本许可证为准，但不得借此规避上游协议的任何义务；
+- 无论哪种情况，使用和分发本分支都必须同时满足所有适用协议。
+
+2.5 上游协议参考：
+
+- [《PCL 分发有限许可》](https://shimo.im/docs/rGrd8pY8xWkt6ryW#anchor-X0bo)
+- [《PCL 存储库合理使用指南》](https://github.com/Meloong-Git/PCL/blob/5ef81e490ae46b1100d61e33d0183094c7a80ca8/LICENCE)
+- [MeloongCore LICENSE（Apache-2.0）](https://github.com/Meloong-Git/MeloongCore/blob/c774ae4c85fd94e0eaa171db21e78a65870df19b/LICENSE.txt)
+
+2.6 分发者应自行确认其发行版满足上游《PCL 存储库合理使用指南》对**重度使用**的全部适用要求，包括但不限于：第三方修改声明、名称规则、龙腾猫跃署名与赞助链接、源代码公开、Minecraft 正版购买劝导、赞助劝导，以及不实现与 PCL 赞助解锁类似的功能。具体以上游原文为准。
+
+## 第三条 YYH 新增内容的许可
+
+在遵守本许可证和所有适用上游协议的前提下，YYH 授予你一项全球范围、非排他、免费、免版税、不可再许可的著作权许可。你可以：
+
+- **(a)** 以个人游玩、学习、研究、非商业评测等非商业目的安装、运行和使用本分支；
+- **(b)** 复制、备份本分支；
+- **(c)** 修改 YYH 新增内容，创作二创作品；
+- **(d)** 以非商业目的传播本分支及二创作品；
+- **(e)** 将本分支及二创作品编译、打包为二进制形式，并以非商业目的传播。
+
+你无需为上述授权支付许可费。每位接收者在遵守本许可证及上游协议的前提下，自动获得同等权利。
+
+本许可证不转让著作权。YYH 保留所有未明确授予的权利。
+
+## 第四条 使用与分发条件
+
+### 4.1 署名与来源
+
+无论转发原版还是二创作品，你都必须：
+
+- **(a)** 保留本许可证全文、YYH 的版权声明，以及所有上游署名、许可证和权利声明；
+- **(b)** 在仓库首页、发布页、程序关于页面或其他等效显著位置，明确注明：
+
+  > PCL-YYH 是 YYH 基于龙腾猫跃（LTCat）的 PCL2 源代码制作的个人游玩分支，非 PCL 官方版本。
+
+- **(c)** 保留龙腾猫跃（LTCat）的署名、PCL 项目链接及上游要求的赞助链接；
+- **(d)** 二创作品必须标注“修改版”、修改者、修改内容和修改日期；
+- **(e)** 不得删除、隐藏或伪造上游署名、赞助链接、许可证信息或版权标识；
+- **(f)** 不得以任何方式暗示 YYH、龙腾猫跃、PCL 团队或 MeloongCore 作者为你的二创作品背书。
+
+### 4.2 相同方式共享
+
+- **(a)** 二创作品必须继续采用本许可证 1.0，或采用 YYH 书面认可的、与本许可证限制一致的兼容许可证；
+- **(b)** 你不得对二创作品施加额外的法律条款或技术限制，以限制他人行使本许可证授予的权利；
+- **(c)** 以二进制形式传播二创作品时，必须提供对应源代码的获取方式（例如公开仓库链接）；
+- **(d)** 二创作品还必须继续遵守所有适用的上游协议。
+
+### 4.3 名称与标识
+
+- **(a)** 本分支名称为 **PCL-YYH**，以 PCL 开头并带 YYH 后缀，表示这是 YYH 的第三方个人修改版；
+- **(b)** 不得使用“PCL 官方”“PCL 团队”“龙腾猫跃认可”等可能造成官方关联误认的表述；
+- **(c)** 二创作品也应使用可区分的名称，并明确标注第三方修改，不得暗示官方版本或官方背书；
+- **(d)** 本许可证不授予 PCL、Plain Craft Launcher、龙腾猫跃、MeloongCore 等名称或商标的许可。
+
+### 4.4 上游特别要求
+
+上游《PCL 存储库合理使用指南》对重度使用提出的要求继续适用，包括但不限于：
+
+1. 明确表示本分支是第三方基于 PCL 独立进行二次创作的产物；
+2. 名称以 Plain Craft Launcher (PCL) 开头，并在其后添加足以表现第三方修改的后缀；
+3. 在关于页面首位给出龙腾猫跃的署名及对应的赞助链接，公开源代码，并继续保留上游指南；
+4. 若软件包含 Minecraft 启动功能，应实现与 `McLaunchPrecheck` 一致（或更激进）的正版购买劝导与赞助劝导；
+5. 不在 Windows 上实现与 PCL 赞助解锁功能类似的功能或表现，包括保持界面的主要色相为蓝色；
+6. 不删除、不隐藏、不伪造上游署名、赞助链接和许可证信息。
+
+本分支已精简“关于”页，因此将上游署名、项目链接与许可信息集中放在 README 顶部和本许可证中。若你的发行版保留“关于”页，应在上游要求的首位展示龙腾猫跃署名与赞助链接；若未保留，应以 README、发布页或程序信息等**等效显著方式**展示，且不得删除或隐藏上游署名。具体以上游原文为准。
+
+## 第五条 贡献者条款
+
+5.1 本分支的贡献者包括：
+
+- **上游作者**：龙腾猫跃（LTCat）——PCL / PCL2 原作者；
+- **上游贡献者**：PCL 与 MeloongCore 的开发者、测试者、文档与资源贡献者；
+- **本分支维护者**：YYH；
+- **AI 协作**：Claude（Anthropic）、ChatGPT / Codex（OpenAI）。
+
+5.2 向本分支提交贡献（包括 Pull Request、patch、代码、文档、测试、素材、问题反馈等），即表示你确认并同意：
+
+- **(a)** 你有权提交该贡献，且该贡献不侵犯任何第三方的著作权、商标权、专利权或其他权利；
+- **(b)** 你的贡献按本许可证 1.0 发布，你授予 YYH 及所有接收者一项非商业、全球、免费、免版税、非排他的许可，允许其使用、修改和传播你的贡献；
+- **(c)** 你的贡献同时受所有适用的上游协议约束，且不会导致本分支违反上游协议；
+- **(d)** 你同意在提交记录、README、CONTRIBUTORS 或等效位置被署名。
+
+5.3 你保留你所提交贡献的著作权。YYH 不因收录你的贡献而取得你的著作权，但有权按本许可证分发包含该贡献的本分支。
+
+5.4 AI 协作工具仅作为开发协助被致谢，**不作为著作权主体**。其参与产出的内容由 YYH 整理、审阅并发布；YYH 对最终发布内容负责。
+
+5.5 贡献者名单可随项目更新。名单本身不构成对任何贡献者、上游作者或第三方公司的官方背书。
+
+## 第六条 商业使用
+
+6.1 未经 YYH 事先书面许可，你不得将 YYH 新增内容用于任何商业目的。
+
+6.2 **“商业目的”** 包括但不限于：
+
+- **(a)** 出售、出租、许可、付费下载、付费订阅、设置付费墙或会员专享，以本分支换取金钱或其他经济利益；
+- **(b)** 将本分支或二创作品捆绑到商业软件、硬件、服务、课程或解决方案中分发；
+- **(c)** 以本分支为基础提供收费的安装、配置、维护、培训、咨询、技术支持或托管服务；
+- **(d)** 在企业、组织或个体工商户的生产经营活动中使用，包括内部部署、商业交付或为客户提供服务；
+- **(e)** 通过广告、赞助、推广、引流、联盟营销等方式直接或间接获利；
+- **(f)** 将本分支或二创作品用于商业产品或服务的功能实现、演示、测试或营销；
+- **(g)** 其他以商业利益或金钱报酬为主要目的或动机的使用。
+
+6.3 个人游玩、学习、研究、非商业评测、教学演示，以及非营利组织内部不以营利为目的的使用，原则上不属于商业目的；但不得向接收者收取超过复制和传输成本的费用，也不得借此进行商业推广。
+
+6.4 **YYH 无权就上游内容授予商业许可。** 即使你获得了 YYH 的书面许可，仍必须自行取得龙腾猫跃、PCL 团队、MeloongCore 作者及其他相关权利人的许可。本许可证不构成任何上游商业授权。
+
+## 第七条 免责声明
+
+7.1 本分支按**“现状”**和**“现有”**提供，不附带任何明示或暗示的担保，包括但不限于适销性、特定用途适用性、合法性、不侵权、无病毒、无错误或不间断运行的担保。
+
+7.2 启动器涉及网络下载、账号登录、Java 检测、Mod 与整合包管理、文件写入等操作，可能导致游戏崩溃、整合包损坏、存档丢失、账号风险或其他损失。你应在使用前备份重要数据、妥善保管账号凭据，并自行承担全部风险。
+
+7.3 本项目不是 Minecraft 官方产品，与 Mojang 或 Microsoft 无隶属、合作或背书关系；Minecraft 及相关商标归其各自权利人所有。
+
+7.4 在适用法律允许的最大范围内，YYH、贡献者与上游作者不对因使用或无法使用本分支而产生的任何直接、间接、附带、特殊、惩罚性或后果性损害承担责任，包括但不限于利润损失、数据丢失、设备损坏、账号损失、业务中断或第三方索赔。
+
+7.5 若适用法律不允许上述全部或部分限制，则相应限制在最小必要范围内不适用，本许可证的其他条款继续有效。
+
+## 第八条 终止
+
+8.1 你违反本许可证或任何适用上游协议时，本许可证授予你的权利立即终止。
+
+8.2 终止后，你应立即停止使用、复制、修改和传播，并删除或销毁你持有或控制的本分支及二创作品副本，法律要求保留的除外。
+
+8.3 若属首次违约，且你在收到 YYH 书面通知后 30 日内完全纠正违约行为并停止相关使用或传播，YYH 可书面恢复你的授权；恢复不溯及既往。
+
+8.4 上游协议可能因你的行为独立终止。本许可证的终止不影响上游权利人依据其协议主张权利。
+
+8.5 第四条、第五条、第六条、第七条、第九条在终止后继续有效。
+
+## 第九条 其他
+
+9.1 本许可证是双方就 YYH 新增内容达成的完整许可约定，取代此前就同一主题作出的口头或书面说明。
+
+9.2 YYH 未行使或延迟行使本许可证下的任何权利，不构成对该权利的放弃。
+
+9.3 本许可证任一条款被认定无效或不可执行，不影响其余条款的效力；应以最接近原条款目的的有效条款替代。
+
+9.4 本许可证的中文版本为正式版本。英文摘要仅为方便理解，不构成正式条款；中英文如有不一致，以中文为准。
+
+9.5 本许可证不构成法律意见，也不建立律师与客户关系。
+
+9.6 本许可证版本 1.0，发布于 2026 年 11 月 22 日。
+
+9.7 本许可证自发布之日起适用于本分支的当前及后续版本。此前版本仍适用其发布时的许可证；本许可证不追溯改变已发布版本的原授权。
+
+---
+
+## English Summary (non-binding)
+
+PCL-YYH is a **personal, non-commercial fork of PCL2** by 龙腾猫跃 (LTCat). It is **not an official PCL release** and is not endorsed by the upstream authors.
+
+Upstream PCL/PCL2 code remains under the **PCL Distribution Limited License** and the **PCL Repository Fair Use Guide**. MeloongCore remains under **Apache License 2.0**. Other third-party components remain under their own terms. This license does **not** relicense, replace, or relax any upstream or third-party license.
+
+This license covers only YYH's original additions and modifications. You may use, modify, and share them for **non-commercial purposes only**, provided that you:
+
+- keep this license and all copyright, attribution, and upstream notices;
+- clearly credit 龙腾猫跃 (LTCat), link to the upstream PCL project, and state that this is a third-party modified fork;
+- mark modified versions and describe the changes and date;
+- publish the corresponding source when distributing binaries;
+- license derivative works under this license or a compatible license approved in writing by YYH;
+- comply with all applicable upstream terms.
+
+**Commercial use is prohibited** without prior written permission from YYH and the relevant upstream rights holders. YYH cannot grant commercial rights to upstream content.
+
+Contributors agree to license their contributions under these terms and to comply with upstream licenses. AI tools are credited as development assistants only and are not copyright holders.
+
+The software is provided **“as is”**, without warranty of any kind. Use it at your own risk. The Chinese text governs.
